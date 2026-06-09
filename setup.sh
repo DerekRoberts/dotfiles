@@ -108,5 +108,20 @@ else
     echo "WARNING: ~/.gemini/antigravity/skills is a physical folder. Skipping symlink creation."
 fi
 
+# 7. Symlink Cursor global instructions to Copilot paths
+CURSOR_USER_DIR="$HOME/.config/Cursor/User"
+if [ -d "$CURSOR_USER_DIR" ]; then
+    echo "Configuring Cursor global instructions..."
+    mkdir -p "$CURSOR_USER_DIR/prompts"
+    if [ -L "$CURSOR_USER_DIR/prompts/global.instructions.md" ] || [ ! -f "$CURSOR_USER_DIR/prompts/global.instructions.md" ]; then
+        ln -sf "$GLOBAL_PROMPT_FILE" "$CURSOR_USER_DIR/prompts/global.instructions.md"
+        echo "✓ Symlinked Cursor global instructions to $GLOBAL_PROMPT_FILE."
+    else
+        echo "WARNING: $CURSOR_USER_DIR/prompts/global.instructions.md is a physical file. Skipping symlink creation."
+    fi
+else
+    echo "Note: Cursor config directory not found at $CURSOR_USER_DIR. Skipping instructions symlink."
+fi
+
 echo ""
 echo "✅ Setup complete! Please run 'source ~/.bashrc' or restart your terminal."
