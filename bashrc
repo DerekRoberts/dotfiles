@@ -105,6 +105,7 @@ pub() {
 if [[ -n "$ANTIGRAVITY_AGENT" ]]; then
     export PS1='$ '
     unset PROMPT_COMMAND
+    unset GITHUB_TOKEN
     return
 fi
 
