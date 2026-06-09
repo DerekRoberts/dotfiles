@@ -14,27 +14,24 @@ if [ -f "$BASHRC" ]; then
     # Create backup
     cp "$BASHRC" "$BASHRC.bak.$(date +%s)"
     
-    # Remove old loader lines if present
-    # We do a python-based line replacement to make sure we don't mangle other parts
+    # Use python regex substitution to safely strip old blocks and avoid leaving orphaned 'fi' lines
     python3 -c '
-import sys
+import sys, re
 path = sys.argv[1]
 with open(path, "r") as f:
-    lines = f.readlines()
+    content = f.read()
 
-new_lines = []
-for line in lines:
-    # Remove legacy reference
-    if "/Documents/1-Personal/Linux/bashrc" in line:
-        continue
-    # Remove any existing repo bashrc reference to prevent duplicates
-    if "Repos/dotfiles/bashrc" in line:
-        continue
-    new_lines.append(line)
+# 1. Strip the legacy personal Documents bashrc if present
+content = re.sub(r"\. /home/derek/Documents/1-Personal/Linux/bashrc\n*", "", content)
 
-# Append new sourcing block safely
-content = "".join(new_lines).rstrip() + "\n\n# Source personal dotfiles configuration\nif [ -f \"$HOME/Repos/dotfiles/bashrc\" ]; then\n    . \"$HOME/Repos/dotfiles/bashrc\"\nfi\n"
+# 2. Strip any existing repo dotfiles block (including the if/then/fi)
+content = re.sub(r"# Source personal dotfiles configuration\nif \[ -f \"\$HOME/Repos/dotfiles/bashrc\" \]; then\n    \. \"\$HOME/Repos/dotfiles/bashrc\"\nfi\n*", "", content)
 
+# 3. Remove any orphaned fi lines left behind by the old buggy script
+content = re.sub(r"# Source personal dotfiles configuration\nfi\n*", "", content)
+
+# Write back with the clean block appended
+content = content.rstrip() + "\n\n# Source personal dotfiles configuration\nif [ -f \"$HOME/Repos/dotfiles/bashrc\" ]; then\n    . \"$HOME/Repos/dotfiles/bashrc\"\nfi\n"
 with open(path, "w") as f:
     f.write(content)
 ' "$BASHRC"
