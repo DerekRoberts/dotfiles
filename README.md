@@ -29,7 +29,3 @@ cd dotfiles
 
 Restart your terminal or run `source ~/.bashrc` to load changes.
 
-## Potential Next Steps (To brainstorm in GitHub Issues)
-
-- [ ] **Fedora/Kinoite Post-Install Playbooks**: Automated flatpak and rpm-ostree package provisioning.
-- [ ] **KDE Shortcuts Exporter/Importer**: Quick restoration of Plasma global keyboard configurations.
