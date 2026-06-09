@@ -81,5 +81,32 @@ else
     echo "Note: VS Code config directory not found at $VSCODE_DIR. Skipping symlink."
 fi
 
+# 6. Symlink Antigravity global instructions & skills to Copilot paths
+echo "Configuring Antigravity global instructions and skills..."
+mkdir -p "$HOME/.gemini/config"
+mkdir -p "$HOME/.gemini/antigravity"
+
+GLOBAL_PROMPT_FILE="$HOME/.config/Code/User/prompts/global.instructions.md"
+if [ -L "$HOME/.gemini/GEMINI.md" ] || [ ! -f "$HOME/.gemini/GEMINI.md" ]; then
+    ln -sf "$GLOBAL_PROMPT_FILE" "$HOME/.gemini/GEMINI.md"
+    echo "✓ Symlinked Antigravity global instructions to $GLOBAL_PROMPT_FILE."
+else
+    echo "WARNING: ~/.gemini/GEMINI.md is a physical file. Skipping symlink creation."
+fi
+
+if [ -L "$HOME/.gemini/config/skills" ] || [ ! -d "$HOME/.gemini/config/skills" ]; then
+    ln -sf "$HOME/.agents/skills" "$HOME/.gemini/config/skills"
+    echo "✓ Symlinked ~/.gemini/config/skills to ~/.agents/skills."
+else
+    echo "WARNING: ~/.gemini/config/skills is a physical folder. Skipping symlink creation."
+fi
+
+if [ -L "$HOME/.gemini/antigravity/skills" ] || [ ! -d "$HOME/.gemini/antigravity/skills" ]; then
+    ln -sf "$HOME/.gemini/config/skills" "$HOME/.gemini/antigravity/skills"
+    echo "✓ Symlinked ~/.gemini/antigravity/skills to ~/.gemini/config/skills."
+else
+    echo "WARNING: ~/.gemini/antigravity/skills is a physical folder. Skipping symlink creation."
+fi
+
 echo ""
 echo "✅ Setup complete! Please run 'source ~/.bashrc' or restart your terminal."
