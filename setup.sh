@@ -22,7 +22,7 @@ with open(path, "r") as f:
     content = f.read()
 
 # 1. Strip the legacy personal Documents bashrc if present
-content = re.sub(r"\. /home/derek/Documents/1-Personal/Linux/bashrc\n*", "", content)
+content = re.sub(r".*/Documents/1-Personal/Linux/bashrc.*\n*", "", content)
 
 # 2. Strip any existing repo dotfiles block (including the if/then/fi)
 content = re.sub(r"# Source personal dotfiles configuration\nif \[ -f \"\$HOME/Repos/dotfiles/bashrc\" \]; then\n    \. \"\$HOME/Repos/dotfiles/bashrc\"\nfi\n*", "", content)
