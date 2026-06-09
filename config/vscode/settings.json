@@ -1,0 +1,121 @@
+{
+  "breadcrumbs.enabled": false,
+  "cSpell.words": [
+    "bcgov",
+    "kubernetes",
+    "openshift"
+  ],
+  "debug.javascript.autoAttachFilter": "smart",
+  "debug.showBreakpointsInOverviewRuler": true,
+  "editor.bracketPairColorization.enabled": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "editor.formatOnSave": true,
+  "editor.guides.bracketPairs": "active",
+  "editor.inlineSuggest.enabled": true,
+  "editor.minimap.enabled": false,
+  "explorer.confirmDelete": false,
+  "files.exclude": {
+    "**/node_modules": true
+  },
+  "files.insertFinalNewline": true,
+  "github.copilot.chat.codeGeneration.useInstructionFiles": true,
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "search.exclude": {
+    "**/dist": true,
+    "**/tests": true,
+    "node_modules": true,
+    "package-lock.json": true
+  },
+  "security.workspace.trust.untrustedFiles": "open",
+  "terminal.integrated.defaultProfile.windows": "C:\\Windows\\System32\\wsl.exe",
+  "terminal.integrated.showExitAlert": false,
+  "terminal.integrated.tabs.enabled": true,
+  "update.showReleaseNotes": false,
+  "workbench.startupEditor": "none",
+  "workbench.statusBar.visible": true,
+  "workbench.tips.enabled": true,
+  "editor.bracketPairColorization.independentColorPoolPerBracketType": true,
+  "editor.language.colorizedBracketPairs": [],
+  "editor.formatOnType": true,
+  "javascript.format.insertSpaceAfterOpeningAndBeforeClosingNonemptyBrackets": true,
+  "typescript.format.insertSpaceAfterOpeningAndBeforeClosingNonemptyBrackets": true,
+  "security.workspace.trust.enabled": false,
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "editor.tabSize": 2,
+  "diffEditor.codeLens": true,
+  "chat.editing.confirmEditRequestRetry": false,
+  "extensions.ignoreRecommendations": true,
+  "chat.tools.terminal.autoApprove": {
+    "/^git\\s+status\\b/i": true,
+    "/^git\\s+log\\b/i": true,
+    "/^git\\s+fetch\\b/i": true,
+    "/^git\\s+switch\\b/i": true,
+    "/^git\\s+checkout\\b/i": true,
+    "/^git\\s+add\\b/i": true,
+    "/^git\\s+commit\\b/i": true,
+    "/^gh\\s+pr\\s+(create|draft)\\b/i": true,
+    "/^npm\\s+(install|update)\\b/i": true,
+    "/^npm\\s+run\\b/i": true,
+    "/^git\\s+push\\s+.*\\b(main|master)\\b/i": {
+      "approve": false,
+      "matchCommandLine": true
+    },
+    "/^git\\s+push\\b/i": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "git pull": true,
+    "git reset": true,
+    "gh": true
+  },
+  "task.notifyWindowOnTaskCompletion": -1,
+  "http.systemCertificatesNode": true,
+  "chat.commandCenter.enabled": false,
+  "window.menuBarVisibility": "toggle",
+  "explorer.decorations.badges": false,
+  "workbench.editor.decorations.badges": false,
+  "outline.problems.badges": false,
+  "search.decorations.badges": false,
+  "chat.tools.urls.autoApprove": {
+    "https://code.visualstudio.com": true,
+    "https://github.com/microsoft/vscode/wiki/*": true,
+    "https://code.visualstudio.com/docs/copilot/customization/custom-instructions": {
+      "approveRequest": false,
+      "approveResponse": true
+    },
+    "https://raw.githubusercontent.com": {
+      "approveRequest": false,
+      "approveResponse": true
+    },
+    "https://github.com": {
+      "approveRequest": false,
+      "approveResponse": true
+    },
+    "https://docs.renovatebot.com": {
+      "approveRequest": false,
+      "approveResponse": true
+    },
+    "https://api.github.com": {
+      "approveRequest": false,
+      "approveResponse": true
+    }
+  },
+  "terminal.integrated.enableNotifications": false,
+  "chat.notifyWindowOnConfirmation": "off",
+  "chat.notifyWindowOnResponseReceived": "off",
+  "kilo-code.new.autocomplete.enableAutoTrigger": false,
+  "kilo-code.new.autocomplete.enableSmartInlineTaskKeybinding": false,
+  "kilo-code.new.autocomplete.enableChatAutocomplete": false,
+  "terminal.integrated.commandsToSkipShell": [
+    "kilo-code.new.agentManagerOpen",
+    "kilo-code.new.agentManager.showTerminal"
+  ],
+  "git.openRepositoryInParentFolders": "never",
+  "kilo-code.new.showTaskTimeline": false,
+  "chat.mcp.gallery.enabled": true,
+  "workbench.sideBar.location": "right"
+}

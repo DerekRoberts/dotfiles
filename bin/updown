@@ -1,0 +1,34 @@
+#!/bin/bash
+set -euo pipefail
+
+echo "--- Initiating Maintenance & Shutdown ---"
+
+# 1. Close Chrome: Try Polite (15), then Force (9)
+if pgrep chrome > /dev/null; then
+    echo "Closing Chrome..."
+    pkill -15 --oldest chrome
+
+    # Wait up to 5 seconds for a clean exit
+    count=0
+    while pgrep chrome > /dev/null && [ $count -lt 5 ]; do
+        sleep 1
+        ((count++))
+    done
+
+    # If it's STILL there, take it down hard
+    if pgrep chrome > /dev/null; then
+        echo "Chrome is stubborn. Forcing exit..."
+        pkill -9 chrome
+    fi
+fi
+
+# 2. Run Updates
+echo "Starting System Updates..."
+# We use 'sudo dnf upgrade' which is the modern standard for Fedora
+if sudo dnf upgrade -y && sudo dnf autoremove -y && sudo flatpak update -y; then
+    echo "✅ Updates complete. Shutting down..."
+    sudo shutdown now
+else
+    echo -e "\n❌ Updates failed. Shutdown aborted.\n"
+    exit 1
+fi
