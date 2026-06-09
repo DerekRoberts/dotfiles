@@ -14,27 +14,24 @@ if [ -f "$BASHRC" ]; then
     # Create backup
     cp "$BASHRC" "$BASHRC.bak.$(date +%s)"
     
-    # Remove old loader lines if present
-    # We do a python-based line replacement to make sure we don't mangle other parts
+    # Use python regex substitution to safely strip old blocks and avoid leaving orphaned 'fi' lines
     python3 -c '
-import sys
+import sys, re
 path = sys.argv[1]
 with open(path, "r") as f:
-    lines = f.readlines()
+    content = f.read()
 
-new_lines = []
-for line in lines:
-    # Remove legacy reference
-    if "/Documents/1-Personal/Linux/bashrc" in line:
-        continue
-    # Remove any existing repo bashrc reference to prevent duplicates
-    if "Repos/dotfiles/bashrc" in line:
-        continue
-    new_lines.append(line)
+# 1. Strip the legacy personal Documents bashrc if present
+content = re.sub(r".*/Documents/1-Personal/Linux/bashrc.*\n*", "", content)
 
-# Append new sourcing block safely
-content = "".join(new_lines).rstrip() + "\n\n# Source personal dotfiles configuration\nif [ -f \"$HOME/Repos/dotfiles/bashrc\" ]; then\n    . \"$HOME/Repos/dotfiles/bashrc\"\nfi\n"
+# 2. Strip any existing repo dotfiles block (including the if/then/fi)
+content = re.sub(r"# Source personal dotfiles configuration\nif \[ -f \"\$HOME/Repos/dotfiles/bashrc\" \]; then\n    \. \"\$HOME/Repos/dotfiles/bashrc\"\nfi\n*", "", content)
 
+# 3. Remove any orphaned fi lines left behind by the old buggy script
+content = re.sub(r"# Source personal dotfiles configuration\nfi\n*", "", content)
+
+# Write back with the clean block appended
+content = content.rstrip() + "\n\n# Source personal dotfiles configuration\nif [ -f \"$HOME/Repos/dotfiles/bashrc\" ]; then\n    . \"$HOME/Repos/dotfiles/bashrc\"\nfi\n"
 with open(path, "w") as f:
     f.write(content)
 ' "$BASHRC"
@@ -82,6 +79,48 @@ if [ -d "$VSCODE_DIR" ]; then
     echo "✓ Symlinked VS Code settings.json."
 else
     echo "Note: VS Code config directory not found at $VSCODE_DIR. Skipping symlink."
+fi
+
+# 6. Symlink Antigravity global instructions & skills to Copilot paths
+echo "Configuring Antigravity global instructions and skills..."
+mkdir -p "$HOME/.gemini/config"
+mkdir -p "$HOME/.gemini/antigravity"
+
+GLOBAL_PROMPT_FILE="$HOME/.config/Code/User/prompts/global.instructions.md"
+if [ -L "$HOME/.gemini/GEMINI.md" ] || [ ! -f "$HOME/.gemini/GEMINI.md" ]; then
+    ln -sf "$GLOBAL_PROMPT_FILE" "$HOME/.gemini/GEMINI.md"
+    echo "✓ Symlinked Antigravity global instructions to $GLOBAL_PROMPT_FILE."
+else
+    echo "WARNING: ~/.gemini/GEMINI.md is a physical file. Skipping symlink creation."
+fi
+
+if [ -L "$HOME/.gemini/config/skills" ] || [ ! -d "$HOME/.gemini/config/skills" ]; then
+    ln -sf "$HOME/.agents/skills" "$HOME/.gemini/config/skills"
+    echo "✓ Symlinked ~/.gemini/config/skills to ~/.agents/skills."
+else
+    echo "WARNING: ~/.gemini/config/skills is a physical folder. Skipping symlink creation."
+fi
+
+if [ -L "$HOME/.gemini/antigravity/skills" ] || [ ! -d "$HOME/.gemini/antigravity/skills" ]; then
+    ln -sf "$HOME/.gemini/config/skills" "$HOME/.gemini/antigravity/skills"
+    echo "✓ Symlinked ~/.gemini/antigravity/skills to ~/.gemini/config/skills."
+else
+    echo "WARNING: ~/.gemini/antigravity/skills is a physical folder. Skipping symlink creation."
+fi
+
+# 7. Symlink Cursor global instructions to Copilot paths
+CURSOR_USER_DIR="$HOME/.config/Cursor/User"
+if [ -d "$CURSOR_USER_DIR" ]; then
+    echo "Configuring Cursor global instructions..."
+    mkdir -p "$CURSOR_USER_DIR/prompts"
+    if [ -L "$CURSOR_USER_DIR/prompts/global.instructions.md" ] || [ ! -f "$CURSOR_USER_DIR/prompts/global.instructions.md" ]; then
+        ln -sf "$GLOBAL_PROMPT_FILE" "$CURSOR_USER_DIR/prompts/global.instructions.md"
+        echo "✓ Symlinked Cursor global instructions to $GLOBAL_PROMPT_FILE."
+    else
+        echo "WARNING: $CURSOR_USER_DIR/prompts/global.instructions.md is a physical file. Skipping symlink creation."
+    fi
+else
+    echo "Note: Cursor config directory not found at $CURSOR_USER_DIR. Skipping instructions symlink."
 fi
 
 echo ""
