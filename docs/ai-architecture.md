@@ -15,13 +15,16 @@ Four repos, four jobs. No profiles. Dotfiles does not install guardrails.
 │  = work standards + delimited personal block                    │
 └────────────────────────────┬────────────────────────────────────┘
                              │  dotfiles/scripts/bundle-ai-instructions.sh
-                             │  (personal block only: append / replace / skip)
+                             │  (personal block: fetch GitHub main → append/replace/skip)
                              ▲
 ┌────────────────────────────┴────────────────────────────────────┐
-│  DerekRoberts/dotfiles                   PERSONAL CONSUMER       │
-│  config/ai/personal.instructions.md    Tone, modes, prefs     │
-│  scripts/bundle-ai-instructions.sh       Personal block sync    │
-│  setup.sh                                Personal sync + symlinks│
+│  GitHub main: DerekRoberts/dotfiles/config/ai/personal…md       │
+│  (canonical personal source — not read from local clone)      │
+└────────────────────────────┬────────────────────────────────────┘
+┌────────────────────────────┴────────────────────────────────────┐
+│  DerekRoberts/dotfiles (clone)           WIRING + DOCS          │
+│  setup.sh: clone/pull → symlinks         bashrc, gitconfig, etc.│
+│  scripts/bundle-ai-instructions.sh       Personal sync only     │
 └────────────────────────────┬────────────────────────────────────┘
                              │  symlinks only (no extra content)
          ┌───────────────────┼───────────────────┐
@@ -66,17 +69,33 @@ Tool-specific (not in bundle):
 - Instruction text → **not** dotfiles symlinks (symlinks wire tools only)
 - Kilo → dropped; Cursor + Copilot + Antigravity cover you
 
-## Machine setup (two independent steps)
+## Machine setup
 
-**Personal consumer (dotfiles):**
+**Personal consumer (dotfiles) — hybrid bootstrap:**
 
 ```bash
+# Fresh machine
+curl -fsSL https://raw.githubusercontent.com/DerekRoberts/dotfiles/main/setup.sh | bash
+
+# Already cloned
 ~/Repos/dotfiles/setup.sh
 ```
 
-Work standards must already be in the global hub (org Copilot / VS Code).
+What `setup.sh` does:
 
-Order inside setup: personal sync → symlinks (Cursor, Antigravity, skills, Ponytail).
+1. **Clone or pull** dotfiles to `DOTFILES_DIR` (default `~/Repos/dotfiles`, branch `main`)
+2. **Wire** bashrc, gitconfig, tool symlinks from the local clone
+3. **Sync personal block** by fetching `config/ai/personal.instructions.md` from **GitHub main** (strict — not the local file)
+4. **Symlink** Cursor, Antigravity, Ponytail, skills
+
+Work standards must already be in the global hub (org Copilot / VS Code). Dotfiles never fetches or overwrites them.
+
+Personal changes take effect after **push to main** and re-run setup. Local dev override:
+
+```bash
+PERSONAL_INSTRUCTIONS_URL="file://$HOME/Repos/dotfiles/config/ai/personal.instructions.md" \
+  ~/Repos/dotfiles/setup.sh
+```
 
 **Guardrails (agent-guardrails — separate, once):**
 
@@ -93,7 +112,13 @@ Re-sync personal block only:
 
 ## Personal block sync (bundle-ai-instructions.sh)
 
-Dotfiles does **not** clone or read `bcgov/copilot-instructions`. It manages only the personal section in the global hub.
+Dotfiles does **not** read `bcgov/copilot-instructions` or manage work standards.
+
+Canonical personal source (strict):
+
+```
+https://raw.githubusercontent.com/DerekRoberts/dotfiles/main/config/ai/personal.instructions.md
+```
 
 Delimiters in `global.instructions.md`:
 
@@ -115,6 +140,9 @@ Delimiters in `global.instructions.md`:
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
+| `DOTFILES_DIR` | `~/Repos/dotfiles` | Clone location for wiring |
+| `DOTFILES_BRANCH` | `main` | Branch to clone/pull |
+| `PERSONAL_INSTRUCTIONS_URL` | raw GitHub `main` URL | Override for local dev only |
 | `GLOBAL_INSTRUCTIONS_OUTPUT` | `~/.config/Code/User/prompts/global.instructions.md` | Hub file for personal sync |
 
 ## After editing work standards
@@ -123,8 +151,9 @@ Work standards are **not** managed by dotfiles. Update via org Copilot settings 
 
 ## After editing personal standards
 
-1. Edit `~/Repos/dotfiles/config/ai/personal.instructions.md`
-2. Run `~/Repos/dotfiles/scripts/bundle-ai-instructions.sh` or full setup
+1. Edit `config/ai/personal.instructions.md` in this repo
+2. **Push to `main`**
+3. Run `~/Repos/dotfiles/scripts/bundle-ai-instructions.sh` or full setup
 
 ## After editing guardrails
 

@@ -1,40 +1,67 @@
 #!/bin/bash
 set -euo pipefail
 
-REPO_DIR="$HOME/Repos/dotfiles"
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/Repos/dotfiles}"
+DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/DerekRoberts/dotfiles.git}"
+DOTFILES_BRANCH="${DOTFILES_BRANCH:-main}"
+
+ensure_dotfiles_repo() {
+    if [[ ! -d "$DOTFILES_DIR/.git" ]]; then
+        echo "Cloning dotfiles to $DOTFILES_DIR..."
+        mkdir -p "$(dirname "$DOTFILES_DIR")"
+        git clone -b "$DOTFILES_BRANCH" "$DOTFILES_REPO" "$DOTFILES_DIR"
+    elif [[ -z "${DOTFILES_SKIP_PULL:-}" ]]; then
+        local current_branch
+        current_branch="$(git -C "$DOTFILES_DIR" branch --show-current 2>/dev/null || true)"
+        if [[ "$current_branch" == "$DOTFILES_BRANCH" ]]; then
+            echo "Updating dotfiles ($DOTFILES_BRANCH)..."
+            git -C "$DOTFILES_DIR" pull --ff-only origin "$DOTFILES_BRANCH"
+        else
+            echo "Note: dotfiles on branch '$current_branch' — skipping pull (not on $DOTFILES_BRANCH)."
+        fi
+    fi
+}
+
+ensure_dotfiles_repo
+
+SETUP_PATH="$(readlink -f "${BASH_SOURCE[0]:-}" 2>/dev/null || true)"
+if [[ -z "$SETUP_PATH" ]] || [[ "$SETUP_PATH" != "$DOTFILES_DIR/setup.sh" ]]; then
+    exec bash "$DOTFILES_DIR/setup.sh" "$@"
+fi
+
+REPO_DIR="$DOTFILES_DIR"
 BASHRC="$HOME/.bashrc"
-LEGACY_SOURCE=". /home/derek/Documents/1-Personal/Linux/bashrc"
-NEW_SOURCE="if [ -f \"\$HOME/Repos/dotfiles/bashrc\" ]; then . \"\$HOME/Repos/dotfiles/bashrc\"; fi"
 
 echo "=== Bootstrapping Dotfiles ==="
 
 # 1. Clean up legacy bashrc sourcing and add new loader
 if [ -f "$BASHRC" ]; then
     echo "Updating ~/.bashrc sourcing..."
-    # Create backup
     cp "$BASHRC" "$BASHRC.bak.$(date +%s)"
-    
-    # Use python regex substitution to safely strip old blocks and avoid leaving orphaned 'fi' lines
-    python3 -c '
+
+    python3 - "$BASHRC" "$REPO_DIR" <<'PY'
 import sys, re
-path = sys.argv[1]
-with open(path, "r") as f:
+path, repo_dir = sys.argv[1], sys.argv[2]
+with open(path) as f:
     content = f.read()
 
-# 1. Strip the legacy personal Documents bashrc if present
 content = re.sub(r".*/Documents/1-Personal/Linux/bashrc.*\n*", "", content)
-
-# 2. Strip any existing repo dotfiles block (including the if/then/fi)
-content = re.sub(r"# Source personal dotfiles configuration\nif \[ -f \"\$HOME/Repos/dotfiles/bashrc\" \]; then\n    \. \"\$HOME/Repos/dotfiles/bashrc\"\nfi\n*", "", content)
-
-# 3. Remove any orphaned fi lines left behind by the old buggy script
+content = re.sub(
+    r"# Source personal dotfiles configuration\nif \[ -f \"[^\"]+/bashrc\" \]; then\n    \. \"[^\"]+/bashrc\"\nfi\n*",
+    "",
+    content,
+)
 content = re.sub(r"# Source personal dotfiles configuration\nfi\n*", "", content)
 
-# Write back with the clean block appended
-content = content.rstrip() + "\n\n# Source personal dotfiles configuration\nif [ -f \"$HOME/Repos/dotfiles/bashrc\" ]; then\n    . \"$HOME/Repos/dotfiles/bashrc\"\nfi\n"
+loader = (
+    f"\n\n# Source personal dotfiles configuration\n"
+    f'if [ -f "{repo_dir}/bashrc" ]; then\n'
+    f'    . "{repo_dir}/bashrc"\n'
+    f"fi\n"
+)
 with open(path, "w") as f:
-    f.write(content)
-' "$BASHRC"
+    f.write(content.rstrip() + loader)
+PY
     echo "✓ ~/.bashrc sourcing updated."
 fi
 

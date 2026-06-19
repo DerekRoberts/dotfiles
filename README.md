@@ -1,21 +1,31 @@
 # Derek's Dotfiles
 
-Personal machine config: shell, git, AI personal-instruction sync, and tool symlinks.
+Personal machine config: shell, git, personal-instruction sync (from GitHub main), and tool symlinks.
 
 See **[docs/ai-architecture.md](docs/ai-architecture.md)** for how this fits the wider AI stack.
 
 ## Quick start
 
+**Fresh machine (curl bootstrap):**
+
 ```bash
-cd ~/Repos/dotfiles && ./setup.sh
+curl -fsSL https://raw.githubusercontent.com/DerekRoberts/dotfiles/main/setup.sh | bash
 source ~/.bashrc
 ```
+
+**Already cloned:**
+
+```bash
+~/Repos/dotfiles/setup.sh
+source ~/.bashrc
+```
+
+`setup.sh` clones or updates the repo, wires local configs from the clone, then syncs the **personal** instructions block from GitHub `main` into your global prompt hub. Work standards in the hub come from org Copilot / VS Code — dotfiles does not manage those.
 
 Guardrails are separate — install once from [bcgov/agent-guardrails](https://github.com/bcgov/agent-guardrails):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/bcgov/agent-guardrails/main/setup.sh | bash
-# or: ~/Repos/agent-guardrails/setup.sh
 ```
 
 ## AI layout (summary)
@@ -23,7 +33,7 @@ curl -fsSL https://raw.githubusercontent.com/bcgov/agent-guardrails/main/setup.s
 | Component | Location |
 |-----------|----------|
 | Work standards | `~/.config/Code/User/prompts/global.instructions.md` (org Copilot / VS Code) |
-| Personal instructions source | `config/ai/personal.instructions.md` |
+| Personal instructions (canonical) | GitHub `main` → `config/ai/personal.instructions.md` |
 | Personal block in hub | Delimited section synced by `bundle-ai-instructions.sh` |
 | Guardrails | [bcgov/agent-guardrails](https://github.com/bcgov/agent-guardrails) — **not dotfiles** |
 | Skills catalogue | `npx skills add bcgov/agent-skills` → `~/.agents/skills/` |
@@ -31,17 +41,28 @@ curl -fsSL https://raw.githubusercontent.com/bcgov/agent-guardrails/main/setup.s
 
 Tools symlinked to the hub: **VS Code Copilot**, **Cursor**, **Antigravity**.
 
+## Environment variables
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `DOTFILES_DIR` | `~/Repos/dotfiles` | Clone location |
+| `DOTFILES_REPO` | `https://github.com/DerekRoberts/dotfiles.git` | Clone URL |
+| `DOTFILES_BRANCH` | `main` | Branch to clone/pull |
+| `DOTFILES_SKIP_PULL` | *(unset)* | Set to skip `git pull` |
+| `PERSONAL_INSTRUCTIONS_URL` | raw GitHub `main` URL | Override for local dev only |
+| `GLOBAL_INSTRUCTIONS_OUTPUT` | `~/.config/Code/User/prompts/global.instructions.md` | Prompt hub path |
+
 ## Structure
 
 ```
-├── setup.sh
+├── setup.sh                        # clone/pull + wire + sync
 ├── bashrc
 ├── gitconfig
 ├── bin/updown
 ├── scripts/
-│   └── bundle-ai-instructions.sh   # sync personal block → global hub
+│   └── bundle-ai-instructions.sh   # fetch personal from GitHub → hub
 ├── config/
-│   ├── ai/personal.instructions.md
+│   ├── ai/personal.instructions.md # canonical source (on main)
 │   ├── antigravity/
 │   └── vscode/
 └── docs/
