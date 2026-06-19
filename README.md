@@ -1,15 +1,21 @@
 # Derek's Dotfiles
 
-Personal machine config: shell, git, AI personal-instruction sync, guardrails wrapper, and tool symlinks.
+Personal machine config: shell, git, AI personal-instruction sync, and tool symlinks.
 
-See **[docs/ai-architecture.md](docs/ai-architecture.md)** for the full four-repo AI stack map.
+See **[docs/ai-architecture.md](docs/ai-architecture.md)** for how this fits the wider AI stack.
 
 ## Quick start
 
 ```bash
-# Requires ~/Repos/agent-guardrails cloned (work standards live in global hub already)
 cd ~/Repos/dotfiles && ./setup.sh
 source ~/.bashrc
+```
+
+Guardrails are separate — install once from [bcgov/agent-guardrails](https://github.com/bcgov/agent-guardrails):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bcgov/agent-guardrails/main/setup.sh | bash
+# or: ~/Repos/agent-guardrails/setup.sh
 ```
 
 ## AI layout (summary)
@@ -19,7 +25,7 @@ source ~/.bashrc
 | Work standards | `~/.config/Code/User/prompts/global.instructions.md` (org Copilot / VS Code) |
 | Personal instructions source | `config/ai/personal.instructions.md` |
 | Personal block in hub | Delimited section synced by `bundle-ai-instructions.sh` |
-| Guardrails source | `~/Repos/agent-guardrails/` (via `scripts/install-guardrails.sh`) |
+| Guardrails | [bcgov/agent-guardrails](https://github.com/bcgov/agent-guardrails) — **not dotfiles** |
 | Skills catalogue | `npx skills add bcgov/agent-skills` → `~/.agents/skills/` |
 | Prompt recipes (optional) | `docs/agent-prompt-card.md` |
 
@@ -33,8 +39,7 @@ Tools symlinked to the hub: **VS Code Copilot**, **Cursor**, **Antigravity**.
 ├── gitconfig
 ├── bin/updown
 ├── scripts/
-│   ├── bundle-ai-instructions.sh   # sync personal block → global hub
-│   └── install-guardrails.sh       # thin wrapper → agent-guardrails
+│   └── bundle-ai-instructions.sh   # sync personal block → global hub
 ├── config/
 │   ├── ai/personal.instructions.md
 │   ├── antigravity/

@@ -109,7 +109,7 @@ Example: `Use github-actions skill. Review .github/workflows/pr-open.yml for BC 
 | Work standards | Org Copilot / VS Code hub (not managed by dotfiles) |
 | Personal source | `~/Repos/dotfiles/config/ai/personal.instructions.md` |
 | Personal sync | `~/Repos/dotfiles/scripts/bundle-ai-instructions.sh` |
-| Guardrails | `~/Repos/agent-guardrails/` (via `scripts/install-guardrails.sh`) |
+| Guardrails | `~/Repos/agent-guardrails/setup.sh` (independent of dotfiles) |
 | User skills | `~/.agents/skills/` |
 | Ponytail rule | `~/.cursor/rules/ponytail.mdc` |
 | Architecture doc | `~/Repos/dotfiles/docs/ai-architecture.md` |
@@ -118,7 +118,7 @@ Re-sync personal block after editing `config/ai/personal.instructions.md`:
 
 ```bash
 ~/Repos/dotfiles/scripts/bundle-ai-instructions.sh
-# or full setup (guardrails + bundle + symlinks):
+# or full setup (personal sync + symlinks):
 ~/Repos/dotfiles/setup.sh
 ```
 

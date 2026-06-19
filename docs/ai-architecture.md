@@ -1,6 +1,6 @@
 # AI stack architecture (Derek)
 
-Four repos, four jobs. No profiles.
+Four repos, four jobs. No profiles. Dotfiles does not install guardrails.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -18,7 +18,10 @@ Four repos, four jobs. No profiles.
                              │  (personal block only: append / replace / skip)
                              ▲
 ┌────────────────────────────┴────────────────────────────────────┐
-│  DerekRoberts/dotfiles/config/ai/personal.instructions.md       │
+│  DerekRoberts/dotfiles                   PERSONAL CONSUMER       │
+│  config/ai/personal.instructions.md    Tone, modes, prefs     │
+│  scripts/bundle-ai-instructions.sh       Personal block sync    │
+│  setup.sh                                Personal sync + symlinks│
 └────────────────────────────┬────────────────────────────────────┘
                              │  symlinks only (no extra content)
          ┌───────────────────┼───────────────────┐
@@ -26,22 +29,9 @@ Four repos, four jobs. No profiles.
     VS Code Copilot      Cursor prompts     Antigravity GEMINI.md
 
 ┌─────────────────────────────────────────────────────────────────┐
-│  bcgov/agent-guardrails                  ENFORCEMENT (SoT)       │
-│  setup.sh                                gitleaks, hooks, shell  │
-│  git-safety.sh, hooks/                   optional git-setup.sh   │
-│  (curl | bash or clone + ./setup.sh)                           │
-└────────────────────────────┬────────────────────────────────────┘
-                             │  dotfiles/scripts/install-guardrails.sh
-                             │  (thin wrapper — delegates, no content)
-                             ▼
-                    ~/.githooks + ~/.bashrc loader
-
-┌─────────────────────────────────────────────────────────────────┐
-│  DerekRoberts/dotfiles                   PERSONAL CONSUMER       │
-│  config/ai/personal.instructions.md    Tone, modes, prefs     │
-│  scripts/bundle-ai-instructions.sh       Personal block sync    │
-│  scripts/install-guardrails.sh           Wrapper → agent-guardrails│
-│  setup.sh                                One command for all    │
+│  bcgov/agent-guardrails                  ENFORCEMENT (separate)  │
+│  setup.sh  →  ~/.githooks + ~/.bashrc loader                    │
+│  Install independently — dotfiles does not call this          │
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
@@ -62,7 +52,7 @@ Tool-specific (not in bundle):
 | **copilot-instructions** | Hard stops, git workflow, org macros, 4k-cap shared text |
 | **agent-guardrails** | gitleaks, git/gh/npm safety wrappers, global hooks, git-setup.sh |
 | **dotfiles personal** | Roasts, coach mode, TS prefs, `unset GITHUB_TOKEN` |
-| **dotfiles scripts** | Personal block sync, guardrails installer wrapper, tool symlinks |
+| **dotfiles scripts** | Personal block sync, tool symlinks |
 | **agent-skills** | github-actions, openshift-deployment, repo audit playbooks |
 | **Chat** | One-off scope, ponytail-review, “report only” |
 
@@ -71,33 +61,34 @@ Tool-specific (not in bundle):
 - Personal opinions → **not** copilot-instructions
 - Always-on guardrails → **not** agent-skills (skills are invoked, not enforced)
 - Guardrails or git-setup → **not** copilot-instructions (belongs in agent-guardrails)
-- Guardrail content → **not** dotfiles (wrapper only)
+- Guardrails install → **not** dotfiles (use agent-guardrails `setup.sh` directly)
 - Work standards merge → **not** dotfiles (org Copilot / VS Code owns the hub)
 - Instruction text → **not** dotfiles symlinks (symlinks wire tools only)
 - Kilo → dropped; Cursor + Copilot + Antigravity cover you
 
-## One command to refresh everything
+## Machine setup (two independent steps)
+
+**Personal consumer (dotfiles):**
 
 ```bash
 ~/Repos/dotfiles/setup.sh
 ```
 
-Requires clone at `~/Repos/agent-guardrails`. Work standards must already be in the global hub (org Copilot / VS Code).
+Work standards must already be in the global hub (org Copilot / VS Code).
 
-Order inside setup: guardrails → personal sync → symlinks (Cursor, Antigravity, skills, Ponytail).
+Order inside setup: personal sync → symlinks (Cursor, Antigravity, skills, Ponytail).
+
+**Guardrails (agent-guardrails — separate, once):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bcgov/agent-guardrails/main/setup.sh | bash
+# or: ~/Repos/agent-guardrails/setup.sh
+```
 
 Re-sync personal block only:
 
 ```bash
 ~/Repos/dotfiles/scripts/bundle-ai-instructions.sh
-```
-
-Guardrails only:
-
-```bash
-~/Repos/dotfiles/scripts/install-guardrails.sh
-# or directly (once bcgov/agent-guardrails exists):
-~/Repos/agent-guardrails/setup.sh
 ```
 
 ## Personal block sync (bundle-ai-instructions.sh)
@@ -120,26 +111,10 @@ Delimiters in `global.instructions.md`:
 | No personal section | Append delimited block |
 | Hub file missing | Create with personal block only |
 
-## Guardrails resolution (install-guardrails.sh)
-
-The dotfiles installer is a **thin wrapper** — it does not own guardrail content.
-
-| Priority | Source | When |
-|----------|--------|------|
-| 1 | `~/Repos/agent-guardrails/setup.sh` | Local clone |
-| 2 | `curl` → `bcgov/agent-guardrails` `main/setup.sh` | No local clone |
-
-Override local path:
-
-```bash
-AGENT_GUARDRAILS_DIR=/path/to/agent-guardrails ~/Repos/dotfiles/scripts/install-guardrails.sh
-```
-
 ## Environment variables
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `AGENT_GUARDRAILS_DIR` | `~/Repos/agent-guardrails` | Local guardrails repo for wrapper |
 | `GLOBAL_INSTRUCTIONS_OUTPUT` | `~/.config/Code/User/prompts/global.instructions.md` | Hub file for personal sync |
 
 ## After editing work standards
@@ -153,8 +128,8 @@ Work standards are **not** managed by dotfiles. Update via org Copilot settings 
 
 ## After editing guardrails
 
-1. Edit `~/Repos/agent-guardrails/` (hooks, git-safety.sh, setup.sh) — **not** dotfiles
-2. Run `~/Repos/dotfiles/scripts/install-guardrails.sh` or full setup
+1. Edit `~/Repos/agent-guardrails/` (hooks, git-safety.sh, setup.sh)
+2. Run `~/Repos/agent-guardrails/setup.sh` — **not** dotfiles
 
 ## copilot-instructions is standards text only
 
