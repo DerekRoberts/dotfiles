@@ -81,12 +81,20 @@ else
     echo "Note: VS Code config directory not found at $VSCODE_DIR. Skipping symlink."
 fi
 
-# 6. Symlink Antigravity global instructions & skills to Copilot paths
+# 6. Install AI guardrails (bcgov/agent-guardrails via thin wrapper)
+echo "Installing AI guardrails..."
+bash "$REPO_DIR/scripts/install-guardrails.sh"
+
+# 7. Sync personal instructions into global prompt hub
+echo "Syncing personal instructions into global prompt hub..."
+bash "$REPO_DIR/scripts/bundle-ai-instructions.sh"
+
+GLOBAL_PROMPT_FILE="$HOME/.config/Code/User/prompts/global.instructions.md"
+
+# 8. Symlink personal tooling to the bundled global prompt hub
 echo "Configuring Antigravity global instructions and skills..."
 mkdir -p "$HOME/.gemini/config"
 mkdir -p "$HOME/.gemini/antigravity"
-
-GLOBAL_PROMPT_FILE="$HOME/.config/Code/User/prompts/global.instructions.md"
 if [ -L "$HOME/.gemini/GEMINI.md" ] || [ ! -f "$HOME/.gemini/GEMINI.md" ]; then
     ln -sf "$GLOBAL_PROMPT_FILE" "$HOME/.gemini/GEMINI.md"
     echo "✓ Symlinked Antigravity global instructions to $GLOBAL_PROMPT_FILE."
@@ -101,6 +109,12 @@ else
     echo "WARNING: ~/.gemini/config/skills is a physical folder. Skipping symlink creation."
 fi
 
+# Remove erroneous circular skills symlink if present (~/.agents/skills/skills -> ~/.gemini/config/skills)
+if [ -L "$HOME/.agents/skills/skills" ]; then
+    rm -f "$HOME/.agents/skills/skills"
+    echo "✓ Removed erroneous ~/.agents/skills/skills circular symlink."
+fi
+
 if [ -L "$HOME/.gemini/antigravity/skills" ] || [ ! -d "$HOME/.gemini/antigravity/skills" ]; then
     ln -sf "$HOME/.gemini/config/skills" "$HOME/.gemini/antigravity/skills"
     echo "✓ Symlinked ~/.gemini/antigravity/skills to ~/.gemini/config/skills."
@@ -108,7 +122,7 @@ else
     echo "WARNING: ~/.gemini/antigravity/skills is a physical folder. Skipping symlink creation."
 fi
 
-# 7. Symlink Cursor global instructions to Copilot paths
+# 9. Symlink Cursor to the bundled global prompt hub
 CURSOR_USER_DIR="$HOME/.config/Cursor/User"
 if [ -d "$CURSOR_USER_DIR" ]; then
     echo "Configuring Cursor global instructions..."
@@ -121,6 +135,26 @@ if [ -d "$CURSOR_USER_DIR" ]; then
     fi
 else
     echo "Note: Cursor config directory not found at $CURSOR_USER_DIR. Skipping instructions symlink."
+fi
+
+# 10. Symlink Ponytail rule into Cursor user rules
+PONYTAIL_RULE="$HOME/.copilot/installed-plugins/ponytail/ponytail/.cursor/rules/ponytail.mdc"
+if [ -f "$PONYTAIL_RULE" ]; then
+    mkdir -p "$HOME/.cursor/rules"
+    if [ -L "$HOME/.cursor/rules/ponytail.mdc" ] || [ ! -f "$HOME/.cursor/rules/ponytail.mdc" ]; then
+        ln -sf "$PONYTAIL_RULE" "$HOME/.cursor/rules/ponytail.mdc"
+        echo "✓ Symlinked Ponytail rule to ~/.cursor/rules/ponytail.mdc."
+    else
+        echo "WARNING: ~/.cursor/rules/ponytail.mdc is a physical file. Skipping symlink creation."
+    fi
+else
+    echo "Note: Ponytail rule not found at $PONYTAIL_RULE. Skipping Ponytail symlink."
+fi
+
+# 11. Remove legacy Kilo symlink if present
+if [ -L "$HOME/.copilot.md" ]; then
+    rm -f "$HOME/.copilot.md"
+    echo "✓ Removed legacy Kilo ~/.copilot.md symlink."
 fi
 
 echo ""
