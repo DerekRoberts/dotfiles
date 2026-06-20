@@ -12,5 +12,8 @@ if [[ -f "$GUARDRAILS_SETUP" ]]; then
   bash "$GUARDRAILS_SETUP"
 else
   echo "Local clone not found at $AGENT_GUARDRAILS_DIR — fetching from bcgov/agent-guardrails..."
-  curl -fsSL https://raw.githubusercontent.com/bcgov/agent-guardrails/main/setup.sh | bash
+  TEMP_SETUP="$(mktemp)"
+  trap 'rm -f "$TEMP_SETUP"' EXIT
+  curl -fsSL https://raw.githubusercontent.com/bcgov/agent-guardrails/main/setup.sh -o "$TEMP_SETUP"
+  bash "$TEMP_SETUP"
 fi
