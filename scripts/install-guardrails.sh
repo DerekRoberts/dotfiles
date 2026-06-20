@@ -15,5 +15,6 @@ else
   TEMP_SETUP="$(mktemp)"
   trap 'rm -f "$TEMP_SETUP"' EXIT
   curl -fsSL https://raw.githubusercontent.com/bcgov/agent-guardrails/main/setup.sh -o "$TEMP_SETUP"
+  bash -n "$TEMP_SETUP"
   bash "$TEMP_SETUP"
 fi

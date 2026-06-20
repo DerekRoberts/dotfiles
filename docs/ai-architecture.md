@@ -94,10 +94,10 @@ PERSONAL_INSTRUCTIONS_URL="file://$HOME/Repos/dotfiles/config/ai/personal.instru
 
 ```bash
 ~/Repos/dotfiles/scripts/install-guardrails.sh
-# or directly:
-curl -fsSL https://raw.githubusercontent.com/bcgov/agent-guardrails/main/setup.sh | bash
 # or: ~/Repos/agent-guardrails/setup.sh
 ```
+
+The wrapper downloads `setup.sh` to a temp file, validates syntax, then runs it — not `curl | bash`.
 
 Re-sync personal block only:
 
