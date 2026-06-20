@@ -25,7 +25,8 @@ source ~/.bashrc
 Guardrails are separate — install once from [bcgov/agent-guardrails](https://github.com/bcgov/agent-guardrails):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bcgov/agent-guardrails/main/setup.sh | bash
+~/Repos/dotfiles/scripts/install-guardrails.sh
+# or: curl -fsSL https://raw.githubusercontent.com/bcgov/agent-guardrails/main/setup.sh | bash
 ```
 
 ## AI layout (summary)
@@ -35,8 +36,7 @@ curl -fsSL https://raw.githubusercontent.com/bcgov/agent-guardrails/main/setup.s
 | Work standards | `~/.config/Code/User/prompts/global.instructions.md` (org Copilot / VS Code) |
 | Personal instructions (canonical) | GitHub `main` → `config/ai/personal.instructions.md` |
 | Personal block in hub | Delimited section synced by `bundle-ai-instructions.sh` |
-| Guardrails | [bcgov/agent-guardrails](https://github.com/bcgov/agent-guardrails) — **not dotfiles** |
-| Skills catalogue | `npx skills add bcgov/agent-skills` → `~/.agents/skills/` |
+| Guardrails | [bcgov/agent-guardrails](https://github.com/bcgov/agent-guardrails) via `scripts/install-guardrails.sh` |
 | Prompt recipes (optional) | `docs/agent-prompt-card.md` |
 
 Tools symlinked to the hub: **VS Code Copilot**, **Cursor**, **Antigravity**.
@@ -60,7 +60,8 @@ Tools symlinked to the hub: **VS Code Copilot**, **Cursor**, **Antigravity**.
 ├── gitconfig
 ├── bin/updown
 ├── scripts/
-│   └── bundle-ai-instructions.sh   # fetch personal from GitHub → hub
+│   ├── bundle-ai-instructions.sh   # fetch personal from GitHub → hub
+│   └── install-guardrails.sh       # thin wrapper → agent-guardrails
 ├── config/
 │   ├── ai/personal.instructions.md # canonical source (on main)
 │   ├── antigravity/

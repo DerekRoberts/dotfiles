@@ -1,6 +1,6 @@
 # AI stack architecture (Derek)
 
-Four repos, four jobs. No profiles. Dotfiles does not install guardrails.
+Three-repo consumer model for Derek. Dotfiles does not install guardrails.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -37,12 +37,6 @@ Four repos, four jobs. No profiles. Dotfiles does not install guardrails.
 │  Install independently — dotfiles does not call this          │
 └─────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────┐
-│  bcgov/agent-skills                      ON-DEMAND SKILLS        │
-│  npx skills add bcgov/agent-skills        Task playbooks        │
-│  ~/.agents/skills/                       Not always-on rules  │
-└─────────────────────────────────────────────────────────────────┘
-
 Tool-specific (not in bundle):
   ~/.cursor/rules/ponytail.mdc     Ponytail (Cursor)
   docs/agent-prompt-card.md        Optional @ reference / cheat sheet
@@ -56,13 +50,12 @@ Tool-specific (not in bundle):
 | **agent-guardrails** | gitleaks, git/gh/npm safety wrappers, global hooks, git-setup.sh |
 | **dotfiles personal** | Roasts, coach mode, TS prefs, `unset GITHUB_TOKEN` |
 | **dotfiles scripts** | Personal block sync, tool symlinks |
-| **agent-skills** | github-actions, openshift-deployment, repo audit playbooks |
 | **Chat** | One-off scope, ponytail-review, “report only” |
 
 ## What does NOT go where
 
 - Personal opinions → **not** copilot-instructions
-- Always-on guardrails → **not** agent-skills (skills are invoked, not enforced)
+- Always-on guardrails → **not** instruction text (belongs in agent-guardrails)
 - Guardrails or git-setup → **not** copilot-instructions (belongs in agent-guardrails)
 - Guardrails install → **not** dotfiles (use agent-guardrails `setup.sh` directly)
 - Work standards merge → **not** dotfiles (org Copilot / VS Code owns the hub)
@@ -100,6 +93,8 @@ PERSONAL_INSTRUCTIONS_URL="file://$HOME/Repos/dotfiles/config/ai/personal.instru
 **Guardrails (agent-guardrails — separate, once):**
 
 ```bash
+~/Repos/dotfiles/scripts/install-guardrails.sh
+# or directly:
 curl -fsSL https://raw.githubusercontent.com/bcgov/agent-guardrails/main/setup.sh | bash
 # or: ~/Repos/agent-guardrails/setup.sh
 ```
@@ -165,13 +160,3 @@ Work standards are **not** managed by dotfiles. Update via org Copilot settings 
 That repo holds `.github/copilot-instructions.md` for org/project distribution. Dotfiles does not read it.
 
 Guardrails live in **bcgov/agent-guardrails**. Personal block sync and tool symlinks live in **dotfiles**.
-
-## agent-skills relationship
-
-Install once (or per skill):
-
-```bash
-npx skills add bcgov/agent-skills
-```
-
-Skills complement instructions — they don't replace them. Name skills in chat when you care which one fires.
