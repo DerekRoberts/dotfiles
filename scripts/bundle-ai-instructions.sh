@@ -84,7 +84,7 @@ def extract_delimited(text: str) -> str | None:
     return match.group(1) if match else None
 
 def strip_delimited(text: str) -> str:
-    pattern = r"\n?" + re.escape(START) + r"\n.*?\n" + re.escape(END) + r"\n?"
+    pattern = re.escape(START) + r"\n.*?\n" + re.escape(END) + r"\n?"
     return re.sub(pattern, "", text, flags=re.DOTALL)
 
 def strip_legacy_personal(text: str) -> str:
