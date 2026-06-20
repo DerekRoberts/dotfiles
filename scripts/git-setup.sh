@@ -27,6 +27,7 @@ print_skip() {
 }
 
 # Helper function to read user input safely (handles piped installation correctly)
+# shellcheck disable=SC2034
 read_input() {
   local prompt="$1"
   local -n ref="$2"
@@ -230,6 +231,7 @@ configure_commit_signing() {
         "id_ecdsa_sk.pub"
       )
       local pub_keys=()
+      local name
       for name in "${expected_names[@]}"; do
         local key_file="$ssh_dir/$name"
         if [[ -f "$key_file" ]]; then
@@ -240,6 +242,7 @@ configure_commit_signing() {
       if [[ ${#pub_keys[@]} -gt 0 ]]; then
         echo "Discovered public keys:"
         local idx=1
+        local key
         for key in "${pub_keys[@]}"; do
           echo "  $idx) $(basename "$key")"
           ((idx++))
@@ -251,6 +254,7 @@ configure_commit_signing() {
         
         if [[ "$selection" =~ ^[0-9]+$ ]] && [[ "$selection" -ge 1 ]] && [[ "$selection" -le ${#pub_keys[@]} ]]; then
           local selected_pub="${pub_keys[$((selection - 1))]}"
+          # shellcheck disable=SC2088
           key_path="~/.ssh/$(basename "$selected_pub")"
         fi
       else
