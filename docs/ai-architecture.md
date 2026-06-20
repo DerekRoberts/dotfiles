@@ -90,20 +90,19 @@ PERSONAL_INSTRUCTIONS_URL="file://$HOME/Repos/dotfiles/config/ai/personal.instru
   ~/Repos/dotfiles/setup.sh
 ```
 
-**Guardrails (agent-guardrails — separate, once). Do not use `curl | bash`:**
+**Guardrails (agent-guardrails — separate, once):**
 
 ```bash
-~/Repos/dotfiles/scripts/install-guardrails.sh
-```
-
-Or clone and run locally:
-
-```bash
+# clone + run
 git clone https://github.com/bcgov/agent-guardrails.git ~/Repos/agent-guardrails
 ~/Repos/agent-guardrails/setup.sh
-```
 
-The wrapper downloads `setup.sh` to a temp file, runs `bash -n`, then executes — never pipes curl straight into bash.
+# or curl bootstrap
+curl -fsSL https://raw.githubusercontent.com/bcgov/agent-guardrails/main/setup.sh | bash
+
+# or wrapper (local clone if present, else curl)
+~/Repos/dotfiles/scripts/install-guardrails.sh
+```
 
 Re-sync personal block only:
 

@@ -22,17 +22,25 @@ source ~/.bashrc
 
 `setup.sh` clones or updates the repo, wires local configs from the clone, then syncs the **personal** instructions block from GitHub `main` into your global prompt hub. Work standards in the hub come from org Copilot / VS Code — dotfiles does not manage those.
 
-Guardrails are separate — install once. **Do not use `curl | bash`** for guardrails; use the wrapper (downloads to a temp file, validates, then runs) or a local clone:
+Guardrails are separate — two install paths:
 
-```bash
-~/Repos/dotfiles/scripts/install-guardrails.sh
-```
-
-Or clone and run locally:
+**Clone and run (preferred when you will hack on guardrails):**
 
 ```bash
 git clone https://github.com/bcgov/agent-guardrails.git ~/Repos/agent-guardrails
 ~/Repos/agent-guardrails/setup.sh
+```
+
+**Or curl bootstrap (no clone yet):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bcgov/agent-guardrails/main/setup.sh | bash
+```
+
+The wrapper script uses whichever applies: local clone if present, otherwise curl:
+
+```bash
+~/Repos/dotfiles/scripts/install-guardrails.sh
 ```
 
 ## AI layout (summary)

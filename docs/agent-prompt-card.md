@@ -109,7 +109,7 @@ Example: `Use github-actions skill. Review .github/workflows/pr-open.yml for BC 
 | Work standards | Org Copilot / VS Code hub (not managed by dotfiles) |
 | Personal source (canonical) | GitHub `main`: `config/ai/personal.instructions.md` |
 | Personal sync | `~/Repos/dotfiles/scripts/bundle-ai-instructions.sh` |
-| Guardrails | `~/Repos/dotfiles/scripts/install-guardrails.sh` (not `curl \| bash`) |
+| Guardrails | clone `bcgov/agent-guardrails` + `setup.sh`, or `install-guardrails.sh` |
 | User skills | `~/.agents/skills/` |
 | Ponytail rule | `~/.cursor/rules/ponytail.mdc` |
 | Architecture doc | `~/Repos/dotfiles/docs/ai-architecture.md` |
