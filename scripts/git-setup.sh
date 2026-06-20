@@ -197,7 +197,6 @@ configure_commit_signing() {
   print_header "Signed Commits Configuration"
   
   # Check if signing is already configured
-  local choice=""
   local current_sign
   current_sign=$(command git config --global --get commit.gpgsign 2>/dev/null || true)
   local current_key
@@ -208,52 +207,30 @@ configure_commit_signing() {
     return 0
   fi
   
-  # Detect existing SSH keys
-  local ssh_key=""
-  local key_candidates=(
-    "id_ed25519"
-    "id_ecdsa_sk"
-    "id_ecdsa"
-    "id_rsa"
-  )
-  
-  for candidate in "${key_candidates[@]}"; do
-    if [[ -f "$HOME/.ssh/$candidate.pub" ]]; then
-      ssh_key="~/.ssh/$candidate"
-      break
-    fi
-  done
-  
-  if [[ -z "$ssh_key" ]]; then
-    print_info "No SSH signing key found."
-    print_info "To enable signed commits, generate a key first:"
-    print_info "  ssh-keygen -t ed25519 -C 'your@email.com' -f ~/.ssh/id_ed25519"
-    print_info "Then add the public key to GitHub as a signing key."
+  local choice=""
+  read_input "Do you want to enable SSH commit signing? [y/N]: " choice
+  if [[ "$choice" != "y" && "$choice" != "Y" ]]; then
+    print_skip "Keeping unsigned commits"
     return 0
   fi
   
-  print_info "Found SSH key: $ssh_key"
-  echo ""
-  echo "Signed commits prove your identity and show a 'Verified' badge on GitHub."
-  echo "Enable signed commits with this key?"
-  echo "  1) Yes - enable SSH commit signing"
-  echo "  2) Skip - do not configure signing"
-  local choice=""
-  read_input "Choose [1/2] (default: 2): " choice
+  local key_path=""
+  read_input "Enter the path to your public SSH key (e.g., ~/.ssh/id_ed25519.pub): " key_path
+  if [[ -z "$key_path" ]]; then
+    print_skip "No key path provided. Skipping signing configuration."
+    return 0
+  fi
   
-  case "${choice}" in
-    1)
-      set_git_config "commit.gpgsign" "true"
-      set_git_config "gpg.format" "ssh"
-      set_git_config "user.signingkey" "$ssh_key"
-      print_success "Commit signing enabled"
-      print_info "Add this key to GitHub as a signing key:"
-      print_info "  https://github.com/settings/keys"
-      ;;
-    *)
-      print_skip "Keeping unsigned commits"
-      ;;
-  esac
+  local expanded_path
+  expanded_path="${key_path/#\~/$HOME}"
+  if [[ ! -f "$expanded_path" ]]; then
+    print_info "Warning: File not found at $key_path"
+  fi
+  
+  command git config --global commit.gpgsign true
+  command git config --global gpg.format ssh
+  command git config --global user.signingkey "$key_path"
+  print_success "Commit signing configured using key: $key_path"
 }
 
 # Main execution
