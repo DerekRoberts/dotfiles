@@ -1,31 +1,86 @@
 # Derek's Dotfiles
 
-Personal system configurations, aliases, prompts, and tool settings for Fedora (Workstation and Kinoite) and KDE Plasma.
+Personal machine config: shell, git, personal-instruction sync (from GitHub main), and tool symlinks.
+
+See **[docs/ai-architecture.md](docs/ai-architecture.md)** for how this fits the wider AI stack.
+
+## Quick start
+
+**Fresh machine (curl bootstrap):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/DerekRoberts/dotfiles/main/setup.sh | bash
+source ~/.bashrc
+```
+
+**Already cloned:**
+
+```bash
+~/Repos/dotfiles/setup.sh
+source ~/.bashrc
+```
+
+`setup.sh` clones or updates the repo, wires local configs from the clone, then syncs the **personal** instructions block from GitHub `main` into your global prompt hub. Work standards in the hub come from org Copilot / VS Code — dotfiles does not manage those.
+
+Guardrails are separate — two install paths:
+
+**Clone and run (preferred when you will hack on guardrails):**
+
+```bash
+git clone https://github.com/bcgov/agent-guardrails.git ~/Repos/agent-guardrails
+~/Repos/agent-guardrails/setup.sh
+```
+
+**Or curl bootstrap (no clone yet):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bcgov/agent-guardrails/main/setup.sh | bash
+```
+
+The wrapper script uses whichever applies: local clone if present, otherwise curl:
+
+```bash
+~/Repos/dotfiles/scripts/install-guardrails.sh
+```
+
+## AI layout (summary)
+
+| Component | Location |
+|-----------|----------|
+| Work standards | `~/.config/Code/User/prompts/global.instructions.md` (org Copilot / VS Code) |
+| Personal instructions (canonical) | GitHub `main` → `config/ai/personal.instructions.md` |
+| Personal block in hub | Delimited section synced by `bundle-ai-instructions.sh` |
+| Guardrails | [bcgov/agent-guardrails](https://github.com/bcgov/agent-guardrails) via `scripts/install-guardrails.sh` |
+| Prompt recipes (optional) | `docs/agent-prompt-card.md` |
+
+Tools symlinked to the hub: **VS Code Copilot**, **Cursor**, **Antigravity**.
+
+## Environment variables
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `DOTFILES_DIR` | `~/Repos/dotfiles` | Clone location |
+| `DOTFILES_REPO` | `https://github.com/DerekRoberts/dotfiles.git` | Clone URL |
+| `DOTFILES_BRANCH` | `main` | Branch to clone/pull |
+| `DOTFILES_SKIP_PULL` | *(unset)* | Set to skip `git pull` |
+| `PERSONAL_INSTRUCTIONS_URL` | raw GitHub `main` URL | Override for local dev only |
+| `GLOBAL_INSTRUCTIONS_OUTPUT` | `~/.config/Code/User/prompts/global.instructions.md` | Prompt hub path |
 
 ## Structure
 
 ```
-├── README.md
-├── setup.sh            # Bootstrap installation script
-├── bashrc              # Clean shell aliases, functions, and optimized git prompt
-├── gitconfig           # Global git configurations (aliases, rebase defaults)
-├── bin/
-│   └── updown          # System updates and shutdown orchestration script
-└── config/
-    ├── antigravity/    # Antigravity desktop assistant instructions and launch flags
-    └── vscode/         # VS Code user settings
+├── setup.sh                        # clone/pull + wire + sync
+├── bashrc
+├── gitconfig
+├── bin/updown
+├── scripts/
+│   ├── bundle-ai-instructions.sh   # fetch personal from GitHub → hub
+│   └── install-guardrails.sh       # thin wrapper → agent-guardrails
+├── config/
+│   ├── ai/personal.instructions.md # canonical source (on main)
+│   ├── antigravity/
+│   └── vscode/
+└── docs/
+    ├── ai-architecture.md
+    └── agent-prompt-card.md
 ```
-
-## Setup Instructions
-
-Clone this repository to `~/Repos/dotfiles` and execute the bootstrap script:
-
-```bash
-cd ~/Repos
-git clone git@github.com:DerekRoberts/dotfiles.git
-cd dotfiles
-./setup.sh
-```
-
-Restart your terminal or run `source ~/.bashrc` to load changes.
-

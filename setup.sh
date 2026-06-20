@@ -1,46 +1,73 @@
 #!/bin/bash
 set -euo pipefail
 
-REPO_DIR="$HOME/Repos/dotfiles"
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/Repos/dotfiles}"
+DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/DerekRoberts/dotfiles.git}"
+DOTFILES_BRANCH="${DOTFILES_BRANCH:-main}"
+
+ensure_dotfiles_repo() {
+    if [[ ! -d "$DOTFILES_DIR/.git" ]]; then
+        echo "Cloning dotfiles to $DOTFILES_DIR..."
+        mkdir -p "$(dirname "$DOTFILES_DIR")"
+        command git clone -b "$DOTFILES_BRANCH" "$DOTFILES_REPO" "$DOTFILES_DIR"
+    elif [[ -z "${DOTFILES_SKIP_PULL:-}" ]]; then
+        local current_branch
+        current_branch="$(command git -C "$DOTFILES_DIR" branch --show-current 2>/dev/null || true)"
+        if [[ "$current_branch" == "$DOTFILES_BRANCH" ]]; then
+            echo "Updating dotfiles ($DOTFILES_BRANCH)..."
+            command git -C "$DOTFILES_DIR" pull --ff-only origin "$DOTFILES_BRANCH"
+        else
+            echo "Note: dotfiles on branch '$current_branch' — skipping pull (not on $DOTFILES_BRANCH)."
+        fi
+    fi
+}
+
+ensure_dotfiles_repo
+
+SETUP_PATH="$(readlink -f "${BASH_SOURCE[0]:-}" 2>/dev/null || true)"
+if [[ -z "$SETUP_PATH" ]] || [[ "$SETUP_PATH" != "$DOTFILES_DIR/setup.sh" ]]; then
+    exec bash "$DOTFILES_DIR/setup.sh" "$@"
+fi
+
+REPO_DIR="$DOTFILES_DIR"
 BASHRC="$HOME/.bashrc"
-LEGACY_SOURCE=". /home/derek/Documents/1-Personal/Linux/bashrc"
-NEW_SOURCE="if [ -f \"\$HOME/Repos/dotfiles/bashrc\" ]; then . \"\$HOME/Repos/dotfiles/bashrc\"; fi"
 
 echo "=== Bootstrapping Dotfiles ==="
 
 # 1. Clean up legacy bashrc sourcing and add new loader
 if [ -f "$BASHRC" ]; then
     echo "Updating ~/.bashrc sourcing..."
-    # Create backup
     cp "$BASHRC" "$BASHRC.bak.$(date +%s)"
-    
-    # Use python regex substitution to safely strip old blocks and avoid leaving orphaned 'fi' lines
-    python3 -c '
+
+    python3 - "$BASHRC" "$REPO_DIR" <<'PY'
 import sys, re
-path = sys.argv[1]
-with open(path, "r") as f:
+path, repo_dir = sys.argv[1], sys.argv[2]
+with open(path) as f:
     content = f.read()
 
-# 1. Strip the legacy personal Documents bashrc if present
 content = re.sub(r".*/Documents/1-Personal/Linux/bashrc.*\n*", "", content)
-
-# 2. Strip any existing repo dotfiles block (including the if/then/fi)
-content = re.sub(r"# Source personal dotfiles configuration\nif \[ -f \"\$HOME/Repos/dotfiles/bashrc\" \]; then\n    \. \"\$HOME/Repos/dotfiles/bashrc\"\nfi\n*", "", content)
-
-# 3. Remove any orphaned fi lines left behind by the old buggy script
+content = re.sub(
+    r"# Source personal dotfiles configuration\nif \[ -f \"[^\"]+/bashrc\" \]; then\n    \. \"[^\"]+/bashrc\"\nfi\n*",
+    "",
+    content,
+)
 content = re.sub(r"# Source personal dotfiles configuration\nfi\n*", "", content)
 
-# Write back with the clean block appended
-content = content.rstrip() + "\n\n# Source personal dotfiles configuration\nif [ -f \"$HOME/Repos/dotfiles/bashrc\" ]; then\n    . \"$HOME/Repos/dotfiles/bashrc\"\nfi\n"
+loader = (
+    f"\n\n# Source personal dotfiles configuration\n"
+    f'if [ -f "{repo_dir}/bashrc" ]; then\n'
+    f'    . "{repo_dir}/bashrc"\n'
+    f"fi\n"
+)
 with open(path, "w") as f:
-    f.write(content)
-' "$BASHRC"
+    f.write(content.rstrip() + loader)
+PY
     echo "✓ ~/.bashrc sourcing updated."
 fi
 
-# 2. Configure global Git include path
+# 2. Configure global Git include path (command git bypasses agent-guardrails shell wrapper)
 echo "Configuring Git global settings..."
-git config --global include.path "$REPO_DIR/gitconfig"
+command git config --global include.path "$REPO_DIR/gitconfig"
 echo "✓ Git include path set to reference $REPO_DIR/gitconfig."
 
 # 3. Symlink bin scripts
@@ -81,12 +108,16 @@ else
     echo "Note: VS Code config directory not found at $VSCODE_DIR. Skipping symlink."
 fi
 
-# 6. Symlink Antigravity global instructions & skills to Copilot paths
+# 6. Sync personal instructions into global prompt hub
+echo "Syncing personal instructions into global prompt hub..."
+bash "$REPO_DIR/scripts/bundle-ai-instructions.sh"
+
+GLOBAL_PROMPT_FILE="$HOME/.config/Code/User/prompts/global.instructions.md"
+
+# 7. Symlink personal tooling to the global prompt hub
 echo "Configuring Antigravity global instructions and skills..."
 mkdir -p "$HOME/.gemini/config"
 mkdir -p "$HOME/.gemini/antigravity"
-
-GLOBAL_PROMPT_FILE="$HOME/.config/Code/User/prompts/global.instructions.md"
 if [ -L "$HOME/.gemini/GEMINI.md" ] || [ ! -f "$HOME/.gemini/GEMINI.md" ]; then
     ln -sf "$GLOBAL_PROMPT_FILE" "$HOME/.gemini/GEMINI.md"
     echo "✓ Symlinked Antigravity global instructions to $GLOBAL_PROMPT_FILE."
@@ -101,6 +132,12 @@ else
     echo "WARNING: ~/.gemini/config/skills is a physical folder. Skipping symlink creation."
 fi
 
+# Remove erroneous circular skills symlink if present (~/.agents/skills/skills -> ~/.gemini/config/skills)
+if [ -L "$HOME/.agents/skills/skills" ]; then
+    rm -f "$HOME/.agents/skills/skills"
+    echo "✓ Removed erroneous ~/.agents/skills/skills circular symlink."
+fi
+
 if [ -L "$HOME/.gemini/antigravity/skills" ] || [ ! -d "$HOME/.gemini/antigravity/skills" ]; then
     ln -sf "$HOME/.gemini/config/skills" "$HOME/.gemini/antigravity/skills"
     echo "✓ Symlinked ~/.gemini/antigravity/skills to ~/.gemini/config/skills."
@@ -108,7 +145,7 @@ else
     echo "WARNING: ~/.gemini/antigravity/skills is a physical folder. Skipping symlink creation."
 fi
 
-# 7. Symlink Cursor global instructions to Copilot paths
+# 8. Symlink Cursor to the global prompt hub
 CURSOR_USER_DIR="$HOME/.config/Cursor/User"
 if [ -d "$CURSOR_USER_DIR" ]; then
     echo "Configuring Cursor global instructions..."
@@ -121,6 +158,26 @@ if [ -d "$CURSOR_USER_DIR" ]; then
     fi
 else
     echo "Note: Cursor config directory not found at $CURSOR_USER_DIR. Skipping instructions symlink."
+fi
+
+# 9. Symlink Ponytail rule into Cursor user rules
+PONYTAIL_RULE="$HOME/.copilot/installed-plugins/ponytail/ponytail/.cursor/rules/ponytail.mdc"
+if [ -f "$PONYTAIL_RULE" ]; then
+    mkdir -p "$HOME/.cursor/rules"
+    if [ -L "$HOME/.cursor/rules/ponytail.mdc" ] || [ ! -f "$HOME/.cursor/rules/ponytail.mdc" ]; then
+        ln -sf "$PONYTAIL_RULE" "$HOME/.cursor/rules/ponytail.mdc"
+        echo "✓ Symlinked Ponytail rule to ~/.cursor/rules/ponytail.mdc."
+    else
+        echo "WARNING: ~/.cursor/rules/ponytail.mdc is a physical file. Skipping symlink creation."
+    fi
+else
+    echo "Note: Ponytail rule not found at $PONYTAIL_RULE. Skipping Ponytail symlink."
+fi
+
+# 10. Remove legacy Kilo symlink if present
+if [ -L "$HOME/.copilot.md" ]; then
+    rm -f "$HOME/.copilot.md"
+    echo "✓ Removed legacy Kilo ~/.copilot.md symlink."
 fi
 
 echo ""
