@@ -215,10 +215,59 @@ configure_commit_signing() {
   fi
   
   local key_path=""
-  read_input "Enter the path to your public SSH key (e.g., ~/.ssh/id_ed25519.pub): " key_path
+  local scan_choice=""
+  read_input "Would you like the script to scan ~/.ssh/ for public keys? [y/N]: " scan_choice
+  
+  if [[ "$scan_choice" == "y" || "$scan_choice" == "Y" ]]; then
+    local ssh_dir="$HOME/.ssh"
+    if [[ -d "$ssh_dir" ]]; then
+      local expected_names=(
+        "id_ed25519.pub"
+        "id_rsa.pub"
+        "id_ecdsa.pub"
+        "id_dsa.pub"
+        "id_ed25519_sk.pub"
+        "id_ecdsa_sk.pub"
+      )
+      local pub_keys=()
+      for name in "${expected_names[@]}"; do
+        local key_file="$ssh_dir/$name"
+        if [[ -f "$key_file" ]]; then
+          pub_keys+=("$key_file")
+        fi
+      done
+      
+      if [[ ${#pub_keys[@]} -gt 0 ]]; then
+        echo "Discovered public keys:"
+        local idx=1
+        for key in "${pub_keys[@]}"; do
+          echo "  $idx) $(basename "$key")"
+          ((idx++))
+        done
+        echo "  $idx) Enter path manually"
+        
+        local selection=""
+        read_input "Choose a key [1-$idx]: " selection
+        
+        if [[ "$selection" =~ ^[0-9]+$ ]] && [[ "$selection" -ge 1 ]] && [[ "$selection" -le ${#pub_keys[@]} ]]; then
+          local selected_pub="${pub_keys[$((selection - 1))]}"
+          key_path="~/.ssh/$(basename "$selected_pub")"
+        fi
+      else
+        print_info "No expected public keys found in ~/.ssh/"
+      fi
+    else
+      print_info "Directory ~/.ssh/ does not exist."
+    fi
+  fi
+  
+  # Fallback to manual entry if not chosen during scan
   if [[ -z "$key_path" ]]; then
-    print_skip "No key path provided. Skipping signing configuration."
-    return 0
+    read_input "Enter the path to your public SSH key (e.g., ~/.ssh/id_ed25519.pub): " key_path
+    if [[ -z "$key_path" ]]; then
+      print_skip "No key path provided. Skipping signing configuration."
+      return 0
+    fi
   fi
   
   local expanded_path
