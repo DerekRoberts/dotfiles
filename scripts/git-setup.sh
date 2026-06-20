@@ -29,14 +29,13 @@ print_skip() {
 # Helper function to read user input safely (handles piped installation correctly)
 read_input() {
   local prompt="$1"
-  local var_name="$2"
-  printf -v "$var_name" '%s' ''
+  local -n ref="$2"
   if [ -t 0 ]; then
-    read -r -p "$prompt" "${var_name?}" || true
+    read -r -p "$prompt" ref || true
   elif [ -c /dev/tty ] && { true </dev/tty; } 2>/dev/null; then
-    read -r -p "$prompt" "${var_name?}" < /dev/tty || true
+    read -r -p "$prompt" ref < /dev/tty || true
   else
-    read -r -p "$prompt" "${var_name?}" < /dev/null || true
+    read -r -p "$prompt" ref < /dev/null || true
   fi
 }
 
@@ -103,7 +102,6 @@ configure_gitignore() {
     echo "  1) Replace - overwrite with recommended patterns"
     echo "  2) Append - add recommended patterns to existing file"
     echo "  3) Skip - keep current file unchanged"
-    local choice=""
     read_input "Choose [1/2/3] (default: 3): " choice
     
     case "${choice}" in
@@ -118,7 +116,7 @@ configure_gitignore() {
       2)
         print_info "Downloading gitignore patterns from bcgov/quickstart-openshift..."
         local temp_file
-        temp_file=$(mktemp)
+        temp_file=$(mktemp "${TMPDIR:-/tmp}/git-setup.XXXXXXXXXX")
         if curl -fsSL "$GITIGNORE_URL" -o "$temp_file"; then
           {
             echo ""
@@ -132,7 +130,7 @@ configure_gitignore() {
           rm "$temp_file"
         fi
         ;;
-      3)
+      *)
         print_skip "Keeping existing gitignore unchanged"
         ;;
     esac
@@ -213,15 +211,15 @@ configure_commit_signing() {
   # Detect existing SSH keys
   local ssh_key=""
   local key_candidates=(
-    "$HOME/.ssh/id_ed25519.pub"
-    "$HOME/.ssh/id_ecdsa_sk.pub"
-    "$HOME/.ssh/id_ecdsa.pub"
-    "$HOME/.ssh/id_rsa.pub"
+    "id_ed25519"
+    "id_ecdsa_sk"
+    "id_ecdsa"
+    "id_rsa"
   )
   
   for candidate in "${key_candidates[@]}"; do
-    if [[ -f "$candidate" ]]; then
-      ssh_key="$candidate"
+    if [[ -f "$HOME/.ssh/$candidate.pub" ]]; then
+      ssh_key="~/.ssh/$candidate"
       break
     fi
   done
