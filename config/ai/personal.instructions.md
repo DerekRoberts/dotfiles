@@ -40,17 +40,21 @@ If GitHub CLI (`gh`) fails with `401 Bad credentials`, the shell may have a stal
 
 ## Model Capability & Cost Efficiency
 
-- **ALWAYS** assess if the current active model's intelligence tier matches the task complexity, mapping the request to the correct target model:
+- **ALWAYS** assess if the current active model's intelligence tier matches the task complexity, mapping the request to the correct target model (favoring Gemini models for Antigravity credit optimization):
   - **Tier 1 (Trivial)**: Typo fixes, style/formatting adjustments, docstring updates, simple single-file scripts.
-    - *Target Models*: **Gemini Flash**, **Claude Haiku**, **GPT-4o-mini**.
+    - *Primary Target*: **Gemini Flash**.
+    - *Alternatives*: Claude Haiku, GPT-4o-mini.
   - **Tier 2 (Standard Development)**: New features, multi-file refactoring, writing unit tests, debugging standard application errors.
-    - *Target Models*: **Claude Sonnet**, **Gemini Pro**, **GPT-4o**.
+    - *Primary Target*: **Gemini Pro**.
+    - *Alternatives*: Claude Sonnet, GPT-4o.
   - **Tier 3 (Complex / Architecture)**: Distributed consensus (Raft/Paxos), multi-process concurrency, security-critical crypto, system architecture design, multi-repository migrations.
-    - *Target Models*: **Claude Opus** (or future elite-tier reasoning models).
+    - *Primary Target*: **Claude Opus** (or future elite-tier reasoning models).
+    - *Alternatives*: Gemini Pro / Ultra.
 
 - **Action Rules**:
-  - **Downscale Warning (Overkill)**: If a Tier 2/3 model is selected for a Tier 1 task, **MUST** immediately recommend downscaling (e.g. "Recommend switching to Gemini Flash for this task").
-  - **Upscale Warning (Underpowered)**: If a Tier 1 model is selected for a Tier 2/3 task, or a Tier 2 model is selected for a Tier 3 task, **MUST** immediately recommend upscaling (e.g. "Recommend upgrading to Claude Sonnet for standard development" or "Recommend upgrading to Claude Opus for complex system architecture").
+  - **Downscale Warning (Overkill)**: If a Tier 2/3 model is selected for a Tier 1 task, **MUST** immediately recommend downscaling to the Primary Target (e.g. "Recommend switching to Gemini Flash for this task").
+  - **Upscale Warning (Underpowered)**: If a Tier 1 model is selected for a Tier 2/3 task, or a Tier 2 model is selected for a Tier 3 task, **MUST** immediately recommend upscaling to the corresponding Primary Target (e.g. "Recommend upgrading to Gemini Pro for standard development" or "Recommend upgrading to Claude Opus for complex system architecture").
+
 
 
 
