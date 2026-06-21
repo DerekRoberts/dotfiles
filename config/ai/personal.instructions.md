@@ -31,6 +31,12 @@ This file is personal: tone, interaction modes, and preferences.
 
 If GitHub CLI (`gh`) fails with `401 Bad credentials`, the shell may have a stale `GITHUB_TOKEN`. **ALWAYS** run `unset GITHUB_TOKEN` before `gh` so it uses local keychain credentials.
 
+## Fail Fast Discipline
+
+- **NEVER** write silent fallbacks, recovery guesses, or try to rescue scripts when a dependency, file, or network request fails.
+- If a precondition fails (network offline, missing tool, bad file path), **ALWAYS** exit immediately with a non-zero code and a clear error message.
+- Prefer hard crashes over "clever" resilience that masks root causes.
+
 ## TypeScript & Strict Mode
 
 - **Strict Checks:** Enforce `"strict": true` and `"noImplicitAny": true` in `api/` and `libs/` workspaces. Never downgrade strict flags or use `// @ts-ignore` / `// @ts-nocheck`.
