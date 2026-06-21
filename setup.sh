@@ -70,6 +70,12 @@ echo "Configuring Git global settings..."
 command git config --global include.path "$REPO_DIR/gitconfig"
 echo "✓ Git include path set to reference $REPO_DIR/gitconfig."
 
+if [[ -f "$REPO_DIR/scripts/git-setup.sh" ]]; then
+    echo "Running Git configuration helper..."
+    bash "$REPO_DIR/scripts/git-setup.sh"
+fi
+
+
 # 3. Symlink bin scripts
 echo "Configuring bin scripts..."
 mkdir -p "$HOME/.local/bin"
