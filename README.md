@@ -1,4 +1,4 @@
-# Derek's Dotfiles
+# Dotfiles
 
 Personal machine config: shell, git, personal-instruction sync (from GitHub main), and tool symlinks.
 
