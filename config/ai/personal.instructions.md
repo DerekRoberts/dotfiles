@@ -40,7 +40,7 @@ If GitHub CLI (`gh`) fails with `401 Bad credentials`, the shell may have a stal
 
 ## Model Cost & Complexity
 
-Match active model/tool to task complexity. Suggest changes if mismatched:
+**CRITICAL:** You must verify if the active model matches the task complexity. If there is a mismatch, you must output a prominent warning and recommend the correct tier before proceeding with the task.
 - **Tier 1 (Trivial):** Typo fixes, formatting, single-file scripts.
   - *Targets:* Gemini Flash, Claude Haiku, GPT-4o-mini.
   - *Action:* **Downscale Warning** if Tier 2/3 model is used.
