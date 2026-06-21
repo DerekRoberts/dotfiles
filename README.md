@@ -50,7 +50,7 @@ The wrapper script uses whichever applies: local clone if present, otherwise cur
 | Work standards | `~/.config/Code/User/prompts/global.instructions.md` (org Copilot / VS Code) |
 | Personal instructions (canonical) | GitHub `main` → `config/ai/personal.instructions.md` |
 | Personal block in hub | Delimited section synced by `bundle-ai-instructions.sh` |
-| Guardrails | [bcgov/agent-guardrails](https://github.com/bcgov/agent-guardrails) via `scripts/install-guardrails.sh` |
+| Guardrails | [bcgov/agent-guardrails](https://github.com/bcgov/agent-guardrails) via `setup.sh` |
 | Prompt recipes (optional) | `docs/agent-prompt-card.md` |
 
 Tools symlinked to the hub: **VS Code Copilot**, **Cursor**, **Antigravity**.
