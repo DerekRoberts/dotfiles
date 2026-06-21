@@ -1,15 +1,16 @@
 #!/bin/bash
-# Sync personal instructions into the global prompt hub (delimiter-managed block).
-# Fetches canonical personal text from GitHub main (strict online source).
-# Work standards in the hub are owned elsewhere (org Copilot / VS Code).
+# Sync work standards and personal instructions into the global prompt hub.
+# Fetches upstream standards from GitHub (online) and personal text from dotfiles.
 #
 # Usage: ./scripts/bundle-ai-instructions.sh
 #
-# Override (local dev only):
+# Overrides (local dev only):
+#   STANDARDS_INSTRUCTIONS_URL=file:///path/to/copilot-instructions.md
 #   PERSONAL_INSTRUCTIONS_URL=file:///path/to/personal.instructions.md
 
 set -euo pipefail
 
+STANDARDS_URL="${STANDARDS_INSTRUCTIONS_URL:-https://raw.githubusercontent.com/bcgov/copilot-instructions/main/copilot-instructions.md}"
 PERSONAL_URL="${PERSONAL_INSTRUCTIONS_URL:-https://raw.githubusercontent.com/DerekRoberts/dotfiles/main/config/ai/personal.instructions.md}"
 OUTPUT_FILE="${GLOBAL_INSTRUCTIONS_OUTPUT:-$HOME/.config/Code/User/prompts/global.instructions.md}"
 
@@ -19,15 +20,44 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+STANDARDS_FILE=""
+STANDARDS_TEMP=""
 PERSONAL_FILE=""
 PERSONAL_TEMP=""
+
 cleanup() {
+  if [[ -n "$STANDARDS_TEMP" && -f "$STANDARDS_TEMP" ]]; then
+    rm -f "$STANDARDS_TEMP"
+  fi
   if [[ -n "$PERSONAL_TEMP" && -f "$PERSONAL_TEMP" ]]; then
     rm -f "$PERSONAL_TEMP"
   fi
 }
 trap cleanup EXIT
 
+# Fetch Standards Instructions
+if [[ "$STANDARDS_URL" == file://* ]]; then
+  STANDARDS_FILE="${STANDARDS_URL#file://}"
+  STANDARDS_SOURCE="$STANDARDS_FILE"
+elif [[ -f "$STANDARDS_URL" ]]; then
+  STANDARDS_FILE="$STANDARDS_URL"
+  STANDARDS_SOURCE="$STANDARDS_FILE"
+else
+  STANDARDS_TEMP="$(mktemp)"
+  STANDARDS_FILE="$STANDARDS_TEMP"
+  STANDARDS_SOURCE="$STANDARDS_URL"
+  if ! curl -fsSL --connect-timeout 15 "$STANDARDS_URL" -o "$STANDARDS_FILE"; then
+    echo -e "${RED}ERROR:${NC} Failed to fetch standards instructions from $STANDARDS_URL" >&2
+    exit 1
+  fi
+fi
+
+if [[ ! -s "$STANDARDS_FILE" ]]; then
+  echo -e "${RED}ERROR:${NC} Standards instructions empty at $STANDARDS_SOURCE" >&2
+  exit 1
+fi
+
+# Fetch Personal Instructions
 if [[ "$PERSONAL_URL" == file://* ]]; then
   PERSONAL_FILE="${PERSONAL_URL#file://}"
   PERSONAL_SOURCE="$PERSONAL_FILE"
@@ -50,24 +80,25 @@ if [[ ! -s "$PERSONAL_FILE" ]]; then
   exit 1
 fi
 
-echo -e "${BLUE}Syncing personal instructions...${NC}"
-echo -e "   Source:   $PERSONAL_SOURCE ($(wc -m < "$PERSONAL_FILE") chars)"
-echo -e "   Hub:      $OUTPUT_FILE"
+echo -e "${BLUE}Syncing instructions...${NC}"
+echo -e "   Standards: $STANDARDS_SOURCE ($(wc -m < "$STANDARDS_FILE") chars)"
+echo -e "   Personal:  $PERSONAL_SOURCE ($(wc -m < "$PERSONAL_FILE") chars)"
+echo -e "   Hub:       $OUTPUT_FILE"
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 
-ACTION=$(python3 - "$PERSONAL_FILE" "$OUTPUT_FILE" <<'PY'
-import re
+ACTION=$(python3 - "$STANDARDS_FILE" "$PERSONAL_FILE" "$OUTPUT_FILE" <<'PY'
 import sys
 from pathlib import Path
 
 START = "<!-- dotfiles:personal-instructions:start -->"
 END = "<!-- dotfiles:personal-instructions:end -->"
-LEGACY_HEADER = "# Personal Instructions (Derek)"
 
-personal_path = Path(sys.argv[1])
-output_path = Path(sys.argv[2])
+standards_path = Path(sys.argv[1])
+personal_path = Path(sys.argv[2])
+output_path = Path(sys.argv[3])
 
+standards = standards_path.read_text().rstrip() + "\n"
 personal = personal_path.read_text().rstrip() + "\n"
 
 def wrap(body: str) -> str:
@@ -76,72 +107,27 @@ def wrap(body: str) -> str:
 def normalize(text: str) -> str:
     return text.rstrip() + "\n"
 
-def extract_delimited(text: str) -> str | None:
-    pattern = (
-        re.escape(START) + r"\n(.*?)\n" + re.escape(END)
-    )
-    match = re.search(pattern, text, flags=re.DOTALL)
-    return match.group(1) if match else None
+new_content = standards + wrap(personal)
 
-def strip_delimited(text: str) -> str:
-    pattern = re.escape(START) + r"\n.*?\n" + re.escape(END) + r"\n?"
-    return re.sub(pattern, "", text, flags=re.DOTALL)
+if output_path.exists():
+    current_content = output_path.read_text()
+else:
+    current_content = ""
 
-def strip_legacy_personal(text: str) -> str:
-    idx = text.find(LEGACY_HEADER)
-    if idx == -1:
-        return text
-    return text[:idx].rstrip()
-
-def write_output(base: str, action: str) -> None:
-    block = wrap(personal)
-    if base:
-        output_path.write_text(base.rstrip() + block)
-    else:
-        output_path.write_text(block.lstrip("\n"))
-    print(action)
-
-text = output_path.read_text() if output_path.exists() else ""
-current = extract_delimited(text)
-
-if current is not None:
-    if normalize(current) == normalize(personal):
-        print("unchanged")
-    else:
-        base = strip_delimited(text).rstrip()
-        write_output(base, "updated")
-elif LEGACY_HEADER in text:
-    legacy_body = text[text.find(LEGACY_HEADER):]
-    if normalize(legacy_body) == normalize(personal):
-        base = strip_legacy_personal(text).rstrip()
-        write_output(base, "upgraded")
-    else:
-        base = strip_legacy_personal(text).rstrip()
-        write_output(base, "updated")
-elif text and normalize(personal) in normalize(text):
+if normalize(current_content) == normalize(new_content):
     print("unchanged")
 else:
-    base = text.rstrip() if text else ""
-    write_output(base, "appended" if text else "created")
+    output_path.write_text(new_content)
+    print("updated")
 PY
 )
 
 case "$ACTION" in
   unchanged)
-    echo -e "${GREEN}✓${NC} Personal instructions already up to date in $OUTPUT_FILE"
-    ;;
-  upgraded)
-    echo -e "${GREEN}✓${NC} Upgraded legacy personal block to delimited section in $OUTPUT_FILE"
+    echo -e "${GREEN}✓${NC} Instructions already up to date in $OUTPUT_FILE"
     ;;
   updated)
-    echo -e "${GREEN}✓${NC} Replaced stale personal instructions in $OUTPUT_FILE"
-    ;;
-  appended)
-    echo -e "${GREEN}✓${NC} Appended personal instructions to $OUTPUT_FILE"
-    ;;
-  created)
-    echo -e "${YELLOW}Note:${NC} Global hub did not exist — created $OUTPUT_FILE with personal block only."
-    echo -e "       Work standards come from org Copilot / VS Code."
+    echo -e "${GREEN}✓${NC} Concatenated and updated instructions in $OUTPUT_FILE"
     ;;
   *)
     echo -e "${RED}ERROR:${NC} Unexpected sync result: $ACTION" >&2
@@ -155,3 +141,4 @@ echo -e "   Total: $TOTAL_CHARS chars in hub"
 if [[ "$TOTAL_CHARS" -gt 8000 ]]; then
   echo -e "   ${YELLOW}Warning:${NC} Hub > 8,000 chars may reduce agent focus."
 fi
+
