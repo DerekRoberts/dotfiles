@@ -37,3 +37,10 @@ If GitHub CLI (`gh`) fails with `401 Bad credentials`, the shell may have a stal
 - **Definite Assignment:** NestJS/TypeORM decorator-initialized properties use `!`, not optional `?`.
 - **Explicit Typing:** No implicit `any` where inference isn't safe.
 - **Null & Relations:** Use `?.` or early returns unless loaded/validated.
+
+## Model Capability & Cost Efficiency
+
+- **ALWAYS** assess if the current active model's intelligence tier matches the task complexity:
+  - **Downscale Warning (Overkill)**: If a high-tier model (e.g., Claude 3.5 Sonnet, Claude 3 Opus, Gemini 1.5 Pro) is active for a trivial task (e.g., typo fixes, syntax corrections, docstring updates, simple script adjustments), **MUST** immediately recommend switching to a cheaper/faster model (e.g., Gemini 3.5 Flash, Claude 3 Haiku, GPT-4o-mini).
+  - **Upscale Warning (Underpowered)**: If a low-tier model (e.g., Gemini 3.5 Flash, Claude 3 Haiku, GPT-4o-mini) is selected for a highly complex task (e.g., large architectural changes, debugging deep asynchronous state/concurrency bugs, complex multi-file refactors, "rewriting the internet"), **MUST** immediately advise upgrading to a higher-tier model to prevent hallucinations and low-quality output.
+
