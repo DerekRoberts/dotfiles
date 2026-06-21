@@ -47,17 +47,8 @@ else
   STANDARDS_FILE="$STANDARDS_TEMP"
   STANDARDS_SOURCE="$STANDARDS_URL"
   if ! curl -fsSL --connect-timeout 15 "$STANDARDS_URL" -o "$STANDARDS_FILE"; then
-    if [[ -f "$OUTPUT_FILE" ]]; then
-      echo -e "${YELLOW}Warning:${NC} Failed to fetch standards from $STANDARDS_URL. Falling back to existing standards in $OUTPUT_FILE" >&2
-      if grep -q "^# Personal Instructions (Derek)" "$OUTPUT_FILE"; then
-        sed -e '/^# Personal Instructions (Derek)/,$d' "$OUTPUT_FILE" > "$STANDARDS_FILE"
-      else
-        cp "$OUTPUT_FILE" "$STANDARDS_FILE"
-      fi
-    else
-      echo -e "${RED}ERROR:${NC} Failed to fetch standards instructions from $STANDARDS_URL" >&2
-      exit 1
-    fi
+    echo -e "${RED}ERROR:${NC} Failed to fetch standards instructions from $STANDARDS_URL" >&2
+    exit 1
   fi
 fi
 
