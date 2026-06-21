@@ -37,3 +37,16 @@ If GitHub CLI (`gh`) fails with `401 Bad credentials`, the shell may have a stal
 - **Definite Assignment:** NestJS/TypeORM decorator-initialized properties use `!`, not optional `?`.
 - **Explicit Typing:** No implicit `any` where inference isn't safe.
 - **Null & Relations:** Use `?.` or early returns unless loaded/validated.
+
+## Model Cost & Complexity
+
+**CRITICAL:** You must verify if the active model matches the task complexity. If there is a mismatch, you must output a prominent warning and recommend the correct tier at both the very beginning and the very end of your response.
+- **Tier 1 (Trivial):** Typo fixes, formatting, single-file scripts.
+  - *Targets:* Gemini Flash, Claude Haiku, GPT-4o-mini.
+  - *Action:* **Downscale Warning** if Tier 2/3 model is used.
+- **Tier 2 (Standard):** New features, refactors, tests, agentic edits.
+  - *Targets:* Gemini Pro, Claude Sonnet, GPT-4o, Cursor Composer.
+  - *Action:* **Upscale Warning** if Tier 1 active; **Downscale Warning** if Tier 3 active.
+- **Tier 3 (Architecture):** Distributed systems, complex concurrency, crypto, multi-repo.
+  - *Targets:* Claude Opus, Gemini Ultra.
+  - *Action:* **Upscale Warning** if Tier 1/2 model is used.
