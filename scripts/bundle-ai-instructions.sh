@@ -5,12 +5,12 @@
 # Usage: ./scripts/bundle-ai-instructions.sh
 #
 # Overrides (local dev only):
-#   STANDARDS_INSTRUCTIONS_URL=file:///path/to/copilot-instructions.md
+#   STANDARDS_INSTRUCTIONS_URL=file:///path/to/instructions.md
 #   PERSONAL_INSTRUCTIONS_URL=file:///path/to/personal.instructions.md
 
 set -euo pipefail
 
-STANDARDS_URL="${STANDARDS_INSTRUCTIONS_URL:-https://raw.githubusercontent.com/bcgov/copilot-instructions/main/copilot-instructions.md}"
+STANDARDS_URL="${STANDARDS_INSTRUCTIONS_URL:-https://raw.githubusercontent.com/bcgov/agent-instructions/main/instructions.md}"
 PERSONAL_URL="${PERSONAL_INSTRUCTIONS_URL:-https://raw.githubusercontent.com/DerekRoberts/dotfiles/main/config/ai/personal.instructions.md}"
 OUTPUT_FILE="${GLOBAL_INSTRUCTIONS_OUTPUT:-$HOME/.config/Code/User/prompts/global.instructions.md}"
 
