@@ -40,20 +40,24 @@ If GitHub CLI (`gh`) fails with `401 Bad credentials`, the shell may have a stal
 
 ## Model Capability & Cost Efficiency
 
-- **ALWAYS** assess if the current active model's intelligence tier matches the task complexity, mapping the request to the correct target model (favoring Gemini models for Antigravity credit optimization):
-  - **Tier 1 (Trivial)**: Typo fixes, style/formatting adjustments, docstring updates, simple single-file scripts.
-    - *Primary Target*: **Gemini Flash**.
-    - *Alternatives*: Claude Haiku, GPT-4o-mini.
-  - **Tier 2 (Standard Development)**: New features, multi-file refactoring, writing unit tests, debugging standard application errors.
-    - *Primary Target*: **Gemini Pro**.
-    - *Alternatives*: Claude Sonnet, GPT-4o.
-  - **Tier 3 (Complex / Architecture)**: Distributed consensus (Raft/Paxos), multi-process concurrency, security-critical crypto, system architecture design, multi-repository migrations.
-    - *Primary Target*: **Claude Opus** (or future elite-tier reasoning models).
-    - *Alternatives*: Gemini Pro / Ultra.
+- **ALWAYS** assess if the current active model or orchestration tool (e.g. Cursor Composer) matches the task complexity.
+- **Value-for-Spend Rule**: Favor models with the highest reasoning-to-cost efficiency ratio (e.g., Gemini and Claude families). Recommend OpenAI GPT models only as a last resort due to lower relative value-for-spend on coding tasks.
 
-- **Action Rules**:
-  - **Downscale Warning (Overkill)**: If a Tier 2/3 model is selected for a Tier 1 task, **MUST** immediately recommend downscaling to the Primary Target (e.g. "Recommend switching to Gemini Flash for this task").
-  - **Upscale Warning (Underpowered)**: If a Tier 1 model is selected for a Tier 2/3 task, or a Tier 2 model is selected for a Tier 3 task, **MUST** immediately recommend upscaling to the corresponding Primary Target (e.g. "Recommend upgrading to Gemini Pro for standard development" or "Recommend upgrading to Claude Opus for complex system architecture").
+### Intelligence Tiers & Target Models:
+- **Tier 1 (Trivial Tasks)**: Typo fixes, minor formatting, docstring updates, simple single-file scripts.
+  - *Highly Recommended (Best Value)*: **Gemini Flash**, **Claude Haiku**.
+  - *Avoid if possible (Low Value/Overkill)*: GPT-4o-mini, or any Tier 2/3 model.
+- **Tier 2 (Standard Development)**: Implementation of new features, multi-file refactoring, writing unit tests, standard debugging.
+  - *Highly Recommended (Best Value)*: **Gemini Pro**, **Claude Sonnet** (or IDE orchestrators like Cursor Composer).
+  - *Avoid if possible (Low Value)*: GPT-4o.
+- **Tier 3 (Complex Systems & Architecture)**: Distributed consensus, multi-process concurrency, security-critical crypto, system architecture design, multi-repository migrations.
+  - *Highly Recommended (Best Value)*: **Claude Opus** (or equivalent elite reasoning models).
+  - *Alternatives*: Gemini Pro / Ultra (if Opus is unavailable).
+
+### Action Rules:
+- **Downscale Warning (Overkill)**: If a Tier 2/3 model is selected for a Tier 1 task, **MUST** immediately recommend downscaling to a Tier 1 model (e.g. "Recommend switching to Gemini Flash/Claude Haiku for this task to optimize cost").
+- **Upscale Warning (Underpowered)**: If a Tier 1 model is active for a Tier 2/3 task, or a Tier 2 model is active for a Tier 3 task, **MUST** immediately recommend upscaling to the corresponding target model (e.g. "Recommend upgrading to Gemini Pro/Claude Sonnet for standard development" or "Recommend upgrading to Claude Opus for complex system architecture").
+
 
 
 
