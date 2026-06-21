@@ -12,7 +12,7 @@ Three-repo consumer model for Derek. Dotfiles does not install guardrails.
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  ~/.config/Code/User/prompts/global.instructions.md             │
-│  = work standards + delimited personal block                    │
+│  = work standards + personal instructions                       │
 └────────────────────────────┬────────────────────────────────────┘
                              │  dotfiles/scripts/bundle-ai-instructions.sh
                              │  (fetch online standards + append personal instructions)
@@ -120,21 +120,9 @@ Canonical personal source (strict):
 https://raw.githubusercontent.com/DerekRoberts/dotfiles/main/config/ai/personal.instructions.md
 ```
 
-Delimiters in `global.instructions.md`:
+Direct concatenation in `global.instructions.md`:
 
-```html
-<!-- dotfiles:personal-instructions:start -->
-…content from config/ai/personal.instructions.md…
-<!-- dotfiles:personal-instructions:end -->
-```
-
-| State | Action |
-|-------|--------|
-| Delimited block matches personal file | No-op |
-| Delimited block differs | Replace block |
-| Legacy `# Personal Instructions (Derek)` section | Upgrade to delimited block (replace if stale) |
-| No personal section | Append delimited block |
-| Hub file missing | Create with personal block only |
+The script overwrites `global.instructions.md` entirely with the fetched work standards followed by the personal instructions.
 
 ## Environment variables
 

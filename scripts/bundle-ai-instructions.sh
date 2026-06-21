@@ -91,9 +91,6 @@ ACTION=$(python3 - "$STANDARDS_FILE" "$PERSONAL_FILE" "$OUTPUT_FILE" <<'PY'
 import sys
 from pathlib import Path
 
-START = "<!-- dotfiles:personal-instructions:start -->"
-END = "<!-- dotfiles:personal-instructions:end -->"
-
 standards_path = Path(sys.argv[1])
 personal_path = Path(sys.argv[2])
 output_path = Path(sys.argv[3])
@@ -101,13 +98,10 @@ output_path = Path(sys.argv[3])
 standards = standards_path.read_text().rstrip() + "\n"
 personal = personal_path.read_text().rstrip() + "\n"
 
-def wrap(body: str) -> str:
-    return f"\n{START}\n{body.rstrip()}\n{END}\n"
+new_content = standards + "\n" + personal
 
 def normalize(text: str) -> str:
     return text.rstrip() + "\n"
-
-new_content = standards + wrap(personal)
 
 if output_path.exists():
     current_content = output_path.read_text()
