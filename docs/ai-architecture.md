@@ -12,10 +12,10 @@ Three-repo consumer model for Derek. Dotfiles does not install guardrails.
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  ~/.config/Code/User/prompts/global.instructions.md             │
-│  = work standards + delimited personal block                    │
+│  = work standards + personal instructions                       │
 └────────────────────────────┬────────────────────────────────────┘
                              │  dotfiles/scripts/bundle-ai-instructions.sh
-                             │  (personal block: fetch GitHub main → append/replace/skip)
+                             │  (fetch online standards + append personal instructions)
                              ▲
 ┌────────────────────────────┴────────────────────────────────────┐
 │  GitHub main: DerekRoberts/dotfiles/config/ai/personal…md       │
@@ -58,7 +58,7 @@ Tool-specific (not in bundle):
 - Always-on guardrails → **not** instruction text (belongs in agent-guardrails)
 - Guardrails or git-setup → **not** copilot-instructions (belongs in agent-guardrails)
 - Guardrails install → **not** dotfiles (use agent-guardrails `setup.sh` directly)
-- Work standards merge → **not** dotfiles (org Copilot / VS Code owns the hub)
+- Work standards merge manual work → **not** needed (dotfiles bundle script handles it)
 - Instruction text → **not** dotfiles symlinks (symlinks wire tools only)
 - Kilo → dropped; Cursor + Copilot + Antigravity cover you
 
@@ -81,7 +81,7 @@ What `setup.sh` does:
 3. **Sync personal block** by fetching `config/ai/personal.instructions.md` from **GitHub main** (strict — not the local file)
 4. **Symlink** Cursor, Antigravity, Ponytail, skills
 
-Work standards must already be in the global hub (org Copilot / VS Code). Dotfiles never fetches or overwrites them.
+Work standards are fetched from `bcgov/copilot-instructions` (online) and concatenated with personal instructions.
 
 Personal changes take effect after **push to main** and re-run setup. Local dev override:
 
@@ -112,7 +112,7 @@ Re-sync personal block only:
 
 ## Personal block sync (bundle-ai-instructions.sh)
 
-Dotfiles does **not** read `bcgov/copilot-instructions` or manage work standards.
+Dotfiles reads `bcgov/copilot-instructions` (online) to bundle with personal instructions.
 
 Canonical personal source (strict):
 
@@ -120,21 +120,9 @@ Canonical personal source (strict):
 https://raw.githubusercontent.com/DerekRoberts/dotfiles/main/config/ai/personal.instructions.md
 ```
 
-Delimiters in `global.instructions.md`:
+Direct concatenation in `global.instructions.md`:
 
-```html
-<!-- dotfiles:personal-instructions:start -->
-…content from config/ai/personal.instructions.md…
-<!-- dotfiles:personal-instructions:end -->
-```
-
-| State | Action |
-|-------|--------|
-| Delimited block matches personal file | No-op |
-| Delimited block differs | Replace block |
-| Legacy `# Personal Instructions (Derek)` section | Upgrade to delimited block (replace if stale) |
-| No personal section | Append delimited block |
-| Hub file missing | Create with personal block only |
+The script overwrites `global.instructions.md` entirely with the fetched work standards followed by the personal instructions.
 
 ## Environment variables
 
@@ -147,7 +135,7 @@ Delimiters in `global.instructions.md`:
 
 ## After editing work standards
 
-Work standards are **not** managed by dotfiles. Update via org Copilot settings or VS Code — the hub updates outside this repo.
+Work standards are updated upstream in `bcgov/copilot-instructions`. Dotfiles pulls them on next bundle sync.
 
 ## After editing personal standards
 
@@ -162,6 +150,6 @@ Work standards are **not** managed by dotfiles. Update via org Copilot settings 
 
 ## copilot-instructions is standards text only
 
-That repo holds `.github/copilot-instructions.md` for org/project distribution. Dotfiles does not read it.
+That repo holds `copilot-instructions.md` for org/project distribution. Dotfiles reads it online.
 
 Guardrails live in **bcgov/agent-guardrails**. Personal block sync and tool symlinks live in **dotfiles**.
