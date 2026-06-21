@@ -47,8 +47,17 @@ else
   STANDARDS_FILE="$STANDARDS_TEMP"
   STANDARDS_SOURCE="$STANDARDS_URL"
   if ! curl -fsSL --connect-timeout 15 "$STANDARDS_URL" -o "$STANDARDS_FILE"; then
-    echo -e "${RED}ERROR:${NC} Failed to fetch standards instructions from $STANDARDS_URL" >&2
-    exit 1
+    if [[ -f "$OUTPUT_FILE" ]]; then
+      echo -e "${YELLOW}Warning:${NC} Failed to fetch standards from $STANDARDS_URL. Falling back to existing standards in $OUTPUT_FILE" >&2
+      if grep -q "^# Personal Instructions (Derek)" "$OUTPUT_FILE"; then
+        sed -e '/^# Personal Instructions (Derek)/,$d' "$OUTPUT_FILE" > "$STANDARDS_FILE"
+      else
+        cp "$OUTPUT_FILE" "$STANDARDS_FILE"
+      fi
+    else
+      echo -e "${RED}ERROR:${NC} Failed to fetch standards instructions from $STANDARDS_URL" >&2
+      exit 1
+    fi
   fi
 fi
 
@@ -95,8 +104,8 @@ standards_path = Path(sys.argv[1])
 personal_path = Path(sys.argv[2])
 output_path = Path(sys.argv[3])
 
-standards = standards_path.read_text().rstrip() + "\n"
-personal = personal_path.read_text().rstrip() + "\n"
+standards = standards_path.read_text(encoding="utf-8").rstrip() + "\n"
+personal = personal_path.read_text(encoding="utf-8").rstrip() + "\n"
 
 new_content = standards + "\n" + personal
 
@@ -104,14 +113,14 @@ def normalize(text: str) -> str:
     return text.rstrip() + "\n"
 
 if output_path.exists():
-    current_content = output_path.read_text()
+    current_content = output_path.read_text(encoding="utf-8")
 else:
     current_content = ""
 
 if normalize(current_content) == normalize(new_content):
     print("unchanged")
 else:
-    output_path.write_text(new_content)
+    output_path.write_text(new_content, encoding="utf-8")
     print("updated")
 PY
 )
