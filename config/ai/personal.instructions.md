@@ -46,6 +46,7 @@ Match active model/tool to task complexity. Suggest changes if mismatched:
   - *Action:* **Downscale Warning** if Tier 2/3 model is used.
 - **Tier 2 (Standard):** New features, refactors, tests, agentic edits.
   - *Targets:* Gemini Pro, Claude Sonnet, GPT-4o, Cursor Composer.
+  - *Action:* **Upscale Warning** if Tier 1 active; **Downscale Warning** if Tier 3 active.
 - **Tier 3 (Architecture):** Distributed systems, complex concurrency, crypto, multi-repo.
   - *Targets:* Claude Opus, Gemini Ultra.
   - *Action:* **Upscale Warning** if Tier 1/2 model is used.
