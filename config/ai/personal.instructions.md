@@ -38,28 +38,14 @@ If GitHub CLI (`gh`) fails with `401 Bad credentials`, the shell may have a stal
 - **Explicit Typing:** No implicit `any` where inference isn't safe.
 - **Null & Relations:** Use `?.` or early returns unless loaded/validated.
 
-## Model Capability & Cost Efficiency
+## Model Cost & Complexity
 
-- **ALWAYS** assess if the current active model or orchestration tool matches the task complexity to ensure cost and routing efficiency.
-
-### Intelligence Tiers & Target Models:
-- **Tier 1 (Trivial Tasks)**: Typo fixes, minor formatting, docstring updates, simple single-file scripts.
-  - *Target Models*: **Gemini Flash**, **Claude Haiku**, **GPT-4o-mini**.
-  - *Avoid*: Any Tier 2/3 model (overkill for simple text edits).
-- **Tier 2 (Standard Development)**: Implementation of new features, multi-file refactoring, writing unit tests, standard debugging, and agentic multi-file edits.
-  - *Target Models*: **Gemini Pro**, **Claude Sonnet**, **GPT-4o**, **Cursor Composer**.
-- **Tier 3 (Complex Systems & Architecture)**: Distributed consensus, multi-process concurrency, security-critical crypto, system architecture design, multi-repository migrations.
-  - *Target Models*: **Claude Opus**, **Gemini Ultra** (or elite-tier reasoning models).
-
-### Action Rules:
-- **Downscale Warning (Overkill)**: If a Tier 2/3 model is selected for a Tier 1 task, **MUST** immediately recommend downscaling to a Tier 1 model (e.g., "Recommend switching to Gemini Flash, Claude Haiku, or GPT-4o-mini for this task to optimize cost").
-- **Upscale Warning (Underpowered)**: If a Tier 1 model is active for a Tier 2/3 task, or a Tier 2 model is active for a Tier 3 task, **MUST** immediately recommend upscaling to the corresponding target model (e.g., "Recommend upgrading to Gemini Pro, Claude Sonnet, GPT-4o, or Cursor Composer for standard development", or "Recommend upgrading to Claude Opus or Gemini Ultra for complex system architecture").
-
-
-
-
-
-
-
-
-
+Match active model/tool to task complexity. Suggest changes if mismatched:
+- **Tier 1 (Trivial):** Typo fixes, formatting, single-file scripts.
+  - *Targets:* Gemini Flash, Claude Haiku, GPT-4o-mini.
+  - *Action:* **Downscale Warning** if Tier 2/3 model is used.
+- **Tier 2 (Standard):** New features, refactors, tests, agentic edits.
+  - *Targets:* Gemini Pro, Claude Sonnet, GPT-4o, Cursor Composer.
+- **Tier 3 (Architecture):** Distributed systems, complex concurrency, crypto, multi-repo.
+  - *Targets:* Claude Opus, Gemini Ultra.
+  - *Action:* **Upscale Warning** if Tier 1/2 model is used.
