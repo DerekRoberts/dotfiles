@@ -40,7 +40,16 @@ If GitHub CLI (`gh`) fails with `401 Bad credentials`, the shell may have a stal
 
 ## Model Capability & Cost Efficiency
 
-- **ALWAYS** assess if the current active model's intelligence tier matches the task complexity:
-  - **Downscale Warning (Overkill)**: If a high-tier model (e.g., Claude 3.5 Sonnet, Claude 3 Opus, Gemini 1.5 Pro) is active for a trivial task (e.g., typo fixes, syntax corrections, docstring updates, simple script adjustments), **MUST** immediately recommend switching to a cheaper/faster model (e.g., Gemini 3.5 Flash, Claude 3 Haiku, GPT-4o-mini).
-  - **Upscale Warning (Underpowered)**: If a low-tier model (e.g., Gemini 3.5 Flash, Claude 3 Haiku, GPT-4o-mini) is selected for a highly complex task (e.g., large architectural changes, debugging deep asynchronous state/concurrency bugs, complex multi-file refactors, "rewriting the internet"), **MUST** immediately advise upgrading to a higher-tier model to prevent hallucinations and low-quality output.
+- **ALWAYS** assess if the current active model's intelligence tier matches the task complexity, mapping the request to the correct target model:
+  - **Tier 1 (Trivial)**: Typo fixes, style/formatting adjustments, docstring updates, simple single-file scripts.
+    - *Target Models*: **Gemini 3.5 Flash**, **Claude 3 Haiku**, **GPT-4o-mini**.
+  - **Tier 2 (Standard Development)**: New features, multi-file refactoring, writing unit tests, debugging standard application errors.
+    - *Target Models*: **Claude 3.5 Sonnet**, **Gemini 1.5 Pro**, **GPT-4o**.
+  - **Tier 3 (Complex / Architecture)**: Distributed consensus (Raft/Paxos), multi-process concurrency, security-critical crypto, system architecture design, multi-repository migrations.
+    - *Target Models*: **Claude 3 Opus** (or future elite-tier reasoning models).
+
+- **Action Rules**:
+  - **Downscale Warning (Overkill)**: If a Tier 2/3 model is selected for a Tier 1 task, **MUST** immediately recommend downscaling (e.g. "Recommend switching to Gemini 3.5 Flash for this task").
+  - **Upscale Warning (Underpowered)**: If a Tier 1 model is selected for a Tier 2/3 task, or a Tier 2 model is selected for a Tier 3 task, **MUST** immediately recommend upscaling (e.g. "Recommend upgrading to Claude 3.5 Sonnet for standard development" or "Recommend upgrading to Claude 3 Opus for complex system architecture").
+
 
