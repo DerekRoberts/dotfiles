@@ -4,7 +4,7 @@ Three-repo consumer model for Derek. Dotfiles does not install guardrails.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  bcgov/copilot-instructions          WORK STANDARDS (upstream)  │
+│  bcgov/agent-instructions            WORK STANDARDS (upstream)  │
 │  .github/copilot-instructions.md     Shared BC Gov text (≤4k)   │
 │  (org Copilot injects into VS Code hub — not read by dotfiles)  │
 └────────────────────────────┬────────────────────────────────────┘
@@ -46,7 +46,7 @@ Tool-specific (not in bundle):
 
 | Put it in… | Examples |
 |------------|----------|
-| **copilot-instructions** | Hard stops, git workflow, org macros, 4k-cap shared text |
+| **agent-instructions** | Hard stops, git workflow, org macros, 4k-cap shared text |
 | **agent-guardrails** | gitleaks, git/gh/npm safety wrappers, global hooks, git-setup.sh |
 | **dotfiles personal** | Roasts, coach mode, TS prefs, `unset GITHUB_TOKEN` |
 | **dotfiles scripts** | Personal block sync, tool symlinks |
@@ -54,9 +54,9 @@ Tool-specific (not in bundle):
 
 ## What does NOT go where
 
-- Personal opinions → **not** copilot-instructions
+- Personal opinions → **not** agent-instructions
 - Always-on guardrails → **not** instruction text (belongs in agent-guardrails)
-- Guardrails or git-setup → **not** copilot-instructions (belongs in agent-guardrails)
+- Guardrails or git-setup → **not** agent-instructions (belongs in agent-guardrails)
 - Guardrails install → **not** dotfiles (use agent-guardrails `setup.sh` directly)
 - Work standards merge manual work → **not** needed (dotfiles bundle script handles it)
 - Instruction text → **not** dotfiles symlinks (symlinks wire tools only)
@@ -81,7 +81,7 @@ What `setup.sh` does:
 3. **Sync personal block** by fetching `config/ai/personal.instructions.md` from **GitHub main** (strict — not the local file)
 4. **Symlink** Cursor, Antigravity, Ponytail, skills
 
-Work standards are fetched from `bcgov/copilot-instructions` (online) and concatenated with personal instructions.
+Work standards are fetched from `bcgov/agent-instructions` (online) and concatenated with personal instructions.
 
 Personal changes take effect after **push to main** and re-run setup. Local dev override:
 
@@ -112,7 +112,7 @@ Re-sync personal block only:
 
 ## Personal block sync (bundle-ai-instructions.sh)
 
-Dotfiles reads `bcgov/copilot-instructions` (online) to bundle with personal instructions.
+Dotfiles reads `bcgov/agent-instructions` (online) to bundle with personal instructions.
 
 Canonical personal source (strict):
 
@@ -135,7 +135,7 @@ The script overwrites `global.instructions.md` entirely with the fetched work st
 
 ## After editing work standards
 
-Work standards are updated upstream in `bcgov/copilot-instructions`. Dotfiles pulls them on next bundle sync.
+Work standards are updated upstream in `bcgov/agent-instructions`. Dotfiles pulls them on next bundle sync.
 
 ## After editing personal standards
 
@@ -148,8 +148,8 @@ Work standards are updated upstream in `bcgov/copilot-instructions`. Dotfiles pu
 1. Edit `~/Repos/agent-guardrails/` (hooks, git-safety.sh, setup.sh)
 2. Run `~/Repos/agent-guardrails/setup.sh` — **not** dotfiles
 
-## copilot-instructions is standards text only
+## agent-instructions is standards text only
 
-That repo holds `copilot-instructions.md` for org/project distribution. Dotfiles reads it online.
+That repo holds `instructions.md` for org/project distribution. Dotfiles reads it online.
 
 Guardrails live in **bcgov/agent-guardrails**. Personal block sync and tool symlinks live in **dotfiles**.
