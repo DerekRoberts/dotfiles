@@ -97,9 +97,26 @@ configure_gitignore() {
   local current_gitignore
   current_gitignore=$(command git config --global --get core.excludesfile 2>/dev/null || true)
   
+  local temp_file
+  temp_file=$(mktemp "${TMPDIR:-/tmp}/git-setup-gitignore.XXXXXXXXXX")
+  
+  print_info "Downloading recommended gitignore patterns..."
+  if ! curl -fsSL "$GITIGNORE_URL" -o "$temp_file"; then
+    print_info "Failed to download gitignore patterns, skipping gitignore configuration"
+    rm -f "$temp_file"
+    return 0
+  fi
+  
   if [[ -n "$current_gitignore" ]] && [[ -f "$current_gitignore" ]]; then
     print_skip "core.excludesfile already set to: $current_gitignore"
-    echo "File exists. How would you like to proceed?"
+    
+    if cmp -s "$current_gitignore" "$temp_file"; then
+      print_skip "Existing gitignore matches recommended patterns, skipping setup"
+      rm -f "$temp_file"
+      return 0
+    fi
+    
+    echo "File exists and differs from recommended patterns. How would you like to proceed?"
     echo "  1) Replace - overwrite with recommended patterns"
     echo "  2) Append - add recommended patterns to existing file"
     echo "  3) Skip - keep current file unchanged"
@@ -107,43 +124,34 @@ configure_gitignore() {
     
     case "${choice}" in
       1)
-        print_info "Downloading gitignore patterns from bcgov/quickstart-openshift..."
-        if curl -fsSL "$GITIGNORE_URL" -o "$current_gitignore"; then
+        if cp "$temp_file" "$current_gitignore"; then
           print_success "Replaced $current_gitignore with recommended patterns"
         else
-          print_info "Failed to download gitignore patterns"
+          print_info "Failed to replace gitignore patterns"
         fi
         ;;
       2)
-        print_info "Downloading gitignore patterns from bcgov/quickstart-openshift..."
-        local temp_file
-        temp_file=$(mktemp "${TMPDIR:-/tmp}/git-setup.XXXXXXXXXX")
-        if curl -fsSL "$GITIGNORE_URL" -o "$temp_file"; then
-          {
-            echo ""
-            echo "# Patterns from bcgov/quickstart-openshift"
-            cat "$temp_file"
-          } >> "$current_gitignore"
-          rm "$temp_file"
-          print_success "Appended recommended patterns to $current_gitignore"
-        else
-          print_info "Failed to download gitignore patterns"
-          rm "$temp_file"
-        fi
+        {
+          echo ""
+          echo "# Patterns from bcgov/quickstart-openshift"
+          cat "$temp_file"
+        } >> "$current_gitignore"
+        print_success "Appended recommended patterns to $current_gitignore"
         ;;
       *)
         print_skip "Keeping existing gitignore unchanged"
         ;;
     esac
   else
-    print_info "Downloading global gitignore from bcgov/quickstart-openshift..."
-    if curl -fsSL "$GITIGNORE_URL" -o "$GLOBAL_GITIGNORE"; then
+    if cp "$temp_file" "$GLOBAL_GITIGNORE"; then
       command git config --global core.excludesfile "$GLOBAL_GITIGNORE"
       print_success "Set core.excludesfile = $GLOBAL_GITIGNORE"
     else
-      print_info "Failed to download gitignore, skipping"
+      print_info "Failed to save global gitignore"
     fi
   fi
+  
+  rm -f "$temp_file"
 }
 
 # Apply recommended git configurations
