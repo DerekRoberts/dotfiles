@@ -99,11 +99,11 @@ configure_gitignore() {
   
   local temp_file
   temp_file=$(mktemp "${TMPDIR:-/tmp}/git-setup-gitignore.XXXXXXXXXX")
+  trap 'rm -f "$temp_file"' EXIT
   
   print_info "Downloading recommended gitignore patterns..."
   if ! curl -fsSL "$GITIGNORE_URL" -o "$temp_file"; then
     print_info "Failed to download gitignore patterns, skipping gitignore configuration"
-    rm -f "$temp_file"
     return 0
   fi
   
@@ -112,7 +112,6 @@ configure_gitignore() {
     
     if cmp -s "$current_gitignore" "$temp_file"; then
       print_skip "Existing gitignore matches recommended patterns, skipping setup"
-      rm -f "$temp_file"
       return 0
     fi
     
@@ -131,12 +130,15 @@ configure_gitignore() {
         fi
         ;;
       2)
-        {
+        if {
           echo ""
           echo "# Patterns from bcgov/quickstart-openshift"
           cat "$temp_file"
-        } >> "$current_gitignore"
-        print_success "Appended recommended patterns to $current_gitignore"
+        } >> "$current_gitignore"; then
+          print_success "Appended recommended patterns to $current_gitignore"
+        else
+          print_info "Failed to append patterns to $current_gitignore"
+        fi
         ;;
       *)
         print_skip "Keeping existing gitignore unchanged"
@@ -152,6 +154,7 @@ configure_gitignore() {
   fi
   
   rm -f "$temp_file"
+  trap - EXIT
 }
 
 # Apply recommended git configurations
