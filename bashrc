@@ -69,7 +69,8 @@ alias gs='git status'
 alias ls='ls --color=auto'
 alias grep='grep --color=auto'
 alias c='code'
-alias a='~/.local/share/antigravity/antigravity'
+alias a='~/.local/bin/antigravity/antigravity'
+alias a-ide='~/.local/bin/antigravity-ide/antigravity-ide'
 
 # Fixes
 alias fix-wifi="sudo systemctl stop NetworkManager && sudo modprobe -r ath11k_pci && sudo modprobe ath11k_pci && sudo systemctl start NetworkManager"
