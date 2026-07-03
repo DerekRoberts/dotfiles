@@ -110,6 +110,8 @@ configure_gitignore() {
   print_info "Downloading recommended gitignore patterns..."
   if ! curl -fsSL "$GITIGNORE_URL" -o "$TEMP_GITIGNORE_FILE"; then
     print_info "Failed to download gitignore patterns, skipping gitignore configuration"
+    rm -f "$TEMP_GITIGNORE_FILE"
+    TEMP_GITIGNORE_FILE=""
     return 0
   fi
   
@@ -118,6 +120,8 @@ configure_gitignore() {
     
     if cmp -s "$current_gitignore" "$TEMP_GITIGNORE_FILE"; then
       print_skip "Existing gitignore matches recommended patterns, skipping setup"
+      rm -f "$TEMP_GITIGNORE_FILE"
+      TEMP_GITIGNORE_FILE=""
       return 0
     fi
     
