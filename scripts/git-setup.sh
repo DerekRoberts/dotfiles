@@ -3,6 +3,14 @@ set -euo pipefail
 
 GITIGNORE_URL="https://raw.githubusercontent.com/bcgov/quickstart-openshift/main/.gitignore"
 GLOBAL_GITIGNORE="$HOME/.gitignore_global"
+TEMP_GITIGNORE_FILE=""
+
+cleanup() {
+  if [[ -n "${TEMP_GITIGNORE_FILE:-}" ]]; then
+    rm -f "$TEMP_GITIGNORE_FILE"
+  fi
+}
+trap cleanup EXIT
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -97,21 +105,23 @@ configure_gitignore() {
   local current_gitignore
   current_gitignore=$(command git config --global --get core.excludesfile 2>/dev/null || true)
   
-  local temp_file
-  temp_file=$(mktemp "${TMPDIR:-/tmp}/git-setup-gitignore.XXXXXXXXXX")
-  trap 'rm -f "$temp_file"' EXIT
+  TEMP_GITIGNORE_FILE=$(mktemp "${TMPDIR:-/tmp}/git-setup-gitignore.XXXXXXXXXX")
   
   print_info "Downloading recommended gitignore patterns..."
-  if ! curl -fsSL "$GITIGNORE_URL" -o "$temp_file"; then
+  if ! curl -fsSL "$GITIGNORE_URL" -o "$TEMP_GITIGNORE_FILE"; then
     print_info "Failed to download gitignore patterns, skipping gitignore configuration"
+    rm -f "$TEMP_GITIGNORE_FILE"
+    TEMP_GITIGNORE_FILE=""
     return 0
   fi
   
   if [[ -n "$current_gitignore" ]] && [[ -f "$current_gitignore" ]]; then
     print_skip "core.excludesfile already set to: $current_gitignore"
     
-    if cmp -s "$current_gitignore" "$temp_file"; then
+    if cmp -s "$current_gitignore" "$TEMP_GITIGNORE_FILE"; then
       print_skip "Existing gitignore matches recommended patterns, skipping setup"
+      rm -f "$TEMP_GITIGNORE_FILE"
+      TEMP_GITIGNORE_FILE=""
       return 0
     fi
     
@@ -123,7 +133,7 @@ configure_gitignore() {
     
     case "${choice}" in
       1)
-        if cp "$temp_file" "$current_gitignore"; then
+        if cp "$TEMP_GITIGNORE_FILE" "$current_gitignore"; then
           print_success "Replaced $current_gitignore with recommended patterns"
         else
           print_info "Failed to replace gitignore patterns"
@@ -133,7 +143,7 @@ configure_gitignore() {
         if {
           echo ""
           echo "# Patterns from bcgov/quickstart-openshift"
-          cat "$temp_file"
+          cat "$TEMP_GITIGNORE_FILE"
         } >> "$current_gitignore"; then
           print_success "Appended recommended patterns to $current_gitignore"
         else
@@ -145,7 +155,7 @@ configure_gitignore() {
         ;;
     esac
   else
-    if cp "$temp_file" "$GLOBAL_GITIGNORE"; then
+    if cp "$TEMP_GITIGNORE_FILE" "$GLOBAL_GITIGNORE"; then
       command git config --global core.excludesfile "$GLOBAL_GITIGNORE"
       print_success "Set core.excludesfile = $GLOBAL_GITIGNORE"
     else
@@ -153,8 +163,8 @@ configure_gitignore() {
     fi
   fi
   
-  rm -f "$temp_file"
-  trap - EXIT
+  rm -f "$TEMP_GITIGNORE_FILE"
+  TEMP_GITIGNORE_FILE=""
 }
 
 # Apply recommended git configurations
