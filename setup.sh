@@ -82,6 +82,9 @@ mkdir -p "$HOME/.local/bin"
 ln -sf "$REPO_DIR/bin/updown" "$HOME/.local/bin/updown"
 chmod +x "$REPO_DIR/bin/updown"
 echo "✓ Symlinked updown to ~/.local/bin/updown."
+ln -sf "$REPO_DIR/bin/update-antigravity" "$HOME/.local/bin/update-antigravity"
+chmod +x "$REPO_DIR/bin/update-antigravity"
+echo "✓ Symlinked update-antigravity to ~/.local/bin/update-antigravity."
 
 # 4. Symlink Antigravity Configs
 echo "Configuring Antigravity..."
