@@ -16,7 +16,7 @@ set_git_prompt() {
     
     # Extract branch from the header line (e.g. ## main...origin/main)
     local first_line="${lines[0]}"
-    local branch="${first_line#\#\# }"
+    local branch="${first_line#"## "}"
     branch="${branch%%...*}"
     
     # Handle initial commit or detached HEAD
@@ -41,9 +41,8 @@ set_git_prompt() {
 }
 
 # Prompt and welcome
-export PS1="\[\033[34m\]\w\[\033[0m\] \$(set_git_prompt)\n$ "
-
 if [[ $- == *i* ]]; then
+    export PS1="\[\033[34m\]\w\[\033[0m\] \$(set_git_prompt)\n$ "
     echo "Welcome!  Config: ${BASH_SOURCE[0]}"
 fi
 
