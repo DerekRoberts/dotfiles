@@ -1,7 +1,5 @@
 #!/bin/bash
 # Script to safely update Google Antigravity and Antigravity IDE on Linux/Fedora
-# Manages process termination, directory cleaning, direct extraction, and SELinux relabeling.
-
 set -euo pipefail
 
 DOWNLOADS_DIR="$HOME/Downloads"
@@ -26,63 +24,35 @@ if [[ ! -f "$CORE_TARBALL" && ! -f "$IDE_TARBALL" ]]; then
     exit 1
 fi
 
-# Function to kill running instances safely
-kill_antigravity_processes() {
-    echo "Terminating running Antigravity processes to prevent file locks..."
-    pkill -9 -f headroom 2>/dev/null || true
-    pkill -9 -f antigravity 2>/dev/null || true
-    echo "✓ Stopped background processes."
-}
+echo "Terminating running Antigravity processes to prevent file locks..."
+pkill -9 -f headroom 2>/dev/null || true
+pkill -9 -f antigravity 2>/dev/null || true
+echo "✓ Stopped background processes."
 
-# Function to update Antigravity Core
-update_core() {
-    echo -e "${BLUE}Updating Antigravity Core...${NC}"
-    mkdir -p "$TARGET_CORE"
-    
-    echo "Cleaning target directory: $TARGET_CORE"
-    rm -rf "${TARGET_CORE:?}"/*
-    
-    echo "Extracting $CORE_TARBALL..."
-    tar -xzf "$CORE_TARBALL" -C "$TARGET_CORE" --strip-components=1
-    echo "✓ Extracted Core files."
-}
+update_app() {
+    local name="$1"
+    local tarball="$2"
+    local target="$3"
 
-# Function to update Antigravity IDE
-update_ide() {
-    echo -e "${BLUE}Updating Antigravity IDE...${NC}"
-    mkdir -p "$TARGET_IDE"
-    
-    echo "Cleaning target directory: $TARGET_IDE"
-    rm -rf "${TARGET_IDE:?}"/*
-    
-    echo "Extracting $IDE_TARBALL..."
-    tar -xzf "$IDE_TARBALL" -C "$TARGET_IDE" --strip-components=1
-    echo "✓ Extracted IDE files."
-}
-
-# Function to apply SELinux labeling
-apply_selinux_contexts() {
-    if command -v restorecon >/dev/null 2>&1; then
-        echo -e "${BLUE}Restoring SELinux security contexts...${NC}"
-        restorecon -R -v "$TARGET_CORE" "$TARGET_IDE"
-        echo "✓ SELinux labeling completed successfully."
-    else
-        echo -e "${BLUE}SELinux restorecon utility not found. Skipping context labeling.${NC}"
+    if [[ -f "$tarball" ]]; then
+        echo -e "${BLUE}Updating $name...${NC}"
+        mkdir -p "$target"
+        echo "Cleaning target directory: $target"
+        rm -rf "${target:?}"/*
+        echo "Extracting $tarball..."
+        tar -xzf "$tarball" -C "$target" --strip-components=1
+        echo "✓ Extracted $name files."
     fi
 }
 
-# Run the update steps
-kill_antigravity_processes
+update_app "Antigravity Core" "$CORE_TARBALL" "$TARGET_CORE"
+update_app "Antigravity IDE" "$IDE_TARBALL" "$TARGET_IDE"
 
-if [[ -f "$CORE_TARBALL" ]]; then
-    update_core
+if command -v restorecon >/dev/null 2>&1; then
+    echo -e "${BLUE}Restoring SELinux security contexts...${NC}"
+    restorecon -R -v "$TARGET_CORE" "$TARGET_IDE"
+    echo "✓ SELinux labeling completed successfully."
 fi
-
-if [[ -f "$IDE_TARBALL" ]]; then
-    update_ide
-fi
-
-apply_selinux_contexts
 
 echo -e "${GREEN}✅ Update completed successfully!${NC}"
 echo "You can now launch the IDE or CLI."

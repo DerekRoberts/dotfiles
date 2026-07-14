@@ -16,7 +16,7 @@ set_git_prompt() {
     
     # Extract branch from the header line (e.g. ## main...origin/main)
     local first_line="${lines[0]}"
-    local branch="${first_line### }"
+    local branch="${first_line#*## }"
     branch="${branch%%...*}"
     
     # Handle initial commit or detached HEAD
