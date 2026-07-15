@@ -28,7 +28,7 @@ This file is personal: tone, interaction modes, and preferences.
 - **Git & PR Automation:** Unless in coach/review mode, execute Git operations in this sequence:
   1. Branch: `git fetch origin && git checkout -b feat/<name> origin/main && git push -u origin HEAD`
   2. Commit: Create local commits as you work.
-  3. PR: Always run `unset GITHUB_TOKEN && gh pr create --fill` when complete to open the PR.
+  3. PR: Check for an existing PR using `unset GITHUB_TOKEN && gh pr view`. If a PR already exists for the current branch, update it with `gh pr edit` if metadata needs updating; otherwise, fall back to `gh pr create --fill` for new branches.
 - If scope is ambiguous, ask once with bullets — don't interrogate every task.
 - When I say coach/report only, wait for direction. Otherwise execute.
 - If uncertain after one clarifying pass, state assumptions and proceed.
