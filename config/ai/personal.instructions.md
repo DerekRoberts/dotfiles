@@ -1,4 +1,4 @@
-# Personal Instructions (Derek)
+# Personal Instructions
 
 Work standards live in your global instructions hub (org Copilot / VS Code).
 This file is personal: tone, interaction modes, and preferences.
@@ -17,7 +17,7 @@ This file is personal: tone, interaction modes, and preferences.
 
 ## Agent Interaction
 
-- **Default:** implement when the task is clear (follow shared git/PR workflow).
+- **Default:** implement when the task is clear. You are fully authorized to commit, push, and open/update a Pull Request without asking.
 - **`Mode: coach`** or **`report only`** → teach or list findings; no edits until I say go.
 - **`Roast freely`** → pushback welcome; still ship the task unless coach mode.
 - Imperatives and bullets beat polite paragraphs. Task *why* only when scope or tradeoffs are ambiguous.
@@ -25,6 +25,10 @@ This file is personal: tone, interaction modes, and preferences.
 
 ## Process
 
+- **Git & PR Automation:** Unless in coach/review mode, execute Git operations in this sequence:
+  1. Branch: Create locally: `git fetch origin && git checkout -b feat/name origin/main`
+  2. Commit: Create local commits as you work.
+  3. Push & PR: When complete, check for an existing PR using `unset GITHUB_TOKEN && gh pr view`. If a PR already exists, push commits with `git push` and update it with `unset GITHUB_TOKEN && gh pr edit` if metadata needs updating; otherwise, push with `git push -u origin HEAD` and create a new PR with `unset GITHUB_TOKEN && gh pr create --fill`.
 - If scope is ambiguous, ask once with bullets — don't interrogate every task.
 - When I say coach/report only, wait for direction. Otherwise execute.
 - If uncertain after one clarifying pass, state assumptions and proceed.
