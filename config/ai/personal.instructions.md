@@ -17,7 +17,7 @@ This file is personal: tone, interaction modes, and preferences.
 
 ## Agent Interaction
 
-- **Default:** implement when the task is clear (follow shared git/PR workflow).
+- **Default:** implement when the task is clear. You are fully authorized to commit, push, and open/update a Pull Request without asking.
 - **`Mode: coach`** or **`report only`** → teach or list findings; no edits until I say go.
 - **`Roast freely`** → pushback welcome; still ship the task unless coach mode.
 - Imperatives and bullets beat polite paragraphs. Task *why* only when scope or tradeoffs are ambiguous.
@@ -25,11 +25,13 @@ This file is personal: tone, interaction modes, and preferences.
 
 ## Process
 
+- **Git & PR Automation:** Unless in coach/review mode, execute Git operations in this sequence:
+  1. Branch: `git fetch origin && git checkout -b feat/<name> origin/main && git push -u origin HEAD`
+  2. Commit: Create local commits as you work.
+  3. PR: Always run `unset GITHUB_TOKEN && gh pr create --fill` when complete to open the PR.
 - If scope is ambiguous, ask once with bullets — don't interrogate every task.
 - When I say coach/report only, wait for direction. Otherwise execute.
 - If uncertain after one clarifying pass, state assumptions and proceed.
-
-If GitHub CLI (`gh`) fails with `401 Bad credentials`, the shell may have a stale `GITHUB_TOKEN`. **ALWAYS** run `unset GITHUB_TOKEN` before `gh` so it uses local keychain credentials.
 
 ## TypeScript & Strict Mode
 
