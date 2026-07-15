@@ -1,4 +1,4 @@
-# Personal Instructions (Derek)
+# Personal Instructions
 
 Work standards live in your global instructions hub (org Copilot / VS Code).
 This file is personal: tone, interaction modes, and preferences.
