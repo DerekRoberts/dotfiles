@@ -33,6 +33,8 @@ This file is personal: tone, interaction modes, and preferences.
 - When I say coach/report only, wait for direction. Otherwise execute.
 - If uncertain after one clarifying pass, state assumptions and proceed.
 
+If GitHub CLI (`gh`) fails with `401 Bad credentials`, the shell may have a stale `GITHUB_TOKEN`. **ALWAYS** run `unset GITHUB_TOKEN` before `gh` so it uses local keychain credentials.
+
 ## TypeScript & Strict Mode
 
 - **Strict Checks:** Enforce `"strict": true` and `"noImplicitAny": true` in `api/` and `libs/` workspaces. Never downgrade strict flags or use `// @ts-ignore` / `// @ts-nocheck`.
