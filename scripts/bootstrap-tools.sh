@@ -17,10 +17,10 @@ if [[ "${1:-}" == "--update" ]] || [[ "${1:-}" == "-u" ]]; then
     UPDATE="1"
 fi
 
-# Tool versions (Explicit defaults, overridable via ENV)
-ACTIONLINT_VERSION="${ACTIONLINT_VERSION:-1.7.12}"
-YQ_VERSION="${YQ_VERSION:-v4.53.3}"
-HADOLINT_VERSION="${HADOLINT_VERSION:-v2.12.0}"
+# Tool version targets (Default to "latest" for dynamic API lookup; overridable via ENV)
+ACTIONLINT_VERSION="${ACTIONLINT_VERSION:-latest}"
+YQ_VERSION="${YQ_VERSION:-latest}"
+HADOLINT_VERSION="${HADOLINT_VERSION:-latest}"
 
 # Detect OS
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
@@ -45,6 +45,25 @@ case "${ARCH}" in
         ;;
     *) echo "❌ Unsupported architecture: ${ARCH}" >&2; exit 1 ;;
 esac
+
+# Helper: Resolve latest tag dynamically from GitHub API / redirect
+resolve_latest_tag() {
+    local repo="$1"
+    local tag=""
+
+    tag="$(curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" 2>/dev/null | grep -o '"tag_name": *"[^"]*"' | head -n 1 | cut -d'"' -f4 || true)"
+
+    if [[ -z "${tag}" ]]; then
+        tag="$(curl -fsSI "https://github.com/${repo}/releases/latest" 2>/dev/null | grep -i "^location:" | head -n 1 | sed -E 's/.*\/tag\/([^ \r\n]+).*/\1/' | tr -d '\r' || true)"
+    fi
+
+    if [[ -z "${tag}" ]]; then
+        echo "❌ Unable to resolve latest release tag for ${repo}" >&2
+        return 1
+    fi
+
+    echo "${tag}"
+}
 
 # Helper: Atomic binary download via mktemp
 download_binary() {
@@ -116,29 +135,55 @@ should_install_tool() {
 echo "Checking & installing dev tools in ${BIN_DIR}..."
 
 # 1. actionlint
-if should_install_tool "actionlint" "${ACTIONLINT_VERSION}" "actionlint -version 2>&1 | head -n 1"; then
-    echo " -> Installing/Updating actionlint (${ACTIONLINT_VERSION})..."
-    ACTIONLINT_TAR="actionlint_${ACTIONLINT_VERSION}_${OS_NAME}_${ARCH_ACTIONLINT}.tar.gz"
-    ACTIONLINT_URL="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${ACTIONLINT_TAR}"
+TARGET_ACTIONLINT_VER="${ACTIONLINT_VERSION}"
+if [[ "${TARGET_ACTIONLINT_VER}" == "latest" ]]; then
+    TARGET_ACTIONLINT_VER="$(resolve_latest_tag "rhysd/actionlint")"
+fi
+
+if should_install_tool "actionlint" "${TARGET_ACTIONLINT_VER}" "actionlint -version 2>&1 | head -n 1"; then
+    echo " -> Installing/Updating actionlint (${TARGET_ACTIONLINT_VER})..."
+    ACTIONLINT_VER_CLEAN="${TARGET_ACTIONLINT_VER#v}"
+    ACTIONLINT_TAR="actionlint_${ACTIONLINT_VER_CLEAN}_${OS_NAME}_${ARCH_ACTIONLINT}.tar.gz"
+    ACTIONLINT_URL="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VER_CLEAN}/${ACTIONLINT_TAR}"
     download_tarball_binary "${ACTIONLINT_URL}" "actionlint" "${BIN_DIR}/actionlint"
 else
     echo " -> actionlint: $(actionlint -version 2>&1 | head -n 1) (up to date)"
 fi
 
 # 2. yq
-if should_install_tool "yq" "${YQ_VERSION}" "yq --version 2>&1"; then
-    echo " -> Installing/Updating yq (${YQ_VERSION})..."
-    YQ_URL="https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_${OS_NAME}_${ARCH_YQ}"
+TARGET_YQ_VER="${YQ_VERSION}"
+if [[ "${TARGET_YQ_VER}" == "latest" ]]; then
+    TARGET_YQ_VER="$(resolve_latest_tag "mikefarah/yq")"
+fi
+if [[ "${TARGET_YQ_VER}" != v* ]]; then
+    TARGET_YQ_TAG="v${TARGET_YQ_VER}"
+else
+    TARGET_YQ_TAG="${TARGET_YQ_VER}"
+fi
+
+if should_install_tool "yq" "${TARGET_YQ_VER}" "yq --version 2>&1"; then
+    echo " -> Installing/Updating yq (${TARGET_YQ_TAG})..."
+    YQ_URL="https://github.com/mikefarah/yq/releases/download/${TARGET_YQ_TAG}/yq_${OS_NAME}_${ARCH_YQ}"
     download_binary "${YQ_URL}" "${BIN_DIR}/yq"
 else
     echo " -> yq: $(yq --version 2>&1) (up to date)"
 fi
 
 # 3. hadolint
-if should_install_tool "hadolint" "${HADOLINT_VERSION}" "hadolint --version 2>&1"; then
-    echo " -> Installing/Updating hadolint (${HADOLINT_VERSION})..."
+TARGET_HADOLINT_VER="${HADOLINT_VERSION}"
+if [[ "${TARGET_HADOLINT_VER}" == "latest" ]]; then
+    TARGET_HADOLINT_VER="$(resolve_latest_tag "hadolint/hadolint")"
+fi
+if [[ "${TARGET_HADOLINT_VER}" != v* ]]; then
+    TARGET_HADOLINT_TAG="v${TARGET_HADOLINT_VER}"
+else
+    TARGET_HADOLINT_TAG="${TARGET_HADOLINT_VER}"
+fi
+
+if should_install_tool "hadolint" "${TARGET_HADOLINT_VER}" "hadolint --version 2>&1"; then
+    echo " -> Installing/Updating hadolint (${TARGET_HADOLINT_TAG})..."
     HADO_OS="$(tr '[:lower:]' '[:upper:]' <<< "${OS_NAME:0:1}")${OS_NAME:1}"
-    HADOLINT_URL="https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-${HADO_OS}-${ARCH_HADOLINT}"
+    HADOLINT_URL="https://github.com/hadolint/hadolint/releases/download/${TARGET_HADOLINT_TAG}/hadolint-${HADO_OS}-${ARCH_HADOLINT}"
     download_binary "${HADOLINT_URL}" "${BIN_DIR}/hadolint"
 else
     echo " -> hadolint: $(hadolint --version 2>&1) (up to date)"
