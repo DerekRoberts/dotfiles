@@ -25,8 +25,14 @@ HADOLINT_VERSION="${HADOLINT_VERSION:-latest}"
 # Detect OS
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 case "${OS}" in
-    linux)  OS_NAME="linux" ;;
-    darwin) OS_NAME="darwin" ;;
+    linux)
+        OS_NAME="linux"
+        HADO_OS="linux"
+        ;;
+    darwin)
+        OS_NAME="darwin"
+        HADO_OS="macos"
+        ;;
     *) echo "❌ Unsupported OS: ${OS}" >&2; exit 1 ;;
 esac
 
@@ -35,13 +41,13 @@ ARCH="$(uname -m)"
 case "${ARCH}" in
     x86_64|amd64)
         ARCH_YQ="amd64"
-        ARCH_HADOLINT="x86_64"
         ARCH_ACTIONLINT="amd64"
+        ARCH_HADOLINT="x86_64"
         ;;
     aarch64|arm64)
         ARCH_YQ="arm64"
-        ARCH_HADOLINT="x86_64"
         ARCH_ACTIONLINT="arm64"
+        ARCH_HADOLINT="arm64"
         ;;
     *) echo "❌ Unsupported architecture: ${ARCH}" >&2; exit 1 ;;
 esac
@@ -104,22 +110,23 @@ download_tarball_binary() {
     trap - RETURN EXIT
 }
 
-# Helper: Check if tool needs installation or update
+# Helper: Check if tool needs installation or update under ~/.local/bin
 should_install_tool() {
     local cmd="$1"
     local target_ver="$2"
-    local get_ver_cmd="$3"
+    local ver_args="$3"
 
     if [[ "${UPDATE}" == "1" ]]; then
         return 0 # Force update requested
     fi
 
-    if ! command -v "${cmd}" &>/dev/null; then
-        return 0 # Tool not installed
+    local bin_path="${BIN_DIR}/${cmd}"
+    if [[ ! -x "${bin_path}" ]]; then
+        return 0 # Binary missing in ~/.local/bin
     fi
 
     local current_ver
-    current_ver="$(eval "${get_ver_cmd}" 2>/dev/null || true)"
+    current_ver="$(eval "${bin_path} ${ver_args}" 2>/dev/null || true)"
     
     local target_clean="${target_ver#v}"
     local current_clean="${current_ver#v}"
@@ -129,7 +136,7 @@ should_install_tool() {
         return 0
     fi
 
-    return 1 # Tool installed and matches version
+    return 1 # Tool installed in ~/.local/bin and matches target version
 }
 
 echo "Checking & installing dev tools in ${BIN_DIR}..."
@@ -140,14 +147,14 @@ if [[ "${TARGET_ACTIONLINT_VER}" == "latest" ]]; then
     TARGET_ACTIONLINT_VER="$(resolve_latest_tag "rhysd/actionlint")"
 fi
 
-if should_install_tool "actionlint" "${TARGET_ACTIONLINT_VER}" "actionlint -version 2>&1 | head -n 1"; then
+if should_install_tool "actionlint" "${TARGET_ACTIONLINT_VER}" "-version 2>&1 | head -n 1"; then
     echo " -> Installing/Updating actionlint (${TARGET_ACTIONLINT_VER})..."
     ACTIONLINT_VER_CLEAN="${TARGET_ACTIONLINT_VER#v}"
     ACTIONLINT_TAR="actionlint_${ACTIONLINT_VER_CLEAN}_${OS_NAME}_${ARCH_ACTIONLINT}.tar.gz"
     ACTIONLINT_URL="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VER_CLEAN}/${ACTIONLINT_TAR}"
     download_tarball_binary "${ACTIONLINT_URL}" "actionlint" "${BIN_DIR}/actionlint"
 else
-    echo " -> actionlint: $(actionlint -version 2>&1 | head -n 1) (up to date)"
+    echo " -> actionlint: $(${BIN_DIR}/actionlint -version 2>&1 | head -n 1) (up to date)"
 fi
 
 # 2. yq
@@ -161,12 +168,12 @@ else
     TARGET_YQ_TAG="${TARGET_YQ_VER}"
 fi
 
-if should_install_tool "yq" "${TARGET_YQ_VER}" "yq --version 2>&1"; then
+if should_install_tool "yq" "${TARGET_YQ_VER}" "--version 2>&1"; then
     echo " -> Installing/Updating yq (${TARGET_YQ_TAG})..."
     YQ_URL="https://github.com/mikefarah/yq/releases/download/${TARGET_YQ_TAG}/yq_${OS_NAME}_${ARCH_YQ}"
     download_binary "${YQ_URL}" "${BIN_DIR}/yq"
 else
-    echo " -> yq: $(yq --version 2>&1) (up to date)"
+    echo " -> yq: $(${BIN_DIR}/yq --version 2>&1) (up to date)"
 fi
 
 # 3. hadolint
@@ -180,13 +187,12 @@ else
     TARGET_HADOLINT_TAG="${TARGET_HADOLINT_VER}"
 fi
 
-if should_install_tool "hadolint" "${TARGET_HADOLINT_VER}" "hadolint --version 2>&1"; then
+if should_install_tool "hadolint" "${TARGET_HADOLINT_VER}" "--version 2>&1"; then
     echo " -> Installing/Updating hadolint (${TARGET_HADOLINT_TAG})..."
-    HADO_OS="$(tr '[:lower:]' '[:upper:]' <<< "${OS_NAME:0:1}")${OS_NAME:1}"
     HADOLINT_URL="https://github.com/hadolint/hadolint/releases/download/${TARGET_HADOLINT_TAG}/hadolint-${HADO_OS}-${ARCH_HADOLINT}"
     download_binary "${HADOLINT_URL}" "${BIN_DIR}/hadolint"
 else
-    echo " -> hadolint: $(hadolint --version 2>&1) (up to date)"
+    echo " -> hadolint: $(${BIN_DIR}/hadolint --version 2>&1) (up to date)"
 fi
 
 echo "✅ All dev tools verified and ready in ${BIN_DIR}."
