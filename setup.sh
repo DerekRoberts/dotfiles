@@ -76,12 +76,18 @@ if [[ -f "$REPO_DIR/scripts/git-setup.sh" ]]; then
 fi
 
 
-# 3. Symlink bin scripts
+# 3. Symlink bin scripts & bootstrap CLI tools
 echo "Configuring bin scripts..."
 mkdir -p "$HOME/.local/bin"
 ln -sf "$REPO_DIR/bin/updown" "$HOME/.local/bin/updown"
 chmod +x "$REPO_DIR/bin/updown"
 echo "✓ Symlinked updown to ~/.local/bin/updown."
+
+if [[ -f "$REPO_DIR/scripts/bootstrap-tools.sh" ]]; then
+    echo "Running dev tooling bootstrap..."
+    bash "$REPO_DIR/scripts/bootstrap-tools.sh"
+fi
+
 
 # 4. Symlink Antigravity Configs
 echo "Configuring Antigravity..."

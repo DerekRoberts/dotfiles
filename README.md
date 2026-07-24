@@ -65,15 +65,29 @@ Tools symlinked to the hub: **VS Code Copilot**, **Cursor**, **Antigravity**.
 | `DOTFILES_SKIP_PULL` | *(unset)* | Set to skip `git pull` |
 | `PERSONAL_INSTRUCTIONS_URL` | raw GitHub `main` URL | Override for local dev only |
 | `GLOBAL_INSTRUCTIONS_OUTPUT` | `~/.config/Code/User/prompts/global.instructions.md` | Prompt hub path |
+| `UPDATE` | `0` | Set `UPDATE=1` to force re-downloading dev tools |
+| `ACTIONLINT_VERSION` | `latest` | Override version tag for actionlint |
+| `YQ_VERSION` | `latest` | Override version tag for yq |
+| `HADOLINT_VERSION` | `latest` | Override version tag for hadolint |
+
+## CLI Dev Tooling (`~/.local/bin`)
+
+During `setup.sh`, `scripts/bootstrap-tools.sh` verifies and installs required CLI development tools (`actionlint`, `yq`, `hadolint`) into `~/.local/bin`.
+
+- **Dynamic Version Resolution**: Tool versions default to `latest`. The script resolves newest GitHub release tags dynamically via the GitHub API (with fallback HTTP redirect header resolution to bypass rate limits).
+- **Atomic Installation**: Binaries write to `mktemp` staging files before atomic replacement to prevent partial download corruption.
+- **Architecture Aware**: Automatically detects OS (`linux`/`darwin`) and CPU architecture (`x86_64`/`arm64`).
+- **Forced Tool Updates**: Run `UPDATE=1 ./setup.sh` or `./scripts/bootstrap-tools.sh --update` to force re-downloading the latest releases.
 
 ## Structure
 
 ```
-├── setup.sh                        # clone/pull + wire + sync
+├── setup.sh                        # clone/pull + wire + sync + dev tools bootstrap
 ├── bashrc
 ├── gitconfig
 ├── bin/updown
 ├── scripts/
+│   ├── bootstrap-tools.sh          # dynamic CLI tool installer (actionlint, yq, hadolint)
 │   ├── bundle-ai-instructions.sh   # fetch personal from GitHub → hub
 │   └── install-guardrails.sh       # thin wrapper → agent-guardrails
 ├── config/
@@ -84,3 +98,4 @@ Tools symlinked to the hub: **VS Code Copilot**, **Cursor**, **Antigravity**.
     ├── ai-architecture.md
     └── agent-prompt-card.md
 ```
+
