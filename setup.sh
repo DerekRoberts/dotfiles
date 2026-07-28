@@ -137,6 +137,17 @@ else
     echo "WARNING: ~/.gemini/GEMINI.md is a physical file. Skipping symlink creation."
 fi
 
+if [ -d "$REPO_DIR/config/ai/skills" ]; then
+    mkdir -p "$HOME/.agents/skills"
+    for skill_dir in "$REPO_DIR/config/ai/skills"/*; do
+        if [ -d "$skill_dir" ]; then
+            skill_name="$(basename "$skill_dir")"
+            ln -sf "$skill_dir" "$HOME/.agents/skills/$skill_name"
+            echo "✓ Symlinked skill $skill_name to ~/.agents/skills/$skill_name."
+        fi
+    done
+fi
+
 if [ -L "$HOME/.gemini/config/skills" ] || [ ! -d "$HOME/.gemini/config/skills" ]; then
     ln -sf "$HOME/.agents/skills" "$HOME/.gemini/config/skills"
     echo "✓ Symlinked ~/.gemini/config/skills to ~/.agents/skills."
