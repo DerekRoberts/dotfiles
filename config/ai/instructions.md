@@ -19,6 +19,7 @@
 
 ### Definition of Done
 - NEVER mark work complete until you have defined success criteria and verified in the target runtime (when applicable).
+- For PR feedback and review tasks: Work is NOT complete until every comment 1 through N has been matched line-by-line against the source code via `view_file` and listed in a verification table with explicit evidence for every keep/reject decision.
 
 ### Dependencies & Solutions
 - ALWAYS avoid dependencies for logic <20 lines. Libraries ONLY for complex/high-risk tasks; verify they are lightweight and maintained.
@@ -50,7 +51,12 @@
 ### Git Workflow
 1. Branch: ALWAYS checkout a new feature branch from `origin/main`.
 2. Update: ALWAYS fetch and merge `origin/main` before new edits or pushing.
-3. PR Feedback: ALWAYS fetch inline review comments via `unset GITHUB_TOKEN && gh api repos/{owner}/{repo}/pulls/{pr_number}/comments` (substituting the actual repository owner, name, and PR number; NEVER rely solely on `gh pr view`).
+3. PR Feedback & Audit Verification:
+   - ALWAYS fetch inline review comments via `unset GITHUB_TOKEN && gh api repos/{owner}/{repo}/pulls/{pr_number}/comments` (substituting actual values; NEVER rely solely on `gh pr view`).
+   - Count total feedback items (N). Enumerate items 1 through N in a structured Markdown verification table: `[Index | File & Line | Author | Feedback Summary | Local Code Snippet | Action Taken]`.
+   - ALWAYS execute `view_file` on the target local file (line range L +/- 5) before evaluating a comment.
+   - FORBIDDEN from rendering an overall summary or conclusion until items 1 through N are individually processed.
+   - FORBIDDEN from rejecting feedback without providing explicit line-level code evidence.
 4. Close: Use `Closes #<num>` ONLY if an issue is explicitly provided. NEVER guess.
 
 ### Project Standards
