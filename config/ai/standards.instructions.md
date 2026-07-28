@@ -14,7 +14,7 @@
 - NEVER implement unrequested features; limit changes to the active prompt.
 - ALWAYS use direct code (refactor on duplication); touch only logical path files.
 - ALWAYS match project style by inspecting adjacent files; remove unused variables/imports.
-- ALWAYS default environments/toggles to PROD when variables are missing.
+- NEVER default missing environment variables to PROD. Hard stop and fail fast on missing configuration, or default to safe non-production modes.
 - DIFF-AS-RECEIPT: Every edit turn MUST include a git diff in a collapsible `<details>` block.
 
 ### Definition of Done
@@ -50,11 +50,11 @@
 ### Git Workflow
 1. Branch: ALWAYS checkout a new feature branch from `origin/main`.
 2. Update: ALWAYS fetch and merge `origin/main` before new edits or pushing.
-3. PR Feedback: ALWAYS fetch inline review comments via `unset GITHUB_TOKEN && gh api repos/:owner/:repo/pulls/:num/comments` (NEVER rely solely on `gh pr view`).
+3. PR Feedback: ALWAYS fetch inline review comments via `unset GITHUB_TOKEN && gh api repos/{owner}/{repo}/pulls/{pr_number}/comments` (substituting actual values; NEVER rely solely on `gh pr view`).
 4. Close: Use `Closes #<num>` ONLY if an issue is explicitly provided. NEVER guess.
 
 ### Project Standards
-- ALWAYS use Conventional Commits. ALWAYS use latest stable packages; NEVER downgrade or edit lock files silently.
+- ALWAYS use Conventional Commits. Use project-approved dependency versions; NEVER perform unrequested major version upgrades or edit lock files silently.
 - ALWAYS use minimum permissions (e.g., `permissions: {}` in GitHub Actions). NEVER add manual version tracking artifacts.
 
 ### Model Complexity

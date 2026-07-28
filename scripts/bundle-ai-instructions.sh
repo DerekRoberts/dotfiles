@@ -1,12 +1,10 @@
 #!/bin/bash
 # Sync work standards and personal instructions into the global prompt hub.
-# Fetches upstream standards from GitHub (online) and personal text from dotfiles.
+# Uses local standards and personal instructions from dotfiles.
 #
 # Usage: ./scripts/bundle-ai-instructions.sh
-#
-# Overrides (local dev only):
-#   STANDARDS_INSTRUCTIONS_URL=file:///path/to/instructions.md
-#   PERSONAL_INSTRUCTIONS_URL=file:///path/to/personal.instructions.md
+
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
