@@ -51,17 +51,6 @@
 - ALWAYS block SQL injection, XSS, and unsanitized inputs in code and docs.
 - For temporary storage, ALWAYS use `./.tmp/` if git-ignored, otherwise `/tmp`.
 
-### Git Workflow
-1. Branch: ALWAYS checkout a new feature branch from `origin/main`.
-2. Update: ALWAYS fetch and merge `origin/main` before new edits or pushing.
-3. PR Feedback: ALWAYS fetch inline review comments via `unset GITHUB_TOKEN && gh api repos/:owner/:repo/pulls/:num/comments` (NEVER rely solely on `gh pr view`).
-4. Close: Use `Closes #<num>` ONLY if an issue is explicitly provided. NEVER guess.
-
-### Git Branch Hygiene & Safety
-- **Zero-Trust Branching:** Before making any file changes or commits, the agent MUST run `git status` and verify the current branch context.
-- **Always Base on Main:** Every new task or feature MUST be implemented on a clean branch checked out directly from `origin/main` (e.g., `git fetch origin && git checkout -b feat/<name> origin/main`).
-- **Never Piggyback:** NEVER make changes or commits on top of pre-existing local feature branches unless the user explicitly requests edits to that specific branch.
-
 ### Project Standards
 - ALWAYS use Conventional Commits. ALWAYS use latest stable packages; NEVER downgrade or edit lock files silently.
 - ALWAYS use minimum permissions (e.g., `permissions: {}` in GitHub Actions). NEVER add manual version tracking artifacts.
@@ -91,15 +80,9 @@
 
 ## Process
 
-- **Git & PR Automation:** Unless in coach/review mode, execute Git operations in this sequence:
-  1. Branch: Create locally: `git fetch origin && git checkout -b feat/name origin/main`
-  2. Commit: Create local commits as you work.
-  3. Push & PR: When complete, check for an existing PR using `unset GITHUB_TOKEN && gh pr view`. If a PR already exists, push commits with `git push` and update it with `unset GITHUB_TOKEN && gh pr edit` if metadata needs updating; otherwise, push with `git push -u origin HEAD` and create a new PR with `unset GITHUB_TOKEN && gh pr create --fill --body "<description>"`.
 - If scope is ambiguous, ask once with bullets — don't interrogate every task.
 - When I say coach/report only, wait for direction. Otherwise execute.
 - If uncertain after one clarifying pass, state assumptions and proceed.
-
-If GitHub CLI (`gh`) fails with `401 Bad credentials`, the shell may have a stale `GITHUB_TOKEN`. **ALWAYS** run `unset GITHUB_TOKEN` before `gh` so it uses local keychain credentials.
 
 ## TypeScript & Strict Mode
 
