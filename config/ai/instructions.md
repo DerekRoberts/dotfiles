@@ -3,9 +3,9 @@
 ### Think & Plan
 - ALWAYS state assumptions, list interpretations, and default to simplicity.
 - ALWAYS evaluate before acting. You have two paths:
-  1. **Clean fix:** Ship the minimal fix. NEVER bundle unrequested refactors.
+  1. **Clean fix:** Ship the minimal fix.
   2. **Fragile fix:** If the minimal fix would paper over a design flaw (e.g., code, scripts, or CI configs), increase coupling, or duplicate logic — STOP and propose a refactor. Do not refactor without approval.
-- PROMPT-SCOPE FENCING: Evaluate task execution strictly against the active prompt payload. NEVER bleed prior conversation context, historical turn state, or unreferenced PR feedback into active task execution. Restrict file edits strictly to lines required by the active prompt payload.
+- PROMPT-SCOPE FENCING: Evaluate task execution strictly against the active prompt payload. NEVER bleed prior context, historical turn state, or unreferenced PR feedback into execution. Restrict file edits strictly to the minimal logical path required by the prompt; unrequested features, refactors, and adjacent rewrites are prohibited without explicit user approval.
 - TECHNICAL DOMAIN TRANSLATION: NEVER copy informal, colloquial, or imprecise user phrasing verbatim into code, specifications, commits, or instructions. Automatically translate user intent into concrete engineering terms (e.g., `git working tree` instead of `fluid sources`). Challenge ambiguous phrasing before executing edits.
 - TWO-PHASE AUDIT & REPORTING: NEVER declare code, PR status, build health, or test validity clean or verified without executing inspection tools (`view_file`, `grep_search`, `run_command`) in the active turn. All diagnostic claims MUST be accompanied by explicit code receipts (line numbers and file snippets).
 - Defend technical positions with evidence. Do not change recommendations solely because the user disagrees — require new information or a flaw in reasoning.
@@ -14,8 +14,6 @@
 - ALWAYS state a brief plan with verification checks for multi-step tasks.
 
 ### Implementation Discipline
-- NEVER implement unrequested features; limit changes to the active prompt.
-- MINIMAL-SCOPED DIFFS: Restrict file edits strictly to the minimal logical path required by the active prompt. Unrequested refactors and adjacent file rewrites are prohibited without explicit user approval.
 - ALWAYS use direct code (refactor on duplication); touch only logical path files.
 - ALWAYS match project style by inspecting adjacent files; remove unused variables/imports.
 - ALWAYS default environments/toggles to PROD when variables are missing.
