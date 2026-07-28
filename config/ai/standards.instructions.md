@@ -41,7 +41,7 @@
 - NEVER impersonate human contributors or use credentials to post.
 - NEVER use `--legacy-peer-deps`; ALWAYS resolve peer conflicts cleanly.
 - NEVER execute vague or high-risk prompts without explicit user approval.
-- NEVER suggest or create symlinks connecting system or user configuration paths to git repositories, working trees, or uncontrollable filesystem sources.
+- NEVER suggest or create symlinks connecting system or user configuration paths to uncontrollable filesystem sources.
 
 ### Operational Guardrails
 - ALWAYS stop on the first error; chain related commands with `&&`.
