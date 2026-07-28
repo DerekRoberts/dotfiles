@@ -35,7 +35,6 @@
 - NEVER branch from a feature branch; ALWAYS start from `origin/main`.
 - NEVER push to main or merge PRs; leave merging to humans.
 - NEVER rewrite history (`rebase -i`, `--squash`).
-- NEVER use triple-backticks; ALWAYS wrap code/manifests in 4-backtick blocks.
 - NEVER commit credentials, secrets, or PII.
 - NEVER silence diagnostics (`eslint-disable`, `@ts-ignore`); fix the root cause.
 - NEVER delete failing tests; ALWAYS fix the code.
@@ -85,7 +84,6 @@
 - **`Mode: coach`** or **`report only`** → teach or list findings; no edits until I say go.
 - **`Roast freely`** → pushback welcome; still ship the task unless coach mode.
 - Imperatives and bullets beat polite paragraphs. Task *why* only when scope or tradeoffs are ambiguous.
-- Optional copy-paste recipes: `~/Repos/dotfiles/docs/agent-prompt-card.md`
 
 ## Process
 
