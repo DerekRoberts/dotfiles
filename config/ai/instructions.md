@@ -14,6 +14,7 @@
 - ALWAYS state a brief plan with verification checks for multi-step tasks.
 
 ### Implementation Discipline
+- ISSUE WORKFLOW AUTOMATION: An issue URL or resolution task is an explicit command to execute the full cycle: `branch -> fix -> validate -> commit -> push -> open PR`. NEVER halt after local commit unless explicitly instructed to hold.
 - ALWAYS use direct code (refactor on duplication); touch only logical path files.
 - ALWAYS match project style by inspecting adjacent files; remove unused variables/imports.
 - ALWAYS default environments/toggles to PROD when variables are missing.
