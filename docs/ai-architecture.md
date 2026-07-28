@@ -39,7 +39,6 @@ Three-repo consumer model for Derek. Dotfiles does not install guardrails.
 
 Tool-specific (not in bundle):
   ~/.cursor/rules/ponytail.mdc     Ponytail (Cursor)
-  docs/agent-prompt-card.md        Optional @ reference / cheat sheet
 ```
 
 ## What goes where

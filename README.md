@@ -51,7 +51,6 @@ The wrapper script uses whichever applies: local clone if present, otherwise cur
 | Personal instructions (canonical) | GitHub `main` → `config/ai/personal.instructions.md` |
 | Personal block in hub | Delimited section synced by `bundle-ai-instructions.sh` |
 | Guardrails | [bcgov/agent-guardrails](https://github.com/bcgov/agent-guardrails) via `setup.sh` |
-| Prompt recipes (optional) | `docs/agent-prompt-card.md` |
 
 Tools symlinked to the hub: **VS Code Copilot**, **Cursor**, **Antigravity**.
 
@@ -95,7 +94,6 @@ During `setup.sh`, `scripts/bootstrap-tools.sh` verifies and installs required C
 │   ├── antigravity/
 │   └── vscode/
 └── docs/
-    ├── ai-architecture.md
-    └── agent-prompt-card.md
+    └── ai-architecture.md
 ```
 
