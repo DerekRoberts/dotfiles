@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+INSTALL_DIR="$HOME/.local/bin/antigravity"
+TARBALL_URL="https://antigravity.google/download" # Adjust if direct download URL is available
+
+CURRENT_VER=$(jq -r '.version' "$INSTALL_DIR/resources/app/package.json" 2>/dev/null || echo "Unknown")
+
+echo "Current Antigravity version: $CURRENT_VER"
+echo "Download the latest tarball to ~/Downloads and run this script with the file name to update."
+echo "Usage: update-antigravity ~/Downloads/antigravity-linux-x64.tar.gz"
+
+if [ -n "${1:-}" ] && [ -f "$1" ]; then
+    echo "Updating Antigravity in $INSTALL_DIR..."
+    mkdir -p "$INSTALL_DIR"
+    tar -xzf "$1" -C "$INSTALL_DIR" --strip-components=1
+    echo "Update complete!"
+fi
