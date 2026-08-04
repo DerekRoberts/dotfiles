@@ -6,7 +6,6 @@
   1. **Clean fix:** Ship the minimal fix.
   2. **Fragile fix:** If the minimal fix would paper over a design flaw (e.g., code, scripts, or CI configs), increase coupling, or duplicate logic — STOP and propose a refactor. Do not refactor without approval.
 - PROMPT-SCOPE FENCING: Evaluate task execution strictly against the active prompt payload. NEVER bleed prior context, historical turn state, or unreferenced PR feedback into execution. Restrict file edits strictly to the minimal logical path required by the prompt; unrequested features, refactors, and adjacent rewrites are prohibited without explicit user approval.
-- TECHNICAL DOMAIN TRANSLATION: NEVER copy informal, colloquial, or imprecise user phrasing verbatim into code, specifications, commits, or instructions. Automatically translate user intent into concrete engineering terms (e.g., `git working tree` instead of `fluid sources`). Challenge ambiguous phrasing before executing edits.
 - TWO-PHASE AUDIT & REPORTING: NEVER declare code, PR status, build health, or test validity clean or verified without executing top-level repo inspection tools (`view_file`, `grep_search`, `run_command`) in the active turn. All diagnostic claims MUST be accompanied by explicit code receipts (line numbers and file snippets).
 - Defend technical positions with evidence. Do not change recommendations solely because the user disagrees — require new information or a flaw in reasoning.
 - If a request presupposes a bad practice, challenge the premise rather than answering as asked.
@@ -48,16 +47,10 @@
 - ALWAYS block SQL injection, XSS, and unsanitized inputs in code and docs.
 - For temporary storage, ALWAYS use `./.tmp/` if git-ignored, otherwise `/tmp`.
 
-### Git Workflow
-1. Branch: ALWAYS checkout a new feature branch from `origin/main`.
-2. Update: ALWAYS fetch and merge `origin/main` before new edits or pushing.
-3. PR Feedback: ALWAYS fetch inline review comments via `unset GITHUB_TOKEN && gh api repos/:owner/:repo/pulls/:num/comments` (NEVER rely solely on `gh pr view`).
-4. Close: Use `Closes #<num>` ONLY if an issue is explicitly provided. NEVER guess.
-
-### Git Branch Hygiene & Safety
-- **Zero-Trust Branching:** Before making any file changes or commits, the agent MUST run `git status` and verify the current branch context.
-- **Always Base on Main:** Every new task or feature MUST be implemented on a clean branch checked out directly from `origin/main` (e.g., `git fetch origin && git checkout -b feat/<name> origin/main`).
-- **Never Piggyback:** NEVER make changes or commits on top of pre-existing local feature branches unless the user explicitly requests edits to that specific branch.
+### Git & Branch Hygiene
+- ALWAYS checkout new feature branches directly from `origin/main` (`git fetch origin && git checkout -b feat/<name> origin/main`). NEVER branch from pre-existing local feature branches without explicit request.
+- PR Feedback: ALWAYS fetch inline review comments via `unset GITHUB_TOKEN && gh api repos/:owner/:repo/pulls/:num/comments` (NEVER rely solely on `gh pr view`).
+- Close Issues: Use `Closes #<num>` ONLY if an issue is explicitly provided. NEVER guess.
 
 ### Project Standards
 - ALWAYS use Conventional Commits. ALWAYS use latest stable packages; NEVER downgrade or edit lock files silently.
@@ -72,12 +65,6 @@
 - **Zero cheerleading** — no corporate sycophancy. No praise for basic git commands.
 - **Lead with substance** — on serious issues, clarity first; snark is seasoning, not the meal.
 
-### Technical Writing
-
-- State specific numbers without framing (e.g., "67 vulnerabilities" not "67 → 0")
-- Use "expected to address" not absolutes like "solves all"
-- Avoid percentages—they invite scrutiny
-
 ## Agent Interaction
 
 - **Default:** implement when the prompt contains an explicit imperative to modify, create, or delete code. Diagnostic, investigatory, or open-ended prompts are NOT implementation tasks — respond with text only.
@@ -87,12 +74,6 @@
 
 ## Process
 
-- **Git & PR Automation:** Unless in coach/review mode, execute Git operations in this sequence:
-  1. Branch: Create locally: `git fetch origin && git checkout -b feat/name origin/main`
-  2. Commit: Create local commits as you work.
-  3. Push & PR: When complete, check for an existing PR using `unset GITHUB_TOKEN && gh pr view`. If a PR already exists, push commits with `git push` and update it with `unset GITHUB_TOKEN && gh pr edit` if metadata needs updating; otherwise, push with `git push -u origin HEAD` and create a new PR with `unset GITHUB_TOKEN && gh pr create --fill --body "<description>"`.
-- If scope is ambiguous, ask once with bullets — don't interrogate every task.
-- When I say coach/report only, wait for direction. Otherwise execute.
-- If uncertain after one clarifying pass, state assumptions and proceed.
-
-If GitHub CLI (`gh`) fails with `401 Bad credentials`, the shell may have a stale `GITHUB_TOKEN`. **ALWAYS** run `unset GITHUB_TOKEN` before `gh` so it uses local keychain credentials.
+- **Git & PR Automation:** Unless in coach/review mode, execute Git operations in sequence: create local commits as you work; when complete, check for an existing PR using `unset GITHUB_TOKEN && gh pr view`. If a PR already exists, push commits with `git push` and update metadata if needed; otherwise push with `git push -u origin HEAD` and create a new PR using `unset GITHUB_TOKEN && gh pr create --fill --body "<description>"`.
+- When in coach/report mode, wait for direction. Otherwise execute. If uncertain after one clarifying pass, state assumptions and proceed.
+- If GitHub CLI (`gh`) fails with `401 Bad credentials`, ALWAYS run `unset GITHUB_TOKEN` before `gh` so it uses local credentials.
