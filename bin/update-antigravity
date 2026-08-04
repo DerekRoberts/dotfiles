@@ -1,18 +1,40 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-INSTALL_DIR="$HOME/.local/bin/antigravity"
-TARBALL_URL="https://antigravity.google/download" # Adjust if direct download URL is available
+INSTALL_DIR="${ANTIGRAVITY_INSTALL_DIR:-$HOME/.local/bin/antigravity}"
+DOWNLOAD_PAGE="https://antigravity.google/download"
 
-CURRENT_VER=$(jq -r '.version' "$INSTALL_DIR/resources/app/package.json" 2>/dev/null || echo "Unknown")
+CURRENT_VER=$(jq -r '.version' "$INSTALL_DIR/resources/app/package.json" 2>/dev/null || echo "Not Installed / Unknown")
+echo "Current Antigravity installation version: $CURRENT_VER"
 
-echo "Current Antigravity version: $CURRENT_VER"
-echo "Download the latest tarball to ~/Downloads and run this script with the file name to update."
-echo "Usage: update-antigravity ~/Downloads/antigravity-linux-x64.tar.gz"
+TARBALL_PATH=""
 
 if [ -n "${1:-}" ] && [ -f "$1" ]; then
-    echo "Updating Antigravity in $INSTALL_DIR..."
-    mkdir -p "$INSTALL_DIR"
-    tar -xzf "$1" -C "$INSTALL_DIR" --strip-components=1
-    echo "Update complete!"
+    echo "Using provided local tarball: $1"
+    TARBALL_PATH="$1"
+else
+    echo "Fetching latest Linux x64 download URL from $DOWNLOAD_PAGE..."
+    DOWNLOAD_URL=$(curl -sL --compressed "$DOWNLOAD_PAGE" | grep -oE 'https://storage\.googleapis\.com/antigravity-public/antigravity-hub/[^"]+/linux-x64/Antigravity\.tar\.gz' | head -n 1 || true)
+
+    if [ -z "$DOWNLOAD_URL" ]; then
+        echo "Error: Could not automatically resolve Linux x64 download URL from $DOWNLOAD_PAGE." >&2
+        echo "Usage: update-antigravity [path/to/antigravity-linux-x64.tar.gz]" >&2
+        exit 1
+    fi
+
+    echo "Found latest release URL: $DOWNLOAD_URL"
+    TARBALL_PATH="/tmp/antigravity-latest.tar.gz"
+    echo "Downloading to $TARBALL_PATH..."
+    curl -L --progress-bar "$DOWNLOAD_URL" -o "$TARBALL_PATH"
 fi
+
+echo "Updating Antigravity in $INSTALL_DIR..."
+mkdir -p "$INSTALL_DIR"
+tar -xzf "$TARBALL_PATH" -C "$INSTALL_DIR" --strip-components=1
+
+if [ -f "/tmp/antigravity-latest.tar.gz" ]; then
+    rm -f "/tmp/antigravity-latest.tar.gz"
+fi
+
+NEW_VER=$(jq -r '.version' "$INSTALL_DIR/resources/app/package.json" 2>/dev/null || echo "Unknown")
+echo "Update complete! Installed version: $NEW_VER"
