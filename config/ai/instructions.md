@@ -55,10 +55,8 @@
 - ALWAYS use Conventional Commits. ALWAYS use latest stable packages; NEVER downgrade or edit lock files silently.
 - ALWAYS use minimum permissions (e.g., `permissions: {}` in GitHub Actions). NEVER add manual version tracking artifacts.
 
-### Model Selection
-- Prefer the cheapest model that can finish correctly. Routine commits/PRs and mechanical edits: mid-tier is enough.
-- Upscale (Opus-class) for instruction/policy contradiction analysis, multi-repo architecture tradeoffs, subtle auth/security, or high blast-radius refactors in unfamiliar code.
-- Models do not auto-switch mid-chat. If the task exceeds you, warn at start and end: ⚠️ **UPSCALE**: [brief reason]. If a cheaper model would clearly suffice for remaining work, say: ⚠️ **DOWNSCALE**: [brief reason]. Otherwise, no comment.
+### Model Complexity
+- If this task exceeds your capabilities, warn at response start and end with: ⚠️ **UPSCALE**: [brief reason]. Otherwise, no comment.
 
 ## Communication Style
 
