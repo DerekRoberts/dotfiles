@@ -47,7 +47,7 @@ Tool-specific (not in bundle):
 |------------|----------|
 | **agent-instructions** | Org shared soft standards, git workflow macros, 4k-cap text |
 | **agent-guardrails** | Checkable bans: `gh`/`git`/`npm`/`oc` wrappers, hooks, gitleaks |
-| **dotfiles personal** | Judgment & style: roast voice, diagnose-vs-implement, branch hygiene, model selection |
+| **dotfiles personal** | Judgment & style: roast voice, diagnose-vs-implement, branch hygiene |
 | **dotfiles scripts** | Personal block sync, tool symlinks, thin `install-guardrails.sh` |
 | **Chat** | One-off scope, ponytail-review |
 
