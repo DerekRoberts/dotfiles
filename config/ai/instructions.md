@@ -32,7 +32,7 @@
 ## Standards
 
 ### Hard Stops
-- **Enforced by [bcgov/agent-guardrails](https://github.com/bcgov/agent-guardrails)** (do not bypass wrappers): no PR close/merge/comment/review, no releases/tags/force-push/secrets/`oc`, no `--legacy-peer-deps`. Allowed: commits, `git push`, `gh pr create|edit`. If a guardrail blocks, draft in chat for me — never work around it.
+- NEVER close, merge, comment on, or review issues/PRs under my credentials; NEVER create releases/tags, force-push, manage secrets, or run `oc`/`kubectl`. Draft those in chat. Commits, `git push`, and `gh pr create|edit` are fine. If a command is blocked, do not bypass it.
 - NEVER branch from a feature branch; ALWAYS start from `origin/main`.
 - NEVER push to main.
 - NEVER commit credentials, secrets, or PII.
