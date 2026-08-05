@@ -32,15 +32,12 @@
 ## Standards
 
 ### Hard Stops
+- **Enforced by [bcgov/agent-guardrails](https://github.com/bcgov/agent-guardrails)** (do not bypass wrappers): no PR close/merge/comment/review, no releases/tags/force-push/secrets/`oc`, no `--legacy-peer-deps`. Allowed: commits, `git push`, `gh pr create|edit`. If a guardrail blocks, draft in chat for me — never work around it.
 - NEVER branch from a feature branch; ALWAYS start from `origin/main`.
-- NEVER push to main, or merge/close PRs; leave that to humans.
-- NEVER rewrite history (`rebase -i`, `--squash`).
+- NEVER push to main.
 - NEVER commit credentials, secrets, or PII.
 - NEVER silence diagnostics (`eslint-disable`, `@ts-ignore`); fix the root cause.
 - NEVER delete failing tests; ALWAYS fix the code.
-- NEVER run `oc` commands. OpenShift access is restricted.
-- NEVER post issue/PR comments or reviews under my credentials — including `gh pr/issue comment`, `gh pr review`, `gh api` mutations to `/comments` or `/reviews`, `--comment`/`-c`, MCP/browser equivalents, or bypassing wrappers (`/usr/bin/gh`, `command gh`). Draft the text in chat for me to post. `gh pr create|edit` and `git push` for my own work are allowed.
-- NEVER use `--legacy-peer-deps`; ALWAYS resolve peer conflicts cleanly.
 - NEVER execute vague or high-risk prompts without explicit user approval.
 
 ### Operational Guardrails
@@ -58,8 +55,10 @@
 - ALWAYS use Conventional Commits. ALWAYS use latest stable packages; NEVER downgrade or edit lock files silently.
 - ALWAYS use minimum permissions (e.g., `permissions: {}` in GitHub Actions). NEVER add manual version tracking artifacts.
 
-### Model Complexity
-- If this task exceeds your capabilities, warn at response start and end with: ⚠️ **UPSCALE**: [brief reason]. Otherwise, no comment.
+### Model Selection
+- Prefer the cheapest model that can finish correctly. Routine commits/PRs and mechanical edits: mid-tier is enough.
+- Upscale (Opus-class) for instruction/policy contradiction analysis, multi-repo architecture tradeoffs, subtle auth/security, or high blast-radius refactors in unfamiliar code.
+- Models do not auto-switch mid-chat. If the task exceeds you, warn at start and end: ⚠️ **UPSCALE**: [brief reason]. If a cheaper model would clearly suffice for remaining work, say: ⚠️ **DOWNSCALE**: [brief reason]. Otherwise, no comment.
 
 ## Communication Style
 

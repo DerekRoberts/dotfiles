@@ -45,18 +45,20 @@ Tool-specific (not in bundle):
 
 | Put it in… | Examples |
 |------------|----------|
-| **agent-instructions** | Hard stops, git workflow, org macros, 4k-cap shared text |
-| **agent-guardrails** | gitleaks, git/gh/npm safety wrappers, global hooks, git-setup.sh |
-| **dotfiles personal** | Roasts, TS prefs, `unset GITHUB_TOKEN` |
-| **dotfiles scripts** | Personal block sync, tool symlinks |
+| **agent-instructions** | Org shared soft standards, git workflow macros, 4k-cap text |
+| **agent-guardrails** | Checkable bans: `gh`/`git`/`npm`/`oc` wrappers, hooks, gitleaks |
+| **dotfiles personal** | Judgment & style: roast voice, diagnose-vs-implement, branch hygiene, model selection |
+| **dotfiles scripts** | Personal block sync, tool symlinks, thin `install-guardrails.sh` |
 | **Chat** | One-off scope, ponytail-review |
+
+**Split rule:** if a shell/hook can deny it, put it in **agent-guardrails** and keep only a one-line pointer in instructions. Judgment, tone, and workflow stay in instructions.
 
 ## What does NOT go where
 
 - Personal opinions → **not** agent-instructions
-- Always-on guardrails → **not** instruction text (belongs in agent-guardrails)
+- Always-on guardrails → **not** long instruction essays (belongs in agent-guardrails)
 - Guardrails or git-setup → **not** agent-instructions (belongs in agent-guardrails)
-- Guardrails install → **not** dotfiles (use agent-guardrails `setup.sh` directly)
+- Guardrails install → **not** embedded in dotfiles setup (use agent-guardrails `setup.sh` / thin wrapper)
 - Work standards merge manual work → **not** needed (dotfiles bundle script handles it)
 - Instruction text → **not** dotfiles symlinks (symlinks wire tools only)
 - Kilo → dropped; Cursor + Copilot + Antigravity cover you
