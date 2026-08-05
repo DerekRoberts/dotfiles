@@ -32,7 +32,7 @@
 ## Standards
 
 ### Hard Stops
-- NEVER close, merge, comment on, or review issues/PRs under my credentials; NEVER create releases/tags, force-push, manage secrets, or run `oc`/`kubectl`. Draft those in chat. Commits, `git push`, and `gh pr create|edit` are fine. If a command is blocked, do not bypass it.
+- NEVER close, merge, comment on, or review issues/PRs under the user's credentials; NEVER create releases/tags, force-push, manage secrets, or run `oc`/`kubectl`. Draft those in chat. Commits, `git push`, and `gh pr create|edit` are fine. If a command is blocked, do not bypass it.
 - NEVER branch from a feature branch; ALWAYS start from `origin/main`.
 - NEVER push to main.
 - NEVER commit credentials, secrets, or PII.
