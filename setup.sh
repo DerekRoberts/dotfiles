@@ -142,14 +142,14 @@ if [ -d "$REPO_DIR/config/ai/skills" ]; then
     for skill_dir in "$REPO_DIR/config/ai/skills"/*; do
         if [ -d "$skill_dir" ]; then
             skill_name="$(basename "$skill_dir")"
-            ln -sf "$skill_dir" "$HOME/.agents/skills/$skill_name"
+            ln -sfn "$skill_dir" "$HOME/.agents/skills/$skill_name"
             echo "✓ Symlinked skill $skill_name to ~/.agents/skills/$skill_name."
         fi
     done
 fi
 
 if [ -L "$HOME/.gemini/config/skills" ] || [ ! -d "$HOME/.gemini/config/skills" ]; then
-    ln -sf "$HOME/.agents/skills" "$HOME/.gemini/config/skills"
+    ln -sfn "$HOME/.agents/skills" "$HOME/.gemini/config/skills"
     echo "✓ Symlinked ~/.gemini/config/skills to ~/.agents/skills."
 else
     echo "WARNING: ~/.gemini/config/skills is a physical folder. Skipping symlink creation."
@@ -162,7 +162,7 @@ if [ -L "$HOME/.agents/skills/skills" ]; then
 fi
 
 if [ -L "$HOME/.gemini/antigravity/skills" ] || [ ! -d "$HOME/.gemini/antigravity/skills" ]; then
-    ln -sf "$HOME/.gemini/config/skills" "$HOME/.gemini/antigravity/skills"
+    ln -sfn "$HOME/.gemini/config/skills" "$HOME/.gemini/antigravity/skills"
     echo "✓ Symlinked ~/.gemini/antigravity/skills to ~/.gemini/config/skills."
 else
     echo "WARNING: ~/.gemini/antigravity/skills is a physical folder. Skipping symlink creation."
