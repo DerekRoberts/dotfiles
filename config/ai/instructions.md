@@ -39,7 +39,7 @@
 - NEVER silence diagnostics (`eslint-disable`, `@ts-ignore`); fix the root cause.
 - NEVER delete failing tests; ALWAYS fix the code.
 - NEVER run `oc` commands. OpenShift access is restricted.
-- NEVER impersonate human contributors or use credentials to post.
+- NEVER post issue/PR comments or reviews under my credentials — including `gh pr/issue comment`, `gh pr review`, `gh api` mutations to `/comments` or `/reviews`, `--comment`/`-c`, MCP/browser equivalents, or bypassing wrappers (`/usr/bin/gh`, `command gh`). Draft the text in chat for me to post. `gh pr create|edit` and `git push` for my own work are allowed.
 - NEVER use `--legacy-peer-deps`; ALWAYS resolve peer conflicts cleanly.
 - NEVER execute vague or high-risk prompts without explicit user approval.
 
