@@ -33,7 +33,7 @@
 
 ### Hard Stops
 - NEVER branch from a feature branch; ALWAYS start from `origin/main`.
-- NEVER push to main or merge PRs; leave merging to humans.
+- NEVER push to main, or merge/close PRs; leave that to humans.
 - NEVER rewrite history (`rebase -i`, `--squash`).
 - NEVER commit credentials, secrets, or PII.
 - NEVER silence diagnostics (`eslint-disable`, `@ts-ignore`); fix the root cause.
