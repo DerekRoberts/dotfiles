@@ -47,9 +47,9 @@ Tool-specific (not in bundle):
 |------------|----------|
 | **agent-instructions** | Hard stops, git workflow, org macros, 4k-cap shared text |
 | **agent-guardrails** | gitleaks, git/gh/npm safety wrappers, global hooks, git-setup.sh |
-| **dotfiles personal** | Roasts, coach mode, TS prefs, `unset GITHUB_TOKEN` |
+| **dotfiles personal** | Roasts, TS prefs, `unset GITHUB_TOKEN` |
 | **dotfiles scripts** | Personal block sync, tool symlinks |
-| **Chat** | One-off scope, ponytail-review, “report only” |
+| **Chat** | One-off scope, ponytail-review |
 
 ## What does NOT go where
 

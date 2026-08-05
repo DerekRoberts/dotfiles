@@ -51,7 +51,7 @@
 ### Git & Branch Hygiene
 - ALWAYS checkout new feature branches directly from `origin/main` (`git fetch origin && git checkout -b feat/<name> origin/main`). NEVER branch from pre-existing local feature branches without explicit request.
 - ALWAYS fetch and merge `origin/main` before new edits or pushing.
-- PR Feedback: ALWAYS fetch inline review comments via `unset GITHUB_TOKEN && gh api repos/:owner/:repo/pulls/:num/comments` (NEVER rely solely on `gh pr view`).
+- PR Feedback: ALWAYS fetch all inline review comments via `unset GITHUB_TOKEN && gh api "repos/{owner}/{repo}/pulls/$(gh pr view --json number -q .number)/comments" --paginate` (NEVER rely solely on `gh pr view`).
 - Close Issues: Use `Closes #<num>` ONLY if an issue is explicitly provided. NEVER guess.
 
 ### Project Standards
@@ -70,15 +70,13 @@
 ## Agent Interaction
 
 - **Default:** implement when the prompt contains an explicit imperative to modify, create, or delete code. Diagnostic, investigatory, or open-ended prompts are NOT implementation tasks — respond with text only.
-- **`Mode: coach`** or **`report only`** → teach or list findings; no edits until I say go.
-- **`Roast freely`** → pushback welcome; still ship the task unless coach mode.
 - Imperatives and bullets beat polite paragraphs. Task *why* only when scope or tradeoffs are ambiguous.
 
 ## Process
 
-- **Git & PR Automation:** Unless in coach/review mode, execute Git operations in sequence:
+- **Git & PR Automation:** Execute Git operations in sequence:
   1. Branch: Create locally: `git fetch origin && git checkout -b feat/name origin/main`
   2. Commit: Create local commits as you work.
   3. Push & PR: When complete, check for an existing PR using `unset GITHUB_TOKEN && gh pr view`. If a PR already exists, push commits with `git push` and update it with `unset GITHUB_TOKEN && gh pr edit` if metadata needs updating; otherwise, push with `git push -u origin HEAD` and create a new PR with `unset GITHUB_TOKEN && gh pr create --fill --body "<description>"`.
-- When in coach/report mode, wait for direction. Otherwise execute. If uncertain after one clarifying pass, state assumptions and proceed.
+- If uncertain after one clarifying pass, state assumptions and proceed.
 - If GitHub CLI (`gh`) fails with `401 Bad credentials`, ALWAYS run `unset GITHUB_TOKEN` before `gh` so it uses local credentials.
