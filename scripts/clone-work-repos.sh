@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# clone-work-repos.sh — Declarative work repo cloner
+# Reads config/work-repos.txt (SSH paths: org/repo), clones into ~/Repos/
+# Generates an SSH key if ~/.ssh/id_ed25519 is absent.
+#
+# Usage: scripts/clone-work-repos.sh [--repos-file PATH]
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPOS_FILE="${1:-$REPO_DIR/config/work-repos.txt}"
+CLONE_DIR="${HOME}/Repos"
+SSH_KEY="${HOME}/.ssh/id_ed25519"
+
+# ── Helpers ─────────────────────────────────────────────────────────────────
+
+info()    { echo "  → $*"; }
+success() { echo "  ✓ $*"; }
+warn()    { echo "  ⚠ $*" >&2; }
+die()     { echo "❌ $*" >&2; exit 1; }
+
+# ── SSH Key ──────────────────────────────────────────────────────────────────
+
+ensure_ssh_key() {
+    if [[ -f "$SSH_KEY" ]]; then
+        info "SSH key already exists: $SSH_KEY"
+        return
+    fi
+
+    echo ""
+    echo "=== SSH Key Setup ==="
+    echo "No SSH key found at $SSH_KEY. Generating a new ed25519 key..."
+
+    local comment
+    comment="$(git config --global user.email 2>/dev/null || hostname)"
+    mkdir -p "${HOME}/.ssh"
+    chmod 700 "${HOME}/.ssh"
+    ssh-keygen -t ed25519 -C "$comment" -f "$SSH_KEY" -N "" -q
+
+    echo ""
+    echo "══════════════════════════════════════════════════════════"
+    echo "  Your new public key — add it to GitHub:"
+    echo "  https://github.com/settings/keys"
+    echo ""
+    cat "${SSH_KEY}.pub"
+    echo "══════════════════════════════════════════════════════════"
+    echo ""
+
+    # Open browser non-blocking (best-effort on Kinoite/KDE)
+    if command -v xdg-open &>/dev/null; then
+        xdg-open "https://github.com/settings/keys" &>/dev/null &
+    fi
+
+    echo "Press Enter once you have added the key to GitHub..."
+    # Read from /dev/tty to work when piped
+    if [[ -t 0 ]]; then
+        read -r
+    elif [[ -c /dev/tty ]] && { true </dev/tty; } 2>/dev/null; then
+        read -r </dev/tty
+    fi
+    echo ""
+}
+
+# ── Repo Cloning ─────────────────────────────────────────────────────────────
+
+clone_repos() {
+    [[ -f "$REPOS_FILE" ]] || die "Repos file not found: $REPOS_FILE"
+
+    mkdir -p "$CLONE_DIR"
+
+    local cloned=0 skipped=0 failed=0
+
+    echo ""
+    echo "=== Cloning Work Repos → $CLONE_DIR ==="
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        # Strip whitespace and skip comments / blank lines
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [[ -z "$line" || "$line" == \#* ]] && continue
+
+        local org repo target
+        org="${line%%/*}"
+        repo="${line#*/}"
+        target="$CLONE_DIR/$repo"
+
+        if [[ -d "$target/.git" ]]; then
+            info "$repo — already cloned, skipping"
+            ((skipped++)) || true
+            continue
+        fi
+
+        local url="git@github.com:${org}/${repo}.git"
+        info "Cloning $url → $target"
+
+        if git clone --filter=blob:none "$url" "$target" 2>&1 | sed 's/^/    /'; then
+            success "$repo cloned"
+            ((cloned++)) || true
+        else
+            warn "$repo — clone failed (SSH key loaded? Repo access granted?)"
+            ((failed++)) || true
+        fi
+    done < "$REPOS_FILE"
+
+    echo ""
+    echo "=== Clone Summary ==="
+    echo "  Cloned:  $cloned"
+    echo "  Skipped: $skipped (already present)"
+    [[ "$failed" -gt 0 ]] && echo "  Failed:  $failed (check SSH access)" || true
+    echo ""
+
+    [[ "$failed" -eq 0 ]] || return 1
+}
+
+# ── Main ─────────────────────────────────────────────────────────────────────
+
+main() {
+    ensure_ssh_key
+    clone_repos
+    echo "✅ Work repo setup complete."
+}
+
+main "$@"

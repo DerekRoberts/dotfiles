@@ -1,5 +1,11 @@
 # .bashrc (common, shared across machines)
 
+# ── Nix (no-op if not installed) ────────────────────────────────────────────
+if [[ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]]; then
+    # shellcheck disable=SC1091
+    . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+fi
+
 # 4. Strict local diagnostic flush for locks and rendering caches
 #alias fix-anti='pkill -f Antigravity; pkill -f agy; rm -f ~/.config/Antigravity/SingletonLock; rm -rf ~/.config/Antigravity/GPUCache ~/.config/Antigravity/Cache; antigravity'
 
@@ -68,8 +74,12 @@ alias gs='git status'
 alias ls='ls --color=auto'
 alias grep='grep --color=auto'
 alias c='code'
-alias a='~/.local/bin/antigravity/antigravity'
-alias a-ide='~/.local/bin/antigravity-ide/antigravity-ide'
+
+# agy CLI — resolve from PATH first, fall back to well-known install dir
+alias agy='_agy_run() { if command -v agy &>/dev/null; then command agy "$@"; else "${HOME}/.local/bin/agy" "$@"; fi; }; _agy_run'
+# Antigravity hub — resolve from PATH first, fall back to well-known install dir
+alias a='_anti_run() { if command -v antigravity &>/dev/null; then command antigravity "$@"; else "${HOME}/.local/bin/antigravity/antigravity" "$@"; fi; }; _anti_run'
+
 
 # Fixes
 alias fix-wifi="sudo systemctl stop NetworkManager && sudo modprobe -r ath11k_pci && sudo modprobe ath11k_pci && sudo systemctl start NetworkManager"

@@ -1,34 +1,119 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# updown — Workstation silent maintenance
+# Stages rpm-ostree upgrade, updates flatpaks, updates Nix/home-manager,
+# and updates Antigravity CLI + hub.
+#
+# Usage:
+#   updown              — run all updates silently
+#   updown --shutdown   — run updates then power off (interactive use)
+#
+# The systemd user service (config/systemd/dotfiles-update.service) calls
+# this script without flags on graphical session start (at most once per 23h).
+
 set -euo pipefail
 
-echo "--- Initiating Maintenance & Shutdown ---"
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/Repos/dotfiles}"
+DOTFILES_PROFILE="${DOTFILES_PROFILE:-dev}"
+LOG_PREFIX="[updown]"
 
-# 1. Close Chrome: Try Polite (15), then Force (9)
-if pgrep chrome > /dev/null; then
-    echo "Closing Chrome..."
-    pkill -15 --oldest chrome
+info()    { echo "$LOG_PREFIX $*"; }
+success() { echo "$LOG_PREFIX ✓ $*"; }
+warn()    { echo "$LOG_PREFIX ⚠ $*" >&2; }
 
-    # Wait up to 5 seconds for a clean exit
-    count=0
-    while pgrep chrome > /dev/null && [ $count -lt 5 ]; do
-        sleep 1
-        ((count++))
-    done
+# ── 1. rpm-ostree ────────────────────────────────────────────────────────────
+# Stages the update; does NOT reboot automatically.
+# On Kinoite, apply takes effect on next reboot (user-controlled).
 
-    # If it's STILL there, take it down hard
-    if pgrep chrome > /dev/null; then
-        echo "Chrome is stubborn. Forcing exit..."
-        pkill -9 chrome
-    fi
+info "Staging rpm-ostree upgrade..."
+if rpm-ostree upgrade --quiet 2>&1; then
+    success "rpm-ostree upgrade staged (reboot when ready to apply)"
+else
+    warn "rpm-ostree upgrade failed or nothing to do — continuing"
 fi
 
-# 2. Run Updates
-echo "Starting System Updates..."
-# We use 'sudo dnf upgrade' which is the modern standard for Fedora
-if sudo dnf upgrade -y && sudo dnf autoremove -y && sudo flatpak update -y; then
-    echo "✅ Updates complete. Shutting down..."
-    sudo shutdown now
+# ── 2. Flatpak ───────────────────────────────────────────────────────────────
+
+info "Updating Flatpaks..."
+if flatpak update -y --noninteractive 2>&1; then
+    success "Flatpaks updated"
 else
-    echo -e "\n❌ Updates failed. Shutdown aborted.\n"
-    exit 1
+    warn "Flatpak update failed — continuing"
+fi
+
+# ── 3. Nix / Home-Manager ────────────────────────────────────────────────────
+
+NIX_PROFILE="/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
+HM_FLAKE="$DOTFILES_DIR/config/home-manager"
+
+if [[ -f "$NIX_PROFILE" ]] && command -v home-manager &>/dev/null; then
+    # Source Nix environment so nix commands are available
+    # shellcheck disable=SC1090
+    . "$NIX_PROFILE"
+
+    info "Updating Nix flake inputs..."
+    if nix flake update --flake "$HM_FLAKE" 2>&1; then
+        success "Nix flake inputs updated"
+    else
+        warn "nix flake update failed — continuing"
+    fi
+
+    info "Applying home-manager switch (profile: $DOTFILES_PROFILE)..."
+    if home-manager switch --flake "$HM_FLAKE#${DOTFILES_PROFILE}" 2>&1; then
+        success "home-manager switch complete"
+    else
+        warn "home-manager switch failed — continuing"
+    fi
+else
+    info "Nix / home-manager not installed — skipping Nix updates"
+fi
+
+# ── 4. Antigravity Hub ───────────────────────────────────────────────────────
+
+ANTI_UPDATER="$DOTFILES_DIR/bin/update-antigravity"
+if [[ -x "$ANTI_UPDATER" ]]; then
+    info "Checking Antigravity hub for updates..."
+    if bash "$ANTI_UPDATER" 2>&1; then
+        success "Antigravity hub up to date"
+    else
+        warn "Antigravity update failed — continuing"
+    fi
+else
+    info "update-antigravity not found — skipping"
+fi
+
+# ── 5. agy CLI ───────────────────────────────────────────────────────────────
+# agy has its own update mechanism: agy update (or re-running the install script)
+
+AGY_BIN="${HOME}/.local/bin/agy"
+if [[ -x "$AGY_BIN" ]]; then
+    info "Updating agy CLI..."
+    if curl -fsSL https://antigravity.google/cli/install.sh | bash 2>&1; then
+        success "agy CLI updated"
+    else
+        warn "agy update failed — continuing"
+    fi
+else
+    info "agy CLI not installed — skipping"
+fi
+
+# ── 6. SELinux context fix ───────────────────────────────────────────────────
+# restorecon is always present on Kinoite (part of the base image).
+# Fixes SELinux labels on any extracted binaries in ~/.local/bin.
+
+info "Restoring SELinux contexts on ~/.local/bin..."
+if command -v restorecon &>/dev/null; then
+    restorecon -Rv "${HOME}/.local/bin" 2>&1 | grep -v "^$" || true
+    success "SELinux contexts restored"
+else
+    info "restorecon not available — skipping (not on SELinux system?)"
+fi
+
+# ── 7. Optional shutdown ─────────────────────────────────────────────────────
+
+echo ""
+echo "✅ Maintenance complete."
+
+if [[ "${1:-}" == "--shutdown" ]]; then
+    echo "Shutting down as requested..."
+    systemctl poweroff
 fi

@@ -64,5 +64,10 @@ echo "Updating Antigravity in $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR"
 tar -xzf "$TARBALL_PATH" -C "$INSTALL_DIR" --strip-components=1 --no-same-owner
 
+# Fix SELinux file contexts after extraction (required on Fedora Kinoite)
+if command -v restorecon &>/dev/null; then
+    restorecon -Rv "$INSTALL_DIR" 2>/dev/null || true
+fi
+
 NEW_VER=$(jq -r '.version' "$INSTALL_DIR/resources/app/package.json" 2>/dev/null || echo "Unknown")
 echo "Update complete! Installed version: $NEW_VER"
