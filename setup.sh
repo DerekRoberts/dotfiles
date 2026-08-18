@@ -676,20 +676,20 @@ PY
 # ── Profile presets ───────────────────────────────────────────────────────────
 
 preset_desktop() {
+    install_nix
+    install_home_manager "desktop"
     install_chrome
     install_yakuake
     install_insync
-    install_nix
-    install_home_manager "desktop"
     install_updater
 }
 
 preset_dev() {
+    install_nix
+    install_home_manager "dev"
     install_chrome
     install_yakuake
     install_insync
-    install_nix
-    install_home_manager "dev"
     install_antigravity
     install_agy
     install_cursor
@@ -721,9 +721,7 @@ run_tui() {
 
     tui_menu items selected "Select components to install (↑↓ Space Enter)"
 
-    [[ "${selected[0]}"  == "1" ]] && install_chrome
-    [[ "${selected[1]}"  == "1" ]] && install_yakuake
-    [[ "${selected[2]}"  == "1" ]] && install_insync
+    # Execute Nix/Home-Manager first so sudo password prompts don't block later
     [[ "${selected[3]}"  == "1" ]] && install_nix
     if [[ "${selected[4]}" == "1" && "${selected[5]}" == "1" ]]; then
         warn "Both dev and desktop home-manager selected — using dev"
@@ -733,6 +731,10 @@ run_tui() {
     elif [[ "${selected[5]}" == "1" ]]; then
         install_home_manager "desktop"
     fi
+
+    [[ "${selected[0]}"  == "1" ]] && install_chrome
+    [[ "${selected[1]}"  == "1" ]] && install_yakuake
+    [[ "${selected[2]}"  == "1" ]] && install_insync
     [[ "${selected[6]}"  == "1" ]] && install_antigravity
     [[ "${selected[7]}"  == "1" ]] && install_agy
     [[ "${selected[8]}"  == "1" ]] && install_cursor
