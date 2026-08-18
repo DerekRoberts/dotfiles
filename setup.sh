@@ -432,14 +432,12 @@ PY
     # 3. bin scripts
     info "Installing bin scripts..."
     mkdir -p "$HOME/.local/bin"
-    rm -f "$HOME/.local/bin/update-antigravity"
-    for script in updown tpm-enroll; do
-        if [[ -f "$DOTFILES_DIR/bin/$script" ]]; then
-            rm -f "$HOME/.local/bin/$script"
-            install -m 755 "$DOTFILES_DIR/bin/$script" "$HOME/.local/bin/$script"
-            success "Installed $script → $HOME/.local/bin/$script"
-        fi
-    done
+    rm -f "$HOME/.local/bin/update-antigravity" "$HOME/.local/bin/tpm-enroll"
+    if [[ -f "$DOTFILES_DIR/bin/updown" ]]; then
+        rm -f "$HOME/.local/bin/updown"
+        install -m 755 "$DOTFILES_DIR/bin/updown" "$HOME/.local/bin/updown"
+        success "Installed updown → $HOME/.local/bin/updown"
+    fi
 
     # 4. Antigravity config symlinks
     info "Configuring Antigravity..."
@@ -656,3 +654,7 @@ esac
 echo ""
 echo "✅ Setup complete!"
 echo "   Run: source ~/.bashrc   (or restart terminal)"
+if [[ -f "$DOTFILES_DIR/scripts/tpm-enroll.sh" ]]; then
+    echo "   Optional: To enable TPM 2.0 LUKS auto-unlock, run:"
+    echo "             $DOTFILES_DIR/scripts/tpm-enroll.sh"
+fi

@@ -64,8 +64,7 @@ source ~/.bashrc
 ├── gitconfig                          # Global git configuration include
 ├── .github/workflows/ci.yml           # ShellCheck & integration tests
 ├── bin/
-│   ├── updown                         # Workstation updater script
-│   └── tpm-enroll                     # TPM2 disk unlock helper
+│   └── updown                         # Workstation updater script
 ├── config/
 │   ├── prompts/
 │   │   └── global.instructions.md     # Unified AI agent instructions & guardrails
@@ -78,6 +77,7 @@ source ~/.bashrc
 ├── scripts/
 │   ├── bootstrap-tools.sh             # CLI binary installer (`oc`)
 │   ├── clone-repos.sh                 # Idempotent repository cloner
+│   ├── tpm-enroll.sh                  # Optional TPM2 disk unlock helper
 │   ├── update-antigravity.sh          # Runtime updater for Antigravity Hub
 │   └── git-setup.sh                   # Interactive git config & signing helper
 └── docs/
