@@ -11,7 +11,7 @@ jobs:
     name: Shellcheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Run ShellCheck
         run: shellcheck setup.sh scripts/*.sh bin/* 
 
@@ -23,11 +23,11 @@ jobs:
       image: fedora:latest
       options: --privileged # Required for flatpak inside docker
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       
       - name: Install Dependencies
         run: |
-          dnf install -y flatpak curl tar git jq unzip bc sudo dbus-daemon
+          dnf install -y flatpak curl tar git jq sudo dbus-daemon
           
       - name: Prepare unprivileged user
         run: |
