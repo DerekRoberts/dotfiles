@@ -66,14 +66,14 @@ source ~/.bashrc
 │   ├── gitconfig                      # Global git configuration include
 │   ├── prompts/
 │   │   └── global.instructions.md     # Unified AI agent instructions & guardrails
+│   ├── skills/
+│   │   └── typescript-standards/      # Modular agent skills
 │   ├── kde/
 │   │   └── user-places.xbel           # Dolphin sidebar bookmarks
 │   ├── systemd/
 │   │   └── dotfiles-update.service    # User systemd service for updates
 │   ├── vscode/
 │   └── repos.txt                      # Repositories cloned during dev setup
-├── skills/
-│   └── typescript-standards/          # Modular agent skills
 ├── scripts/
 │   ├── updown.sh                      # Workstation updater script (installed to ~/.local/bin/updown)
 │   ├── bootstrap-tools.sh             # CLI binary installer (`oc`)
