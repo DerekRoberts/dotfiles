@@ -429,18 +429,17 @@ PY
         bash "$DOTFILES_DIR/scripts/git-setup.sh"
     fi
 
-    # 3. bin symlinks
-    info "Symlinking bin scripts..."
+    # 3. bin scripts
+    info "Installing bin scripts..."
     mkdir -p "$HOME/.local/bin"
     rm -f "$HOME/.local/bin/update-antigravity"
     for script in updown tpm-enroll; do
-        [[ -f "$DOTFILES_DIR/bin/$script" ]] || { warn "bin/$script missing — skipping"; continue; }
-        chmod +x "$DOTFILES_DIR/bin/$script"
+        if [[ -f "$DOTFILES_DIR/bin/$script" ]]; then
+            rm -f "$HOME/.local/bin/$script"
+            install -m 755 "$DOTFILES_DIR/bin/$script" "$HOME/.local/bin/$script"
+            success "Installed $script → $HOME/.local/bin/$script"
+        fi
     done
-    if [[ -f "$DOTFILES_DIR/bin/updown" ]]; then
-        ln -sf "$DOTFILES_DIR/bin/updown" "$HOME/.local/bin/updown"
-        success "Symlinked updown → $HOME/.local/bin/updown"
-    fi
 
     # 4. Antigravity config symlinks
     info "Configuring Antigravity..."

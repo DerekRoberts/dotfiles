@@ -13,7 +13,7 @@
 set -euo pipefail
 
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || true)"
-if [[ -n "$SCRIPT_PATH" && -f "$SCRIPT_PATH" ]]; then
+if [[ -n "$SCRIPT_PATH" && -f "$(dirname "$SCRIPT_PATH")/../setup.sh" ]]; then
     DOTFILES_DIR="$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)"
 else
     DOTFILES_DIR="${DOTFILES_DIR:-$HOME/Repos/dotfiles}"
