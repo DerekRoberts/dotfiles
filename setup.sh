@@ -588,6 +588,57 @@ EOF
     done
     
     mkdir -p "$HOME/Repos" "$HOME/Documents" "$HOME/Downloads"
+    
+    info "Hiding unwanted folders from KDE Dolphin sidebar..."
+    python3 - << 'PY'
+import xml.etree.ElementTree as ET
+import os
+
+places_file = os.path.expanduser('~/.local/share/user-places.xbel')
+if os.path.exists(places_file):
+    ET.register_namespace('', 'http://www.freedesktop.org/standards/desktop-bookmarks')
+    ET.register_namespace('bookmark', 'http://www.freedesktop.org/standards/desktop-bookmarks')
+    ET.register_namespace('kdepriv', 'http://www.kde.org/kdepriv')
+    ET.register_namespace('mime', 'http://www.freedesktop.org/standards/shared-mime-info')
+
+    tree = ET.parse(places_file)
+    root = tree.getroot()
+
+    hide_icons = {'user-desktop', 'folder-music', 'folder-pictures', 'folder-videos', 'folder-public', 'folder-templates'}
+    changed = False
+
+    for bookmark in root.findall('{http://www.freedesktop.org/standards/desktop-bookmarks}bookmark'):
+        info = bookmark.find('{http://www.freedesktop.org/standards/desktop-bookmarks}info')
+        if info is not None:
+            icon = None
+            for meta in info.findall('{http://www.freedesktop.org/standards/desktop-bookmarks}metadata'):
+                if meta.attrib.get('owner') == 'http://freedesktop.org':
+                    icon_node = meta.find('{http://www.freedesktop.org/standards/desktop-bookmarks}icon')
+                    if icon_node is not None:
+                        icon = icon_node.attrib.get('name')
+            
+            if icon in hide_icons:
+                kde_meta = None
+                for meta in info.findall('{http://www.freedesktop.org/standards/desktop-bookmarks}metadata'):
+                    if meta.attrib.get('owner') == 'http://www.kde.org':
+                        kde_meta = meta
+                        break
+                if kde_meta is None:
+                    kde_meta = ET.SubElement(info, '{http://www.freedesktop.org/standards/desktop-bookmarks}metadata', owner='http://www.kde.org')
+                
+                is_hidden = kde_meta.find('{http://www.freedesktop.org/standards/desktop-bookmarks}IsHidden')
+                if is_hidden is None:
+                    is_hidden = ET.SubElement(kde_meta, '{http://www.freedesktop.org/standards/desktop-bookmarks}IsHidden')
+                    is_hidden.text = 'true'
+                    changed = True
+                elif is_hidden.text != 'true':
+                    is_hidden.text = 'true'
+                    changed = True
+
+    if changed:
+        tree.write(places_file, encoding='UTF-8', xml_declaration=True)
+PY
+
     success "Directories configured (Documents, Downloads, Repos remain)"
 }
 
