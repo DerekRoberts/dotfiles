@@ -340,9 +340,9 @@ install_oc() {
     bash "$DOTFILES_DIR/scripts/bootstrap-tools.sh"
 }
 
-install_work_repos() {
-    section "Work Repositories"
-    bash "$DOTFILES_DIR/scripts/clone-work-repos.sh"
+install_repos() {
+    section "Repositories"
+    bash "$DOTFILES_DIR/scripts/clone-repos.sh"
 }
 
 # ── Core wiring (always runs regardless of profile) ──────────────────────────
@@ -599,7 +599,7 @@ preset_dev() {
     install_cursor
     install_ponytail
     install_oc
-    install_work_repos
+    install_repos
 }
 # ── Usage ─────────────────────────────────────────────────────────────────────
 

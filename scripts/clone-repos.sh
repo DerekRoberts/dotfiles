@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# clone-work-repos.sh — Declarative work repo cloner
+# clone-repos.sh — Declarative repo cloner
 # Reads config/repos.txt (SSH paths: org/repo), clones into ~/Repos/
 # Generates an SSH key if ~/.ssh/id_ed25519 is absent.
 #
-# Usage: scripts/clone-work-repos.sh [--repos-file PATH]
+# Usage: scripts/clone-repos.sh [--repos-file PATH]
 
 set -euo pipefail
 

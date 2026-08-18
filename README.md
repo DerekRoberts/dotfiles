@@ -77,7 +77,7 @@ source ~/.bashrc
 │   └── repos.txt                      # Repositories cloned during dev setup
 ├── scripts/
 │   ├── bootstrap-tools.sh             # CLI binary installer (`oc`)
-│   ├── clone-work-repos.sh            # Idempotent repository cloner
+│   ├── clone-repos.sh                 # Idempotent repository cloner
 │   ├── update-antigravity.sh          # Runtime updater for Antigravity Hub
 │   └── git-setup.sh                   # Interactive git config & signing helper
 └── docs/
