@@ -57,7 +57,7 @@ if command -v home-manager &>/dev/null || ( [[ -f "$NIX_PROFILE" ]] && source "$
     fi
 
     info "Applying home-manager switch (profile: $DOTFILES_PROFILE)..."
-    if home-manager switch --flake "$HM_FLAKE#${DOTFILES_PROFILE}" 2>&1; then
+    if home-manager switch --flake "$HM_FLAKE#${DOTFILES_PROFILE:-dev}" 2>&1; then
         success "home-manager switch complete"
     else
         warn "home-manager switch failed — continuing"
