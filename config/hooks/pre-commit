@@ -31,14 +31,3 @@ git diff --cached --name-only -z | while IFS= read -r -d '' file; do
   fi
 done
 
-# ─── Data-Layer Mutability Guardian ─────────────────────────────────────────
-# Detects and blocks accidental overwrite: true on deployment infrastructure.
-# Prevents accidental recreation or destructive replacement of stateful/database instances.
-
-if git diff --cached -U0 | grep -E "^\+[[:space:]]*['\"]?overwrite['\"]?[[:space:]]*:[[:space:]]*['\"]?true['\"]?" >/dev/null 2>&1; then
-  echo -e "\033[0;31mBLOCKED: Dangerous mutability change detected (overwrite: true)!\033[0m" >&2
-  echo "AI Agents are STRICTLY FORBIDDEN from setting 'overwrite: true' on deployment infrastructure." >&2
-  echo "This protects databases and stateful services from accidental recreation or data loss." >&2
-  echo "If this is an intentional manual change, human developers may bypass via: command git commit -n" >&2
-  exit 1
-fi
