@@ -275,11 +275,20 @@ install_ponytail() {
 
 
 install_nix() {
-    section "Nix (Fedora Native)"
+    section "Nix (Determinate Systems OSTree Installer)"
 
-    if command -v nix &>/dev/null && [[ -d /nix ]]; then
-        success "Nix is installed."
+    # The official Determinate Systems installer natively supports OSTree (Silverblue/Kinoite)
+    # by using systemd mount units to bypass the immutable root restrictions.
+    
+    # 1. Check if it's already installed via Determinate Systems
+    if [[ -d "/nix" ]] && [[ -f "/nix/var/nix/profiles/default/bin/nix" ]]; then
+        success "Nix is already installed."
         
+        # Ensure it's in the PATH for this script session
+        if ! command -v nix &>/dev/null; then
+            source "/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
+        fi
+
         # Ensure flakes are enabled
         local NIX_CONF_DIR="$HOME/.config/nix"
         mkdir -p "$NIX_CONF_DIR"
@@ -287,43 +296,28 @@ install_nix() {
             echo "experimental-features = nix-command flakes" >> "$NIX_CONF_DIR/nix.conf"
             success "Enabled Nix flakes in $NIX_CONF_DIR/nix.conf"
         fi
-
-        # Try to ensure daemon is active, prompt for sudo if necessary
-        if ! systemctl status nix-daemon.socket &>/dev/null; then
-            info "Enabling nix-daemon.socket (requires sudo)..."
-            sudo systemctl enable --now nix-daemon.socket || true
-        fi
         return
     fi
 
-    info "Installing Nix via rpm-ostree..."
+    info "Nix is missing. Installing via Determinate Systems (native OSTree support)..."
+    info "This will prompt for your sudo password."
     
-    if rpm-ostree status | grep -q " nix"; then
-        warn "Nix is staged but not active. A reboot is required to mount /nix."
-        warn "Please REBOOT and run ./setup.sh again to continue setup."
-        exit 0
-    else
-        # Try to apply live
-        if rpm-ostree install --idempotent --apply-live -y nix; then
-            success "Nix installed and applied live!"
-            local NIX_CONF_DIR="$HOME/.config/nix"
-            mkdir -p "$NIX_CONF_DIR"
-            if ! grep -q "experimental-features" "$NIX_CONF_DIR/nix.conf" 2>/dev/null; then
-                echo "experimental-features = nix-command flakes" >> "$NIX_CONF_DIR/nix.conf"
-            fi
-            if ! systemctl status nix-daemon.socket &>/dev/null; then
-                info "Enabling nix-daemon.socket (requires sudo)..."
-                sudo systemctl enable --now nix-daemon.socket || true
-            fi
-        else
-            warn "Live apply failed (expected for sysusers/daemons on immutable roots)."
-            info "Falling back to standard staging install..."
-            rpm-ostree install --idempotent -y nix
-            warn "Nix has been successfully staged."
-            warn "A REBOOT IS REQUIRED to mount /nix and initialize the daemon."
-            warn "Please REBOOT and run ./setup.sh again."
-            exit 0
+    if curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install --no-confirm; then
+        success "Nix successfully installed!"
+        
+        # Source it immediately so the rest of the script (Home-Manager) works
+        if [[ -f "/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh" ]]; then
+            source "/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
         fi
+
+        local NIX_CONF_DIR="$HOME/.config/nix"
+        mkdir -p "$NIX_CONF_DIR"
+        if ! grep -q "experimental-features" "$NIX_CONF_DIR/nix.conf" 2>/dev/null; then
+            echo "experimental-features = nix-command flakes" >> "$NIX_CONF_DIR/nix.conf"
+        fi
+    else
+        warn "Nix installation failed."
+        exit 1
     fi
 }
 
