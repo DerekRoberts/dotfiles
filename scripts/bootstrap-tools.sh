@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
-# bootstrap-tools.sh — CLI tool installer for tools not in nixpkgs at target cadence.
+# bootstrap-tools.sh — CLI tool installer
 #
 # Currently manages:
-#   - oc (OpenShift CLI) — tracks Red Hat's official release, not nixpkgs lag
-#
-# hadolint, actionlint, and yq-go are declared in config/home-manager/home.nix
-# and installed via: home-manager switch --flake .#dev
+#   - oc (OpenShift CLI) — tracks Red Hat's official release mirror
 #
 # Usage:
 #   scripts/bootstrap-tools.sh           # install/verify all managed tools
@@ -157,9 +154,9 @@ should_install_tool() {
     return 1  # up to date
 }
 
-# ── oc (OpenShift CLI) ───────────────────────────────────────────────────────
-# oc is not in nixpkgs at Red Hat's release cadence; managed here as a binary.
+# ── Tool installers ──────────────────────────────────────────────────────────
 
+# oc (OpenShift CLI)
 install_oc() {
     local TARGET_OC_VER="${OC_VERSION}"
 

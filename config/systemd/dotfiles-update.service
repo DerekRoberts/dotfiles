@@ -1,5 +1,5 @@
 [Unit]
-Description=Dotfiles silent maintenance (rpm-ostree, flatpak, nix, antigravity)
+Description=Dotfiles silent maintenance (rpm-ostree, flatpak, binaries, antigravity)
 Documentation=file://%h/Repos/dotfiles/bin/updown
 After=network-online.target graphical-session.target
 Wants=network-online.target

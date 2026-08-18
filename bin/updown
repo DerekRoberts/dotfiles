@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # updown — Workstation silent maintenance
-# Stages rpm-ostree upgrade, updates flatpaks, updates Nix/home-manager,
+# Stages rpm-ostree upgrade, updates flatpaks, updates third-party binaries,
 # and updates Antigravity CLI + hub.
 #
 # Usage:

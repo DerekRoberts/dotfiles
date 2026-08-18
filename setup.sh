@@ -635,7 +635,21 @@ EOF
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
-echo "=== Bootstrapping Dotfiles (Fedora Kinoite ) ==="
+case "${1:-}" in
+    --help|-h)
+        usage
+        exit 0
+        ;;
+    --dev|--desktop|"")
+        ;;
+    *)
+        echo "Unknown option: $1" >&2
+        usage >&2
+        exit 1
+        ;;
+esac
+
+echo "=== Bootstrapping Dotfiles (Fedora Kinoite) ==="
 
 # Always wire core configs (bashrc, git, symlinks)
 wire_core
@@ -648,15 +662,6 @@ case "${1:-}" in
     --desktop)
         echo "Profile: desktop (essentials)"
         preset_desktop
-        ;;
-    --help|-h)
-        usage
-        exit 0
-        ;;
-    *)
-        echo "Unknown option: $1" >&2
-        usage >&2
-        exit 1
         ;;
 esac
 
