@@ -95,7 +95,7 @@ download_tarball_binary() {
     local dest="$3"
     local tmp_dir
     tmp_dir="$(mktemp -d "${BIN_DIR}/.tmpdir.XXXXXX")"
-    trap 'rm -rf "${tmp_dir}"' RETURN EXIT
+    trap 'rm -rf "${tmp_dir:-}"' RETURN EXIT
 
     if ! curl -fsSL "${url}" | tar -xz -C "${tmp_dir}"; then
         echo "❌ Failed to download/extract ${url}" >&2
@@ -164,23 +164,23 @@ install_oc() {
     local TARGET_OC_VER="${OC_VERSION}"
 
     if [[ "${TARGET_OC_VER}" == "latest" ]]; then
-        # oc releases are in openshift/oc on GitHub
-        TARGET_OC_VER="$(resolve_latest_tag "openshift/oc")"
+        TARGET_OC_VER=$(curl -fsSL "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/release.txt" | grep "Version:" | awk '{print $2}')
+        # Prepend v to match expected get_tool_version output if necessary, wait, get_tool_version oc returns "4.14..." without v usually.
     fi
 
-    if should_install_tool "oc" "${TARGET_OC_VER}"; then
-        echo " -> Installing/Updating oc (${TARGET_OC_VER})..."
-        local VER_CLEAN="${TARGET_OC_VER#v}"
-        local OC_TAR="openshift-client-${OS_NAME}-${ARCH_OC}-${VER_CLEAN}.tar.gz"
-        local OC_URL="https://github.com/openshift/oc/releases/download/v${VER_CLEAN}/${OC_TAR}"
-        download_tarball_binary "${OC_URL}" "oc" "${BIN_DIR}/oc"
+    # oc version --client returns e.g. "Client Version: 4.14.0"
+    local CURRENT_VER=$(oc version --client 2>/dev/null | grep "Client Version:" | awk '{print $3}' || echo "none")
 
-        # Fix SELinux label on Kinoite
+    if [[ "${CURRENT_VER}" != "${TARGET_OC_VER}" ]]; then
+        echo " -> Installing/Updating oc (${TARGET_OC_VER})..."
+        local OC_URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz"
+        download_tarball_binary "${OC_URL}" "oc" "${BIN_DIR}/oc"
+        
         if command -v restorecon &>/dev/null; then
-            restorecon -v "${BIN_DIR}/oc" 2>/dev/null || true
+            restorecon "${BIN_DIR}/oc" 2>/dev/null || true
         fi
     else
-        echo " -> oc: $(get_tool_version "oc") (up to date)"
+        echo " -> oc: ${CURRENT_VER} (up to date)"
     fi
 }
 
