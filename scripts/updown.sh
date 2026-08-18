@@ -4,11 +4,11 @@
 # and updates Antigravity CLI + hub.
 #
 # Usage:
-#   updown                   — run updates then power off (default / interactive)
-#   updown --no-shutdown, -n — run updates without powering off (background / CI)
+#   updown                 — run updates then power off (default / interactive)
+#   updown --background, -b — run updates in the background without power off
 #
 # The systemd user service (config/systemd/dotfiles-update.service) calls
-# this script with --no-shutdown on graphical session start (at most once per 23h).
+# this script with --background on graphical session start (at most once per 23h).
 
 set -euo pipefail
 
@@ -17,7 +17,7 @@ INSTALL_INSYNC=0
 
 for arg in "$@"; do
     case "$arg" in
-        --no-shutdown|--background|-n)
+        --background|-b|--no-shutdown|-n)
             SHUTDOWN=0
             ;;
         --install-insync)
@@ -30,8 +30,9 @@ for arg in "$@"; do
         --help|-h)
             echo "Usage: updown [options]"
             echo "  (default)            Run updates and power off"
-            echo "  --no-shutdown, -n    Run updates without powering off"
-            echo "  --install-insync     Bootstrap/update Insync only without shutdown"
+            echo "  --background, -b     Run updates in background without power off"
+            echo "  --install-insync     Bootstrap/update Insync only without power off"
+            echo "  --help, -h           Show this help"
             exit 0
             ;;
     esac
