@@ -141,7 +141,7 @@ install_insync() {
         local AUTOSTART_DIR="$HOME/.config/autostart"
         mkdir -p "$AUTOSTART_DIR"
         if [[ -f "$APPS_DIR/insync.desktop" ]]; then
-            ln -sf "$APPS_DIR/insync.desktop" "$AUTOSTART_DIR/insync.desktop"
+            cp -f "$APPS_DIR/insync.desktop" "$AUTOSTART_DIR/insync.desktop"
             success "Insync added to autostart"
         fi
         return
@@ -172,7 +172,7 @@ DESKTOP
 
     local AUTOSTART_DIR="$HOME/.config/autostart"
     mkdir -p "$AUTOSTART_DIR"
-    ln -sf "$APPS_DIR/insync.desktop" "$AUTOSTART_DIR/insync.desktop"
+    cp -f "$APPS_DIR/insync.desktop" "$AUTOSTART_DIR/insync.desktop"
 
     success "Insync installed to $INSYNC_BIN and added to autostart"
     info "Run: insync start"
@@ -437,7 +437,7 @@ PY
         success "Installed updown → $HOME/.local/bin/updown"
     fi
 
-    # 4. Antigravity config symlinks
+    # 4. Antigravity config
     info "Configuring Antigravity..."
     local ANTIGRAVITY_DIR="$HOME/.config/antigravity"
     mkdir -p "$ANTIGRAVITY_DIR"
@@ -445,37 +445,33 @@ PY
         local src="$DOTFILES_DIR/config/antigravity/$f"
         local dest="$ANTIGRAVITY_DIR/$f"
         [[ -f "$src" ]] || continue
-        if [[ -f "$dest" && ! -L "$dest" ]]; then
-            mv "$dest" "$dest.bak"
-            info "Backed up $f to $f.bak"
-        fi
-        ln -sf "$src" "$dest"
+        rm -f "$dest"
+        cp -f "$src" "$dest"
     done
-    if [[ -f "$HOME/.config/antigravity-flags.conf" && ! -L "$HOME/.config/antigravity-flags.conf" ]]; then
-        mv "$HOME/.config/antigravity-flags.conf" "$HOME/.config/antigravity-flags.conf.bak"
+    if [[ -f "$DOTFILES_DIR/config/antigravity/antigravity-flags.conf" ]]; then
+        rm -f "$HOME/.config/antigravity-flags.conf"
+        cp -f "$DOTFILES_DIR/config/antigravity/antigravity-flags.conf" "$HOME/.config/antigravity-flags.conf"
     fi
-    ln -sf "$DOTFILES_DIR/config/antigravity/antigravity-flags.conf" "$HOME/.config/antigravity-flags.conf"
-    success "Antigravity config symlinked"
+    success "Antigravity config installed"
 
     # 5. Antigravity global instructions + skills
     local GLOBAL_PROMPT_FILE="$DOTFILES_DIR/config/prompts/global.instructions.md"
     info "Configuring Antigravity global instructions and skills..."
-    mkdir -p "$HOME/.gemini/config" "$HOME/.gemini/antigravity"
-    if [[ -L "$HOME/.gemini/GEMINI.md" || ! -f "$HOME/.gemini/GEMINI.md" ]]; then
-        ln -sf "$GLOBAL_PROMPT_FILE" "$HOME/.gemini/GEMINI.md"
-        success "Symlinked ~/.gemini/GEMINI.md → global instructions"
-    else
-        warn "~/.gemini/GEMINI.md is a physical file — skipping symlink"
+    mkdir -p "$HOME/.gemini/config" "$HOME/.gemini/antigravity" "$HOME/.agents/skills"
+    if [[ -f "$GLOBAL_PROMPT_FILE" ]]; then
+        rm -f "$HOME/.gemini/GEMINI.md"
+        cp -f "$GLOBAL_PROMPT_FILE" "$HOME/.gemini/GEMINI.md"
+        success "Installed ~/.gemini/GEMINI.md"
     fi
 
     if [[ -d "$DOTFILES_DIR/config/skills" ]]; then
-        mkdir -p "$HOME/.agents/skills"
         for skill_dir in "$DOTFILES_DIR/config/skills"/*; do
             [[ -d "$skill_dir" ]] || continue
             local skill_name; skill_name="$(basename "$skill_dir")"
-            ln -sfn "$skill_dir" "$HOME/.agents/skills/$skill_name"
+            rm -rf "$HOME/.agents/skills/$skill_name"
+            cp -rf "$skill_dir" "$HOME/.agents/skills/$skill_name"
         done
-        success "AI skills symlinked"
+        success "AI skills installed"
     fi
 
     if [[ -L "$HOME/.gemini/config/skills" || ! -d "$HOME/.gemini/config/skills" ]]; then
@@ -484,20 +480,16 @@ PY
     if [[ -L "$HOME/.gemini/antigravity/skills" || ! -d "$HOME/.gemini/antigravity/skills" ]]; then
         ln -sfn "$HOME/.gemini/config/skills" "$HOME/.gemini/antigravity/skills"
     fi
-    # Remove erroneous circular symlink
     [[ -L "$HOME/.agents/skills/skills" ]] && rm -f "$HOME/.agents/skills/skills"
 
     # 6. Cursor instructions
     local CURSOR_USER_DIR="$HOME/.config/Cursor/User"
-    if [[ -d "$CURSOR_USER_DIR" ]]; then
+    if [[ -d "$CURSOR_USER_DIR" && -f "$GLOBAL_PROMPT_FILE" ]]; then
         info "Configuring Cursor..."
         mkdir -p "$CURSOR_USER_DIR/prompts"
-        if [[ -L "$CURSOR_USER_DIR/prompts/global.instructions.md" || ! -f "$CURSOR_USER_DIR/prompts/global.instructions.md" ]]; then
-            ln -sf "$GLOBAL_PROMPT_FILE" "$CURSOR_USER_DIR/prompts/global.instructions.md"
-            success "Cursor instructions symlinked"
-        else
-            warn "$CURSOR_USER_DIR/prompts/global.instructions.md is a physical file — skipping"
-        fi
+        rm -f "$CURSOR_USER_DIR/prompts/global.instructions.md"
+        cp -f "$GLOBAL_PROMPT_FILE" "$CURSOR_USER_DIR/prompts/global.instructions.md"
+        success "Cursor instructions installed"
     fi
 
     # 7. Remove legacy Kilo symlink

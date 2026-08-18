@@ -9,7 +9,7 @@ Declarative, single-command workstation setup and configuration for **Fedora Kin
   - `--dev` (default): Full developer workstation (Node LTS via NVM, `gh`, `jq`, `podman-compose`, `oc`, Cursor, Antigravity, Ponytail, work repos).
   - `--desktop`: Minimal desktop essentials (Google Chrome and Insync).
 - **Automated Updates**: Systemd user service (`dotfiles-update.service`) running `updown` at login with a 23-hour idempotency guard.
-- **Unified AI Prompts**: Self-contained guardrails and instructions in `config/prompts/global.instructions.md` symlinked to Cursor and Antigravity.
+- **Unified AI Prompts**: Self-contained guardrails and instructions in `config/prompts/global.instructions.md` deployed to Cursor and Antigravity.
 
 ## Quick Start
 
