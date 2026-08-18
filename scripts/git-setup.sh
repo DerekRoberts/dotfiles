@@ -317,7 +317,7 @@ configure_commit_signing() {
 # Main execution
 main() {
   echo -e "${BLUE}=== Git Configuration Setup ===${NC}"
-  echo -e "${BLUE}bcgov/agent-guardrails${NC}"
+  echo -e "${BLUE}Git Setup${NC}"
   
   configure_user
   configure_gitignore

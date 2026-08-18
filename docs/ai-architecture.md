@@ -32,7 +32,7 @@ Three-repo consumer model for Derek. Dotfiles does not install guardrails.
     VS Code Copilot      Cursor prompts     Antigravity GEMINI.md
 
 ┌─────────────────────────────────────────────────────────────────┐
-│  bcgov/agent-guardrails                  ENFORCEMENT (separate)  │
+│  dotfiles/config/prompts                  ENFORCEMENT (separate)  │
 │  setup.sh  →  ~/.githooks + ~/.bashrc loader                    │
 │  Install independently — dotfiles does not call this          │
 └─────────────────────────────────────────────────────────────────┘
@@ -48,7 +48,6 @@ Tool-specific (not in bundle):
 | **agent-instructions** | Org shared soft standards, git workflow macros, 4k-cap text |
 | **agent-guardrails** | Checkable bans: `gh`/`git`/`npm`/`oc` wrappers, hooks, gitleaks |
 | **dotfiles personal** | Judgment & style: roast voice, diagnose-vs-implement, branch hygiene |
-| **dotfiles scripts** | Personal block sync, tool symlinks, thin `install-guardrails.sh` |
 | **Chat** | One-off scope, ponytail-review |
 
 **Split rule:** if a shell/hook can deny it, put it in **agent-guardrails** and keep only a one-line pointer in instructions. Judgment, tone, and workflow stay in instructions.
@@ -95,14 +94,10 @@ PERSONAL_INSTRUCTIONS_URL="file://$HOME/Repos/dotfiles/config/ai/personal.instru
 
 ```bash
 # clone + run
-git clone https://github.com/bcgov/agent-guardrails.git ~/Repos/agent-guardrails
-~/Repos/agent-guardrails/setup.sh
 
 # or curl bootstrap
-curl -fsSL https://raw.githubusercontent.com/bcgov/agent-guardrails/main/setup.sh | bash
 
 # or wrapper (local clone if present, else curl)
-~/Repos/dotfiles/scripts/install-guardrails.sh
 ```
 
 Re-sync personal block only:
@@ -147,10 +142,9 @@ Work standards are updated upstream in `bcgov/agent-instructions`. Dotfiles pull
 ## After editing guardrails
 
 1. Edit `~/Repos/agent-guardrails/` (hooks, git-safety.sh, setup.sh)
-2. Run `~/Repos/agent-guardrails/setup.sh` — **not** dotfiles
 
 ## agent-instructions is standards text only
 
 That repo holds `instructions.md` for org/project distribution. Dotfiles reads it online.
 
-Guardrails live in **bcgov/agent-guardrails**. Personal block sync and tool symlinks live in **dotfiles**.
+Guardrails live in **dotfiles/config/prompts**. Personal block sync and tool symlinks live in **dotfiles**.

@@ -27,20 +27,16 @@ Guardrails are separate — two install paths:
 **Clone and run (preferred when you will hack on guardrails):**
 
 ```bash
-git clone https://github.com/bcgov/agent-guardrails.git ~/Repos/agent-guardrails
-~/Repos/agent-guardrails/setup.sh
 ```
 
 **Or curl bootstrap (no clone yet):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bcgov/agent-guardrails/main/setup.sh | bash
 ```
 
 The wrapper script uses whichever applies: local clone if present, otherwise curl:
 
 ```bash
-~/Repos/dotfiles/scripts/install-guardrails.sh
 ```
 
 ## AI layout (summary)
@@ -50,7 +46,7 @@ The wrapper script uses whichever applies: local clone if present, otherwise cur
 | Work standards | `~/.config/Code/User/prompts/global.instructions.md` (org Copilot / VS Code) |
 | Personal instructions (canonical) | GitHub `main` → `config/ai/personal.instructions.md` |
 | Personal block in hub | Delimited section synced by `bundle-ai-instructions.sh` |
-| Guardrails | [bcgov/agent-guardrails](https://github.com/bcgov/agent-guardrails) via `setup.sh` |
+| Guardrails | [dotfiles/config/prompts](https://github.com/dotfiles/config/prompts) via `setup.sh` |
 
 Tools symlinked to the hub: **VS Code Copilot**, **Cursor**, **Antigravity**.
 
@@ -88,7 +84,6 @@ During `setup.sh`, `scripts/bootstrap-tools.sh` verifies and installs required C
 ├── scripts/
 │   ├── bootstrap-tools.sh          # dynamic CLI tool installer (actionlint, yq, hadolint)
 │   ├── bundle-ai-instructions.sh   # fetch personal from GitHub → hub
-│   └── install-guardrails.sh       # thin wrapper → agent-guardrails
 ├── config/
 │   ├── ai/personal.instructions.md # canonical source (on main)
 │   ├── antigravity/
