@@ -4,13 +4,38 @@
 # and updates Antigravity CLI + hub.
 #
 # Usage:
-#   updown              — run all updates silently
-#   updown --shutdown   — run updates then power off (interactive use)
+#   updown                   — run updates then power off (default / interactive)
+#   updown --no-shutdown, -n — run updates without powering off (background / CI)
 #
 # The systemd user service (config/systemd/dotfiles-update.service) calls
-# this script without flags on graphical session start (at most once per 23h).
+# this script with --no-shutdown on graphical session start (at most once per 23h).
 
 set -euo pipefail
+
+SHUTDOWN=1
+INSTALL_INSYNC=0
+
+for arg in "$@"; do
+    case "$arg" in
+        --no-shutdown|--background|-n)
+            SHUTDOWN=0
+            ;;
+        --install-insync)
+            INSTALL_INSYNC=1
+            SHUTDOWN=0
+            ;;
+        --shutdown|-s)
+            SHUTDOWN=1
+            ;;
+        --help|-h)
+            echo "Usage: updown [options]"
+            echo "  (default)            Run updates and power off"
+            echo "  --no-shutdown, -n    Run updates without powering off"
+            echo "  --install-insync     Bootstrap/update Insync only without shutdown"
+            exit 0
+            ;;
+    esac
+done
 
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || true)"
 if [[ -n "$SCRIPT_PATH" && -f "$(dirname "$SCRIPT_PATH")/../setup.sh" ]]; then
@@ -80,7 +105,7 @@ fi
 # ── 6. Insync ────────────────────────────────────────────────────────────────
 
 INSYNC_BIN="${HOME}/.local/bin/insync"
-if [[ -x "$INSYNC_BIN" ]] || [[ "${1:-}" == "--install-insync" ]]; then
+if [[ -x "$INSYNC_BIN" ]] || [[ "$INSTALL_INSYNC" -eq 1 ]]; then
     info "Checking Insync for updates..."
     INSYNC_JS_URL="https://cdn.insynchq.com/web/webflow/js/linux_download_links.js"
     LATEST_INSYNC_URL="$(curl -fsSL "$INSYNC_JS_URL" | grep -oE 'https://cdn\.insynchq\.com/builds/linux/[^"]+\.x86_64\.rpm' | grep -v 'headless' | grep 'fc44' | head -n 1 || true)"
@@ -162,12 +187,13 @@ else
     info "restorecon not available — skipping (not on SELinux system?)"
 fi
 
-# ── 7. Optional shutdown ─────────────────────────────────────────────────────
+# ── 9. Shutdown ──────────────────────────────────────────────────────────────
 
 echo ""
 echo "✅ Maintenance complete."
 
-if [[ "${1:-}" == "--shutdown" ]]; then
-    echo "Shutting down as requested..."
+if [[ "$SHUTDOWN" -eq 1 ]]; then
+    echo "Shutting down system in 3 seconds (Ctrl+C to cancel)..."
+    sleep 3
     systemctl poweroff
 fi
