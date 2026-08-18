@@ -147,22 +147,20 @@ if [[ -x "$INSYNC_BIN" ]] || [[ "$INSTALL_INSYNC" -eq 1 ]]; then
                     [[ -d "$INSYNC_LIB_DIR" ]] && mv "$INSYNC_LIB_DIR" "${INSYNC_LIB_DIR}.old"
                     if cp -rf "$extracted_lib" "$INSYNC_LIB_DIR"; then
                         rm -rf "${INSYNC_LIB_DIR}.old"
-                    else
-                        warn "Insync copy failed — restoring previous installation"
-                        [[ -d "${INSYNC_LIB_DIR}.old" ]] && mv "${INSYNC_LIB_DIR}.old" "$INSYNC_LIB_DIR"
-                        rm -rf "$tmp_dir"
-                        continue
-                    fi
-                    chmod +x "$INSYNC_LIB_DIR/insync"
-                    
-                    cat > "$INSYNC_BIN" << 'EOF'
+                        chmod +x "$INSYNC_LIB_DIR/insync"
+                        
+                        cat > "$INSYNC_BIN" << 'EOF'
 #!/bin/bash
 LC_TIME=C exec "$HOME/.local/lib/insync/insync" "$@"
 EOF
-                    chmod +x "$INSYNC_BIN"
-                    mkdir -p "$(dirname "$STAMP_FILE")"
-                    echo "$LATEST_INSYNC_URL" > "$STAMP_FILE"
-                    success "Insync updated"
+                        chmod +x "$INSYNC_BIN"
+                        mkdir -p "$(dirname "$STAMP_FILE")"
+                        echo "$LATEST_INSYNC_URL" > "$STAMP_FILE"
+                        success "Insync updated"
+                    else
+                        warn "Insync copy failed — restoring previous installation"
+                        [[ -d "${INSYNC_LIB_DIR}.old" ]] && mv "${INSYNC_LIB_DIR}.old" "$INSYNC_LIB_DIR"
+                    fi
                 else
                     warn "Insync update failed (library bundle not found in RPM)"
                 fi
