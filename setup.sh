@@ -558,6 +558,39 @@ install_ai_instructions() {
 
 # ── Core wiring (always runs regardless of profile) ──────────────────────────
 
+configure_user_dirs() {
+    section "XDG User Directories"
+    
+    local CONFIG_FILE="$HOME/.config/user-dirs.dirs"
+    info "Writing strict XDG directory definitions..."
+    
+    mkdir -p "$HOME/.config"
+    cat > "$CONFIG_FILE" << EOF
+XDG_DESKTOP_DIR="$HOME/Downloads/"
+XDG_DOCUMENTS_DIR="$HOME/Documents/"
+XDG_DOWNLOAD_DIR="$HOME/Downloads/"
+XDG_MUSIC_DIR="$HOME/Downloads/"
+XDG_PICTURES_DIR="$HOME/Downloads/"
+XDG_PROJECTS_DIR="$HOME/Downloads/"
+XDG_PUBLICSHARE_DIR="$HOME/Downloads/"
+XDG_TEMPLATES_DIR="$HOME/Downloads/"
+XDG_VIDEOS_DIR="$HOME/Downloads/"
+EOF
+
+    # Prevent xdg-user-dirs-update from recreating the default folders
+    echo "enabled=False" > "$HOME/.config/user-dirs.conf"
+
+    info "Cleaning up unused default directories (if empty)..."
+    for dir in Desktop Music Pictures Public Templates Videos; do
+        if [[ -d "$HOME/$dir" ]]; then
+            rmdir "$HOME/$dir" 2>/dev/null || true
+        fi
+    done
+    
+    mkdir -p "$HOME/Repos" "$HOME/Documents" "$HOME/Downloads"
+    success "Directories configured (Documents, Downloads, Repos remain)"
+}
+
 wire_core() {
     section "Core Wiring"
 
@@ -692,6 +725,8 @@ PY
 
     # 10. Remove legacy Kilo symlink
     [[ -L "$HOME/.copilot.md" ]] && rm -f "$HOME/.copilot.md" && info "Removed legacy ~/.copilot.md"
+
+    configure_user_dirs
 
     success "Core wiring complete"
 }
