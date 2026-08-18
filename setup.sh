@@ -547,6 +547,16 @@ install_native_tools() {
         curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | PROFILE=/dev/null bash
         success "nvm installed"
     fi
+
+    # Ensure Node LTS is installed via NVM
+    export NVM_DIR="$HOME/.nvm"
+    if [ -s "$NVM_DIR/nvm.sh" ]; then
+        \. "$NVM_DIR/nvm.sh"
+        info "Ensuring Node LTS is installed..."
+        nvm install --lts >/dev/null 2>&1
+        nvm alias default 'lts/*' >/dev/null 2>&1
+        success "Node LTS installed & set as default"
+    fi
     success "Native tools installed"
 }
 
