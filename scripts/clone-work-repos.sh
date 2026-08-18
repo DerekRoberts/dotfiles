@@ -40,8 +40,12 @@ ensure_ssh_key() {
 
     echo ""
     echo "══════════════════════════════════════════════════════════"
-    echo "  Your new public key — add it to GitHub:"
+    echo "  Your new public SSH key — add it to GitHub:"
     echo "  https://github.com/settings/keys"
+    echo ""
+    echo "  IMPORTANT: To verify commits, you must add it TWICE:"
+    echo "    1) Type: Authentication Key (to clone repos)"
+    echo "    2) Type: Signing Key (to get Verified commit badges)"
     echo ""
     cat "${SSH_KEY}.pub"
     echo "══════════════════════════════════════════════════════════"
