@@ -40,54 +40,6 @@ else
     warn "Flatpak update failed — continuing"
 fi
 
-HM_FLAKE="$DOTFILES_DIR/config/home-manager"
-
-if command -v home-manager &>/dev/null || ( [[ -f "$NIX_PROFILE" ]] && source "$NIX_PROFILE" && command -v home-manager &>/dev/null ); then
-    # Ensure nix commands are available if profile exists
-    [[ -f "$NIX_PROFILE" ]] && source "$NIX_PROFILE"
-
-    info "Updating Nix flake inputs..."
-    if nix flake update --flake "$HM_FLAKE" 2>&1; then
-        success "Nix flake inputs updated"
-    else
-        warn "nix flake update failed — continuing"
-    fi
-
-    info "Applying home-manager switch (profile: $DOTFILES_PROFILE)..."
-    if home-manager switch --flake "$HM_FLAKE#${DOTFILES_PROFILE:-dev}" 2>&1; then
-        success "home-manager switch complete"
-    else
-        warn "home-manager switch failed — continuing"
-    fi
-else
-fi
-
-# ── 3. Standalone Binaries ───────────────────────────────────────────────────
-
-info "Updating standalone binaries..."
-BIN_DIR="${HOME}/.local/bin"
-
-if command -v uv &>/dev/null; then
-    uv self update 2>&1 >/dev/null || warn "uv update failed"
-fi
-
-if command -v fnm &>/dev/null; then
-    curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell 2>&1 >/dev/null || warn "fnm update failed"
-fi
-
-if command -v starship &>/dev/null; then
-    curl -sS https://starship.rs/install.sh | sh -s -- -y -b "$BIN_DIR" 2>&1 >/dev/null || warn "starship update failed"
-fi
-
-if command -v yq &>/dev/null; then
-    curl -fsSL "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64" -o "$BIN_DIR/yq" 2>/dev/null && chmod +x "$BIN_DIR/yq" || warn "yq update failed"
-fi
-
-if command -v hadolint &>/dev/null; then
-    curl -fsSL "https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64" -o "$BIN_DIR/hadolint" 2>/dev/null && chmod +x "$BIN_DIR/hadolint" || warn "hadolint update failed"
-fi
-success "Standalone binaries updated"
-
 # ── 4. Antigravity Hub ───────────────────────────────────────────────────────
 
 ANTI_UPDATER="$DOTFILES_DIR/bin/update-antigravity"

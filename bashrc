@@ -143,12 +143,9 @@ alias ..="cd .."
 alias ...="cd ../.."
 alias docker-compose="podman-compose"
 
-# ── FNM ────────────────────────────────────────────────────────────────────
-if command -v fnm &>/dev/null; then
-    eval "$(fnm env --use-on-cd --shell bash)"
-fi
 
-# ── Starship Prompt ────────────────────────────────────────────────────────
-if command -v starship &>/dev/null; then
-    eval "$(starship init bash)"
-fi
+
+# ── NVM ────────────────────────────────────────────────────────────────────
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"

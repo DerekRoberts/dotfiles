@@ -532,7 +532,7 @@ PY
 
 install_native_tools() {
     section "Native Dev Tools"
-    local SYSTEM_PKGS="gh jq ripgrep fzf python3 podman-compose fira-code-fonts jetbrains-mono-fonts"
+    local SYSTEM_PKGS="gh jq python3 podman-compose"
     info "Installing native system packages via rpm-ostree..."
     for pkg in $SYSTEM_PKGS; do
         if ! rpm-ostree status | grep -q "$pkg"; then
@@ -542,11 +542,11 @@ install_native_tools() {
     info "Installing standalone binaries..."
     local BIN_DIR="$HOME/.local/bin"
     mkdir -p "$BIN_DIR"
-    if ! command -v fnm &>/dev/null; then curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell; fi
-    if ! command -v uv &>/dev/null; then curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="$BIN_DIR" sh; fi
-    if ! command -v yq &>/dev/null; then curl -fsSL "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64" -o "$BIN_DIR/yq" && chmod +x "$BIN_DIR/yq"; fi
-    if ! command -v hadolint &>/dev/null; then curl -fsSL "https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64" -o "$BIN_DIR/hadolint" && chmod +x "$BIN_DIR/hadolint"; fi
-    if ! command -v starship &>/dev/null; then curl -sS https://starship.rs/install.sh | sh -s -- -y -b "$BIN_DIR"; fi
+    if [ ! -d "$HOME/.nvm" ]; then
+        info "Installing nvm..."
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | PROFILE=/dev/null bash
+        success "nvm installed"
+    fi
     success "Native tools installed"
 }
 
