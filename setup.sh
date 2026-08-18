@@ -132,12 +132,24 @@ install_chrome() {
     section "Google Chrome"
     if flatpak list --user 2>/dev/null | grep -q "com.google.Chrome"; then
         success "Chrome already installed (Flatpak)"
-        return
+    else
+        ensure_flathub
+        info "Installing Chrome via Flatpak..."
+        flatpak install --user -y flathub com.google.Chrome
+        success "Chrome installed"
     fi
-    ensure_flathub
-    info "Installing Chrome via Flatpak..."
-    flatpak install --user -y flathub com.google.Chrome
-    success "Chrome installed"
+    
+    info "Configuring Chrome autostart..."
+    local AUTOSTART_DIR="$HOME/.config/autostart"
+    mkdir -p "$AUTOSTART_DIR"
+    cat > "$AUTOSTART_DIR/com.google.Chrome.desktop" << 'DESKTOP'
+[Desktop Entry]
+Name=Google Chrome
+Exec=flatpak run com.google.Chrome
+Type=Application
+X-Flatpak=com.google.Chrome
+DESKTOP
+    success "Chrome added to autostart"
 }
 
 install_yakuake() {
@@ -195,6 +207,12 @@ install_insync() {
 
     if [[ -x "$INSYNC_BIN" ]]; then
         success "Insync already installed"
+        local AUTOSTART_DIR="$HOME/.config/autostart"
+        mkdir -p "$AUTOSTART_DIR"
+        if [[ -f "$APPS_DIR/insync.desktop" ]]; then
+            ln -sf "$APPS_DIR/insync.desktop" "$AUTOSTART_DIR/insync.desktop"
+            success "Insync added to autostart"
+        fi
         return
     fi
 
@@ -276,7 +294,11 @@ StartupNotify=true
 DESKTOP
     sed -i "s|%h|$HOME|g" "$APPS_DIR/insync.desktop"
 
-    success "Insync installed to $INSYNC_BIN"
+    local AUTOSTART_DIR="$HOME/.config/autostart"
+    mkdir -p "$AUTOSTART_DIR"
+    ln -sf "$APPS_DIR/insync.desktop" "$AUTOSTART_DIR/insync.desktop"
+
+    success "Insync installed to $INSYNC_BIN and added to autostart"
     info "Run: insync start"
 }
 
