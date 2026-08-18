@@ -457,24 +457,8 @@ PY
     ln -sf "$DOTFILES_DIR/config/antigravity/antigravity-flags.conf" "$HOME/.config/antigravity-flags.conf"
     success "Antigravity config symlinked"
 
-    # 5. VS Code config symlinks
-    local VSCODE_DIR="$HOME/.config/Code/User"
-    if [[ -d "$VSCODE_DIR" ]]; then
-        info "Configuring VS Code..."
-        if [[ -f "$VSCODE_DIR/settings.json" && ! -L "$VSCODE_DIR/settings.json" ]]; then
-            mv "$VSCODE_DIR/settings.json" "$VSCODE_DIR/settings.json.bak"
-        fi
-        ln -sf "$DOTFILES_DIR/config/vscode/settings.json" "$VSCODE_DIR/settings.json"
-        success "VS Code settings.json symlinked"
-    else
-        info "VS Code not found — skipping"
-    fi
-
-    # 6. AI instructions
-
+    # 5. Antigravity global instructions + skills
     local GLOBAL_PROMPT_FILE="$DOTFILES_DIR/config/prompts/global.instructions.md"
-
-    # 7. Antigravity global instructions + skills
     info "Configuring Antigravity global instructions and skills..."
     mkdir -p "$HOME/.gemini/config" "$HOME/.gemini/antigravity"
     if [[ -L "$HOME/.gemini/GEMINI.md" || ! -f "$HOME/.gemini/GEMINI.md" ]]; then
@@ -503,7 +487,7 @@ PY
     # Remove erroneous circular symlink
     [[ -L "$HOME/.agents/skills/skills" ]] && rm -f "$HOME/.agents/skills/skills"
 
-    # 8. Cursor instructions
+    # 6. Cursor instructions
     local CURSOR_USER_DIR="$HOME/.config/Cursor/User"
     if [[ -d "$CURSOR_USER_DIR" ]]; then
         info "Configuring Cursor..."
@@ -515,7 +499,8 @@ PY
             warn "$CURSOR_USER_DIR/prompts/global.instructions.md is a physical file — skipping"
         fi
     fi
-    # 10. Remove legacy Kilo symlink
+
+    # 7. Remove legacy Kilo symlink
     [[ -L "$HOME/.copilot.md" ]] && rm -f "$HOME/.copilot.md" && info "Removed legacy ~/.copilot.md"
 
     configure_user_dirs

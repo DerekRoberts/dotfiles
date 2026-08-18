@@ -72,7 +72,6 @@ source ~/.bashrc
 │   │   └── user-places.xbel           # Dolphin sidebar bookmarks
 │   ├── systemd/
 │   │   └── dotfiles-update.service    # User systemd service for updates
-│   ├── vscode/
 │   └── repos.txt                      # Repositories cloned during dev setup
 ├── scripts/
 │   ├── updown.sh                      # Workstation updater script (installed to ~/.local/bin/updown)
