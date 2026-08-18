@@ -553,7 +553,7 @@ Default (no flags): full dev stack, same as --dev.
 
 Options:
   --dev       Full developer stack: Node LTS, CLI tools, Chrome, Yakuake, Insync,
-              Antigravity hub, agy CLI, Cursor, oc, Ponytail, and work repos
+              Antigravity hub, agy CLI, Cursor, oc, Ponytail, and repositories
   --desktop   Minimal desktop essentials: Chrome and Insync
   --help, -h  Show this help
 

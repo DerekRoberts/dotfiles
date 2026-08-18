@@ -100,7 +100,7 @@ clone_repos() {
     local cloned=0 skipped=0 failed=0
 
     echo ""
-    echo "=== Cloning Work Repos → $CLONE_DIR ==="
+    echo "=== Cloning Repos → $CLONE_DIR ==="
 
     while IFS= read -r line || [[ -n "$line" ]]; do
         # Strip whitespace and skip comments / blank lines
@@ -148,7 +148,8 @@ clone_repos() {
 main() {
     ensure_ssh_key
     clone_repos
-    echo "✅ Work repo setup complete."
+    echo "✅ Repository setup complete."
 }
+
 
 main "$@"

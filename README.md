@@ -6,7 +6,7 @@ Declarative, single-command workstation setup and configuration for **Fedora Kin
 
 - **Zero OS Layering**: Keeps the base OSTree image pristine; all userland tools run in userspace (`~/.local/bin`, `~/.nvm`, `~/.local/share/flatpak`).
 - **Profiles**:
-  - `--dev` (default): Full developer workstation (Node LTS via NVM, `gh`, `jq`, `podman-compose`, `oc`, Cursor, Antigravity, Ponytail, work repos).
+  - `--dev` (default): Full developer workstation (Node LTS via NVM, `gh`, `jq`, `podman-compose`, `oc`, Cursor, Antigravity, Ponytail, repositories).
   - `--desktop`: Minimal desktop essentials (Google Chrome and Insync).
 - **Automated Updates**: Systemd user service (`dotfiles-update.service`) running `updown` at login with a 23-hour idempotency guard.
 - **Unified AI Instructions**: Self-contained guardrails and instructions in `config/instructions.md` deployed to Cursor and Antigravity.
@@ -46,8 +46,9 @@ source ~/.bashrc
 | Antigravity Hub & `agy` CLI | ❌ | ✅ |
 | Cursor (AppImage) | ❌ | ✅ |
 | Ponytail (Cursor + AGY rules) | ❌ | ✅ |
-| Work Repositories & SSH Key | ❌ | ✅ |
+| Repositories & SSH Key | ❌ | ✅ |
 | Login Auto-Updater | ✅ | ✅ |
+
 
 ## Environment Variables
 
