@@ -36,9 +36,9 @@ else
         exit 1
     fi
 
-    # Check if we already have this exact build
+    # Check if we already have this exact build AND the binary exists
     STAMP_FILE="$HOME/.local/share/dotfiles/antigravity.url"
-    if [ -f "$STAMP_FILE" ] && [ "$(cat "$STAMP_FILE")" = "$DOWNLOAD_URL" ]; then
+    if [ -f "$STAMP_FILE" ] && [ -x "$INSTALL_DIR/antigravity" ] && [ "$(cat "$STAMP_FILE")" = "$DOWNLOAD_URL" ]; then
         echo "Antigravity hub is already up to date."
         exit 0
     fi
@@ -69,8 +69,18 @@ if tar -tzf "$TARBALL_PATH" | grep -qE '(^|/)\.\.(/|$)|^/'; then
 fi
 
 echo "Updating Antigravity in $INSTALL_DIR..."
-mkdir -p "$INSTALL_DIR"
-tar -xzf "$TARBALL_PATH" -C "$INSTALL_DIR" --strip-components=1 --no-same-owner
+TMP_EXTRACT="$(mktemp -d "${INSTALL_DIR}.tmp.XXXXXX")"
+tar -xzf "$TARBALL_PATH" -C "$TMP_EXTRACT" --strip-components=1 --no-same-owner
+
+# Atomic swap into INSTALL_DIR
+mkdir -p "$(dirname "$INSTALL_DIR")"
+BACKUP_DIR="${INSTALL_DIR}.old"
+rm -rf "$BACKUP_DIR"
+if [ -d "$INSTALL_DIR" ]; then
+    mv "$INSTALL_DIR" "$BACKUP_DIR"
+fi
+mv "$TMP_EXTRACT" "$INSTALL_DIR"
+rm -rf "$BACKUP_DIR"
 
 # Fix SELinux file contexts after extraction (required on Fedora Kinoite)
 if command -v restorecon &>/dev/null; then
@@ -83,3 +93,4 @@ if [ -n "${DOWNLOAD_URL:-}" ] && [ -n "${STAMP_FILE:-}" ]; then
     echo "$DOWNLOAD_URL" > "$STAMP_FILE"
 fi
 echo "Update complete! Installed version: $NEW_VER"
+

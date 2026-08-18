@@ -50,7 +50,22 @@ info()    { echo "$LOG_PREFIX $*"; }
 success() { echo "$LOG_PREFIX ✓ $*"; }
 warn()    { echo "$LOG_PREFIX ⚠ $*" >&2; }
 
+# Force close target running apps before updating them to prevent file locking & crashes
+kill_running_apps() {
+    local apps=("cursor" "cursor.AppImage" "insync" "antigravity" "agy")
+    for app in "${apps[@]}"; do
+        if pgrep -x "$app" &>/dev/null || pgrep -f "$app" &>/dev/null; then
+            info "Closing running process for $app..."
+            pkill -TERM -f "$app" 2>/dev/null || true
+            sleep 1
+            pkill -KILL -f "$app" 2>/dev/null || true
+        fi
+    done
+}
+
 if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
+    kill_running_apps
+
     # ── 1. rpm-ostree ────────────────────────────────────────────────────────────
     # Stages the update; does NOT reboot automatically.
     # On Kinoite, apply takes effect on next reboot (user-controlled).
@@ -65,10 +80,16 @@ if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
     # ── 2. Flatpak ───────────────────────────────────────────────────────────────
 
     info "Updating Flatpaks..."
-    if flatpak update -y --noninteractive 2>&1; then
-        success "Flatpaks updated"
+    if flatpak update --user -y --noninteractive 2>&1; then
+        success "User Flatpaks updated"
     else
-        warn "Flatpak update failed — continuing"
+        warn "Flatpak user update failed — continuing"
+    fi
+    if flatpak update --system -y --noninteractive 2>&1; then
+        success "System Flatpaks updated"
+    else
+        # Not fatal if user is not in wheel or polkit denies silent system update
+        info "System Flatpak update skipped or completed"
     fi
 
     # ── 4. Antigravity Hub ───────────────────────────────────────────────────────
@@ -107,6 +128,7 @@ fi
 # ── 6. Insync ────────────────────────────────────────────────────────────────
 
 INSYNC_BIN="${HOME}/.local/bin/insync"
+INSYNC_LIB_DIR="${HOME}/.local/lib/insync"
 if [[ -x "$INSYNC_BIN" ]] || [[ "$INSTALL_INSYNC" -eq 1 ]]; then
     info "Checking Insync for updates..."
     INSYNC_JS_URL="https://cdn.insynchq.com/web/webflow/js/linux_download_links.js"
@@ -117,22 +139,32 @@ if [[ -x "$INSYNC_BIN" ]] || [[ "$INSTALL_INSYNC" -eq 1 ]]; then
 
     STAMP_FILE="${HOME}/.local/share/dotfiles/insync.url"
     if [[ -n "$LATEST_INSYNC_URL" ]]; then
-        if [[ -f "$STAMP_FILE" ]] && [[ "$(cat "$STAMP_FILE")" == "$LATEST_INSYNC_URL" ]]; then
+        if [[ -f "$STAMP_FILE" ]] && [[ -x "$INSYNC_LIB_DIR/insync" ]] && [[ "$(cat "$STAMP_FILE")" == "$LATEST_INSYNC_URL" ]]; then
             success "Insync is up to date"
         else
             info "Updating Insync..."
             tmp_dir="$(mktemp -d)"
             if curl -fsSL "$LATEST_INSYNC_URL" -o "$tmp_dir/insync.rpm" && \
                (cd "$tmp_dir" && rpm2cpio insync.rpm | cpio -idm 2>/dev/null); then
-                extracted_bin="$(find "$tmp_dir" -type f -name "insync" -not -name "*.py" | head -n 1 || true)"
-                if [[ -n "$extracted_bin" ]]; then
-                    cp "$extracted_bin" "$INSYNC_BIN"
+                extracted_lib="$(find "$tmp_dir" -type d -path "*/usr/lib/insync" | head -n 1 || true)"
+                if [[ -n "$extracted_lib" && -f "$extracted_lib/insync" ]]; then
+                    mkdir -p "${HOME}/.local/lib" "${HOME}/.local/bin"
+                    rm -rf "${INSYNC_LIB_DIR}.old"
+                    [[ -d "$INSYNC_LIB_DIR" ]] && mv "$INSYNC_LIB_DIR" "${INSYNC_LIB_DIR}.old"
+                    cp -rf "$extracted_lib" "$INSYNC_LIB_DIR"
+                    rm -rf "${INSYNC_LIB_DIR}.old"
+                    chmod +x "$INSYNC_LIB_DIR/insync"
+                    
+                    cat > "$INSYNC_BIN" << 'EOF'
+#!/bin/bash
+LC_TIME=C exec "$HOME/.local/lib/insync/insync" "$@"
+EOF
                     chmod +x "$INSYNC_BIN"
                     mkdir -p "$(dirname "$STAMP_FILE")"
                     echo "$LATEST_INSYNC_URL" > "$STAMP_FILE"
                     success "Insync updated"
                 else
-                    warn "Insync update failed (binary not found in RPM)"
+                    warn "Insync update failed (library bundle not found in RPM)"
                 fi
             else
                 warn "Insync update failed (download/extract error)"
@@ -156,7 +188,7 @@ if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
         
         STAMP_FILE="${HOME}/.local/share/dotfiles/cursor.url"
         if [[ -n "$LATEST_CURSOR_URL" ]]; then
-            if [[ -f "$STAMP_FILE" ]] && [[ "$(cat "$STAMP_FILE")" == "$LATEST_CURSOR_URL" ]]; then
+            if [[ -f "$STAMP_FILE" ]] && [[ -x "$CURSOR_BIN" ]] && [[ "$(cat "$STAMP_FILE")" == "$LATEST_CURSOR_URL" ]]; then
                 success "Cursor is up to date"
             else
                 info "Updating Cursor..."
@@ -178,6 +210,7 @@ if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
         info "Cursor not installed — skipping"
     fi
 fi
+
 
 # ── 8. SELinux context fix ───────────────────────────────────────────────────
 # restorecon is always present on Kinoite (part of the base image).
