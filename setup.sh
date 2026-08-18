@@ -484,9 +484,9 @@ PY
         warn "~/.gemini/GEMINI.md is a physical file — skipping symlink"
     fi
 
-    if [[ -d "$DOTFILES_DIR/config/ai/skills" ]]; then
+    if [[ -d "$DOTFILES_DIR/skills" ]]; then
         mkdir -p "$HOME/.agents/skills"
-        for skill_dir in "$DOTFILES_DIR/config/ai/skills"/*; do
+        for skill_dir in "$DOTFILES_DIR/skills"/*; do
             [[ -d "$skill_dir" ]] || continue
             local skill_name; skill_name="$(basename "$skill_dir")"
             ln -sfn "$skill_dir" "$HOME/.agents/skills/$skill_name"

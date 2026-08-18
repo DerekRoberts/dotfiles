@@ -72,6 +72,8 @@ source ~/.bashrc
 │   │   └── dotfiles-update.service    # User systemd service for updates
 │   ├── vscode/
 │   └── repos.txt                      # Repositories cloned during dev setup
+├── skills/
+│   └── typescript-standards/          # Modular agent skills
 ├── scripts/
 │   ├── updown.sh                      # Workstation updater script (installed to ~/.local/bin/updown)
 │   ├── bootstrap-tools.sh             # CLI binary installer (`oc`)
