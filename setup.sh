@@ -287,9 +287,9 @@ install_ponytail() {
 }
 install_antigravity() {
     section "Antigravity Hub"
-    local UPDATER="$DOTFILES_DIR/bin/update-antigravity"
-    if [[ ! -x "$UPDATER" ]]; then
-        warn "bin/update-antigravity not found — skipping"
+    local UPDATER="$DOTFILES_DIR/scripts/update-antigravity.sh"
+    if [[ ! -f "$UPDATER" ]]; then
+        warn "scripts/update-antigravity.sh not found — skipping"
         return
     fi
     bash "$UPDATER"
@@ -432,7 +432,8 @@ PY
     # 3. bin symlinks
     info "Symlinking bin scripts..."
     mkdir -p "$HOME/.local/bin"
-    for script in updown update-antigravity tpm-enroll; do
+    rm -f "$HOME/.local/bin/update-antigravity"
+    for script in updown tpm-enroll; do
         [[ -f "$DOTFILES_DIR/bin/$script" ]] || { warn "bin/$script missing — skipping"; continue; }
         chmod +x "$DOTFILES_DIR/bin/$script"
     done

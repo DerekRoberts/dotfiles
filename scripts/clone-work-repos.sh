@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # clone-work-repos.sh — Declarative work repo cloner
-# Reads config/work-repos.txt (SSH paths: org/repo), clones into ~/Repos/
+# Reads config/repos.txt (SSH paths: org/repo), clones into ~/Repos/
 # Generates an SSH key if ~/.ssh/id_ed25519 is absent.
 #
 # Usage: scripts/clone-work-repos.sh [--repos-file PATH]
@@ -9,7 +9,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-REPOS_FILE="${1:-$REPO_DIR/config/work-repos.txt}"
+REPOS_FILE="${1:-$REPO_DIR/config/repos.txt}"
 CLONE_DIR="${HOME}/Repos"
 SSH_KEY="${HOME}/.ssh/id_ed25519"
 

@@ -47,16 +47,11 @@ fi
 
 # ── 4. Antigravity Hub ───────────────────────────────────────────────────────
 
-ANTI_UPDATER="$DOTFILES_DIR/bin/update-antigravity"
-if [[ -x "$ANTI_UPDATER" ]]; then
-    info "Checking Antigravity hub for updates..."
-    if bash "$ANTI_UPDATER" 2>&1; then
-        success "Antigravity hub up to date"
-    else
-        warn "Antigravity update failed — continuing"
-    fi
+ANTI_UPDATER="$DOTFILES_DIR/scripts/update-antigravity.sh"
+if [[ -f "$ANTI_UPDATER" ]]; then
+    bash "$ANTI_UPDATER" || warn "Antigravity hub update exited with error"
 else
-    info "update-antigravity not found — skipping"
+    info "scripts/update-antigravity.sh not found — skipping"
 fi
 
 # ── 5. agy CLI ───────────────────────────────────────────────────────────────

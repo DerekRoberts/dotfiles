@@ -65,7 +65,6 @@ source ~/.bashrc
 ├── .github/workflows/ci.yml           # ShellCheck & integration tests
 ├── bin/
 │   ├── updown                         # Workstation updater script
-│   ├── update-antigravity             # Runtime updater for Antigravity Hub
 │   └── tpm-enroll                     # TPM2 disk unlock helper
 ├── config/
 │   ├── prompts/
@@ -75,10 +74,11 @@ source ~/.bashrc
 │   ├── systemd/
 │   │   └── dotfiles-update.service    # User systemd service for updates
 │   ├── vscode/
-│   └── work-repos.txt                 # Repositories cloned during dev setup
+│   └── repos.txt                      # Repositories cloned during dev setup
 ├── scripts/
 │   ├── bootstrap-tools.sh             # CLI binary installer (`oc`)
-│   ├── clone-work-repos.sh            # Idempotent work repository cloner
+│   ├── clone-work-repos.sh            # Idempotent repository cloner
+│   ├── update-antigravity.sh          # Runtime updater for Antigravity Hub
 │   └── git-setup.sh                   # Interactive git config & signing helper
 └── docs/
     └── ai-architecture.md             # AI prompt integration notes
