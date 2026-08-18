@@ -1,0 +1,44 @@
+#!/bin/bash
+# Pre-commit hook - Global safety checks for AI agents and developers.
+set -euo pipefail
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "BLOCKED: gitleaks not found. Ensure gitleaks is installed on your PATH." >&2
+  exit 1
+fi
+
+gitleaks protect --staged --redact --no-banner
+
+# ─── General Regression Guardian ───────────────────────────────────────────
+# Detects and blocks accidental version downgrades in config files.
+# Supports Docker (FROM), Node (package.json), Actions (uses), and Python (requires-python).
+
+# Use null-delimited find to handle spaces/newlines in filenames
+git diff --cached --name-only -z | while IFS= read -r -d '' file; do
+  if [[ "$file" =~ (package.json|Containerfile|Dockerfile|compose.yml|docker-compose.yml|pyproject.toml|\.github/workflows/.*\.ya?ml)$ ]]; then
+    REGRESSION=$(git diff --cached "$file" | grep "^-" | grep -oE "[0-9]+(\.[0-9]+)+" | head -n 1 || true)
+    NEW_VERSION=$(git diff --cached "$file" | grep "^+" | grep -oE "[0-9]+(\.[0-9]+)+" | head -n 1 || true)
+
+    if [[ -n "$REGRESSION" ]] && [[ -n "$NEW_VERSION" ]]; then
+      LOWER_VERSION=$(printf "%s\n%s" "$REGRESSION" "$NEW_VERSION" | sort -V | head -n 1)
+
+      if [[ "$LOWER_VERSION" == "$NEW_VERSION" ]] && [[ "$NEW_VERSION" != "$REGRESSION" ]]; then
+        echo -e "\033[0;31mERROR: Version regression detected in $file ($REGRESSION -> $NEW_VERSION)!\033[0m" >&2
+        echo "AI Agents are FORBIDDEN from downgrading versions without explicit user discussion." >&2
+        exit 1
+      fi
+    fi
+  fi
+done
+
+# ─── Data-Layer Mutability Guardian ─────────────────────────────────────────
+# Detects and blocks accidental overwrite: true on deployment infrastructure.
+# Prevents accidental recreation or destructive replacement of stateful/database instances.
+
+if git diff --cached -U0 | grep -E "^\+[[:space:]]*overwrite:[[:space:]]*['\"]?true['\"]?" >/dev/null 2>&1; then
+  echo -e "\033[0;31mBLOCKED: Dangerous mutability change detected (overwrite: true)!\033[0m" >&2
+  echo "AI Agents are STRICTLY FORBIDDEN from setting 'overwrite: true' on deployment infrastructure." >&2
+  echo "This protects databases and stateful services from accidental recreation or data loss." >&2
+  echo "If this is an intentional manual change, human developers may bypass via: command git commit -n" >&2
+  exit 1
+fi
