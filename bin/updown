@@ -86,17 +86,98 @@ fi
 
 AGY_BIN="${HOME}/.local/bin/agy"
 if [[ -x "$AGY_BIN" ]]; then
-    info "Updating agy CLI..."
-    if curl -fsSL https://antigravity.google/cli/install.sh | bash 2>&1; then
-        success "agy CLI updated"
+    info "Checking agy CLI for updates..."
+    LATEST_AGY_VER=$(curl -fsSL https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests/linux_amd64.json | jq -r .version 2>/dev/null || echo "unknown")
+    CURRENT_AGY_VER=$("$AGY_BIN" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "none")
+
+    if [[ "$LATEST_AGY_VER" != "unknown" ]] && [[ "$CURRENT_AGY_VER" == "$LATEST_AGY_VER" ]]; then
+        success "agy CLI is up to date ($CURRENT_AGY_VER)"
     else
-        warn "agy update failed — continuing"
+        info "Updating agy CLI ($CURRENT_AGY_VER -> $LATEST_AGY_VER)..."
+        if curl -fsSL https://antigravity.google/cli/install.sh | bash 2>&1; then
+            success "agy CLI updated"
+        else
+            warn "agy update failed — continuing"
+        fi
     fi
 else
     info "agy CLI not installed — skipping"
 fi
 
-# ── 6. SELinux context fix ───────────────────────────────────────────────────
+# ── 6. Insync ────────────────────────────────────────────────────────────────
+
+INSYNC_BIN="${HOME}/.local/bin/insync"
+if [[ -x "$INSYNC_BIN" ]]; then
+    info "Checking Insync for updates..."
+    INSYNC_JS_URL="https://cdn.insynchq.com/web/webflow/js/linux_download_links.js"
+    LATEST_INSYNC_URL="$(curl -fsSL "$INSYNC_JS_URL" | grep -oE 'https://cdn\.insynchq\.com/builds/linux/[^"]+\.x86_64\.rpm' | grep -v 'headless' | grep 'fc44' | head -n 1 || true)"
+    if [[ -z "$LATEST_INSYNC_URL" ]]; then
+        LATEST_INSYNC_URL="$(curl -fsSL "$INSYNC_JS_URL" | grep -oE 'https://cdn\.insynchq\.com/builds/linux/[^"]+\.x86_64\.rpm' | grep -v 'headless' | grep -E 'fc[0-9]+' | sort -t'c' -k2 -rn | head -n 1 || true)"
+    fi
+
+    STAMP_FILE="${HOME}/.local/share/dotfiles/insync.url"
+    if [[ -n "$LATEST_INSYNC_URL" ]]; then
+        if [[ -f "$STAMP_FILE" ]] && [[ "$(cat "$STAMP_FILE")" == "$LATEST_INSYNC_URL" ]]; then
+            success "Insync is up to date"
+        else
+            info "Updating Insync..."
+            tmp_dir="$(mktemp -d)"
+            if curl -fsSL "$LATEST_INSYNC_URL" -o "$tmp_dir/insync.rpm" && \
+               (cd "$tmp_dir" && rpm2cpio insync.rpm | cpio -idm 2>/dev/null); then
+                extracted_bin="$(find "$tmp_dir" -type f -name "insync" -not -name "*.py" | head -n 1 || true)"
+                if [[ -n "$extracted_bin" ]]; then
+                    cp "$extracted_bin" "$INSYNC_BIN"
+                    chmod +x "$INSYNC_BIN"
+                    mkdir -p "$(dirname "$STAMP_FILE")"
+                    echo "$LATEST_INSYNC_URL" > "$STAMP_FILE"
+                    success "Insync updated"
+                else
+                    warn "Insync update failed (binary not found in RPM)"
+                fi
+            else
+                warn "Insync update failed (download/extract error)"
+            fi
+            rm -rf "$tmp_dir"
+        fi
+    else
+        warn "Could not resolve Insync URL — skipping update"
+    fi
+else
+    info "Insync not installed — skipping"
+fi
+
+# ── 7. Cursor ────────────────────────────────────────────────────────────────
+
+CURSOR_BIN="${HOME}/.local/bin/cursor.AppImage"
+if [[ -x "$CURSOR_BIN" ]]; then
+    info "Checking Cursor for updates..."
+    LATEST_CURSOR_URL="$(curl -fsSL 'https://www.cursor.com/api/download?platform=linux-x64&releaseTrack=stable' | grep -o '"downloadUrl":"[^"]*"' | cut -d'"' -f4 || true)"
+    
+    STAMP_FILE="${HOME}/.local/share/dotfiles/cursor.url"
+    if [[ -n "$LATEST_CURSOR_URL" ]]; then
+        if [[ -f "$STAMP_FILE" ]] && [[ "$(cat "$STAMP_FILE")" == "$LATEST_CURSOR_URL" ]]; then
+            success "Cursor is up to date"
+        else
+            info "Updating Cursor..."
+            if curl -L -fsS "$LATEST_CURSOR_URL" -o "${CURSOR_BIN}.tmp"; then
+                mv "${CURSOR_BIN}.tmp" "$CURSOR_BIN"
+                chmod +x "$CURSOR_BIN"
+                mkdir -p "$(dirname "$STAMP_FILE")"
+                echo "$LATEST_CURSOR_URL" > "$STAMP_FILE"
+                success "Cursor updated"
+            else
+                warn "Cursor update failed (download error)"
+                rm -f "${CURSOR_BIN}.tmp"
+            fi
+        fi
+    else
+        warn "Could not resolve Cursor URL — skipping update"
+    fi
+else
+    info "Cursor not installed — skipping"
+fi
+
+# ── 8. SELinux context fix ───────────────────────────────────────────────────
 # restorecon is always present on Kinoite (part of the base image).
 # Fixes SELinux labels on any extracted binaries in ~/.local/bin.
 

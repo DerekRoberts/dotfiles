@@ -211,6 +211,11 @@ install_insync() {
         restorecon -v "$INSYNC_BIN" 2>/dev/null || true
     fi
 
+    # Write version stamp for auto-updater
+    local STAMP_FILE="$HOME/.local/share/dotfiles/insync.url"
+    mkdir -p "$(dirname "$STAMP_FILE")"
+    echo "$INSYNC_RPM_URL" > "$STAMP_FILE"
+
     # Desktop entry
     mkdir -p "$APPS_DIR"
     cat > "$APPS_DIR/insync.desktop" << 'DESKTOP'
@@ -262,6 +267,11 @@ install_cursor() {
     if command -v restorecon &>/dev/null; then
         restorecon -v "$CURSOR_BIN" 2>/dev/null || true
     fi
+
+    # Write version stamp for auto-updater
+    local STAMP_FILE="$HOME/.local/share/dotfiles/cursor.url"
+    mkdir -p "$(dirname "$STAMP_FILE")"
+    echo "$CURSOR_URL" > "$STAMP_FILE"
 
     # Desktop entry
     mkdir -p "$APPS_DIR"
