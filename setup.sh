@@ -7,14 +7,17 @@
 
 set -euo pipefail
 
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/Repos/dotfiles}"
-DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/DerekRoberts/dotfiles.git}"
-DOTFILES_BRANCH="${DOTFILES_BRANCH:-main}"
-
-# ── Bootstrap: ensure dotfiles repo is present if running via curl/pipe ───────
+# ── Bootstrap: self-location or curl/pipe clone ──────────────────────────────
 
 SETUP_PATH="$(readlink -f "${BASH_SOURCE[0]:-}" 2>/dev/null || true)"
-if [[ -z "$SETUP_PATH" ]] || [[ "$SETUP_PATH" != "$DOTFILES_DIR/setup.sh" ]]; then
+
+if [[ -n "$SETUP_PATH" && -f "$SETUP_PATH" ]]; then
+    DOTFILES_DIR="$(cd "$(dirname "$SETUP_PATH")" && pwd)"
+else
+    DOTFILES_DIR="${DOTFILES_DIR:-$HOME/Repos/dotfiles}"
+    DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/DerekRoberts/dotfiles.git}"
+    DOTFILES_BRANCH="${DOTFILES_BRANCH:-main}"
+
     if [[ ! -d "$DOTFILES_DIR/.git" ]]; then
         echo "Cloning dotfiles to $DOTFILES_DIR..."
         mkdir -p "$(dirname "$DOTFILES_DIR")"
@@ -613,9 +616,6 @@ Options:
   --help      Show this help
 
 Environment variables:
-  DOTFILES_DIR        Clone location (default: ~/Repos/dotfiles)
-  DOTFILES_REPO       Clone URL (default: GitHub)
-  DOTFILES_BRANCH     Branch (default: main)
   UPDATE              Set UPDATE=1 to force re-download of oc binary
   OC_VERSION          Override oc version tag (default: latest)
 EOF
