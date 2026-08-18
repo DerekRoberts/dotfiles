@@ -120,9 +120,15 @@ Type=Application
 X-Flatpak=org.kde.yakuake
 DESKTOP
 
-    info "Setting Yakuake toggle shortcut to Ctrl+Space..."
+    info "Setting Yakuake toggle shortcut to Ctrl+Space and disabling tray icon..."
     if command -v kwriteconfig6 &>/dev/null; then
         kwriteconfig6 --file kglobalshortcutsrc --group yakuake --key toggle-window-state "Ctrl+Space,F12,Open/Retract Yakuake"
+        
+        # Hide the system tray icon natively (Flatpak Yakuake config)
+        local YAKUAKE_CONFIG="$HOME/.var/app/org.kde.yakuake/config/yakuakerc"
+        mkdir -p "$(dirname "$YAKUAKE_CONFIG")"
+        kwriteconfig6 --file "$YAKUAKE_CONFIG" --group Window --key ShowSystrayIcon false
+
         if command -v qdbus &>/dev/null; then
             qdbus org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel.reparseConfiguration 2>/dev/null || true
         elif command -v qdbus6 &>/dev/null; then
