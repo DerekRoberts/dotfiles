@@ -5,8 +5,6 @@
 #   curl -fsSL https://raw.githubusercontent.com/DerekRoberts/dotfiles/main/setup.sh | bash
 #   setup.sh --dev      # Full dev stack, non-interactive
 #   setup.sh --desktop  # Desktop essentials (Chrome + Insync + Nix minimal)
-#   setup.sh --custom   # TUI checkbox menu
-#   setup.sh            # TUI checkbox menu (same as --custom)
 
 set -euo pipefail
 
@@ -55,66 +53,6 @@ section() { echo ""; echo "=== $* ==="; }
 # Arrow keys navigate, Space toggles, Enter confirms.
 # Reads from /dev/tty so it works when stdin is piped.
 
-tui_menu() {
-    local -n _tui_items="$1"
-    local -n _tui_selected="$2"
-    local title="${3:-Select components}"
-
-    local num=${#_tui_items[@]}
-    local cursor=0
-    local checked=()
-    for ((i = 0; i < num; i++)); do
-        checked+=("${_tui_selected[$i]:-0}")
-    done
-
-    # Requires a terminal
-    local tty="/dev/tty"
-    [[ -c "$tty" ]] && { true <"$tty"; } 2>/dev/null || {
-        warn "No TTY available — defaulting to all items selected."
-        for ((i = 0; i < num; i++)); do _tui_selected[$i]=1; done
-        return
-    }
-
-    _tui_draw() {
-        tput clear <"$tty"
-        echo "  $title" >"$tty"
-        echo "  (↑↓ navigate, Space toggle, Enter confirm)" >"$tty"
-        echo "" >"$tty"
-        for ((i = 0; i < num; i++)); do
-            local box="[ ]"
-            [[ "${checked[$i]}" == "1" ]] && box="[x]"
-            if [[ "$i" == "$cursor" ]]; then
-                echo "  > $box ${_tui_items[$i]}" >"$tty"
-            else
-                echo "    $box ${_tui_items[$i]}" >"$tty"
-            fi
-        done
-    }
-
-    _tui_draw
-    while IFS= read -rsn1 -t 60 key <"$tty" 2>/dev/null; do
-        case "$key" in
-            $'\x1b')  # Escape sequence
-                read -rsn2 -t 0.1 seq <"$tty" 2>/dev/null || seq=""
-                case "$seq" in
-                    "[A") ((cursor > 0)) && ((cursor--)) ;;          # Up
-                    "[B") ((cursor < num - 1)) && ((cursor++)) ;;    # Down
-                esac
-                ;;
-            " ")  # Space = toggle
-                checked[$cursor]=$(( 1 - checked[$cursor] ))
-                ;;
-            "")   # Enter = confirm
-                break ;;
-        esac
-        _tui_draw
-    done
-
-    tput clear <"$tty" 2>/dev/null || true
-    for ((i = 0; i < num; i++)); do
-        _tui_selected[$i]="${checked[$i]}"
-    done
-}
 
 # ── Installer functions ───────────────────────────────────────────────────────
 # Each function is idempotent: checks for presence before acting.
@@ -216,68 +154,13 @@ install_insync() {
         return
     fi
 
-    info "Resolving latest Insync RPM for Fedora..."
-    # The downloads page is JS-rendered; the real URLs live in linux_download_links.js.
-    # Prefer fc44 (Kinoite target), fall back to the newest Fedora build available.
-    local INSYNC_JS_URL="https://cdn.insynchq.com/web/webflow/js/linux_download_links.js"
-    local INSYNC_RPM_URL
-    INSYNC_RPM_URL="$(curl -fsSL "$INSYNC_JS_URL" \
-        | grep -oE 'https://cdn\.insynchq\.com/builds/linux/[^"]+\.x86_64\.rpm' \
-        | grep -v 'headless' \
-        | grep 'fc44' | head -n 1 || true)"
+    info "Downloading/Updating Insync..."
+    bash "$REPO_DIR/bin/updown" --install-insync
 
-    # Fall back to newest available Fedora build if fc44 not yet listed
-    if [[ -z "$INSYNC_RPM_URL" ]]; then
-        INSYNC_RPM_URL="$(curl -fsSL "$INSYNC_JS_URL" \
-            | grep -oE 'https://cdn\.insynchq\.com/builds/linux/[^"]+\.x86_64\.rpm' \
-            | grep -v 'headless' \
-            | grep -E 'fc[0-9]+' | sort -t'c' -k2 -rn | head -n 1 || true)"
-    fi
-
-    if [[ -z "$INSYNC_RPM_URL" ]]; then
-        warn "Could not resolve Insync RPM URL — skipping"
-        warn "Manual install: https://www.insynchq.com/downloads"
+    if [[ ! -x "$INSYNC_BIN" ]]; then
+        warn "Insync installation failed"
         return 1
     fi
-
-    info "Downloading Insync RPM: $INSYNC_RPM_URL"
-    local tmp_dir
-    tmp_dir="$(mktemp -d)"
-    trap 'rm -rf "$tmp_dir"' RETURN
-
-    curl -fsSL "$INSYNC_RPM_URL" -o "$tmp_dir/insync.rpm"
-
-    # Extract RPM contents without installing (no root, no rpm-ostree)
-    info "Extracting Insync binaries..."
-    if ! command -v rpm2cpio &>/dev/null; then
-        warn "rpm2cpio not found — cannot extract Insync RPM"
-        warn "rpm2cpio is part of the base Fedora Kinoite image. This is unexpected."
-        return 1
-    fi
-
-    (cd "$tmp_dir" && rpm2cpio insync.rpm | cpio -idm 2>/dev/null)
-
-    mkdir -p "$BIN_DIR"
-    # Find the insync binary inside the extracted tree
-    local extracted_bin
-    extracted_bin="$(find "$tmp_dir" -type f -name "insync" -not -name "*.py" | head -n 1 || true)"
-    if [[ -z "$extracted_bin" ]]; then
-        warn "insync binary not found in RPM — package structure may have changed"
-        return 1
-    fi
-
-    cp "$extracted_bin" "$INSYNC_BIN"
-    chmod +x "$INSYNC_BIN"
-
-    # Fix SELinux context
-    if command -v restorecon &>/dev/null; then
-        restorecon -v "$INSYNC_BIN" 2>/dev/null || true
-    fi
-
-    # Write version stamp for auto-updater
-    local STAMP_FILE="$HOME/.local/share/dotfiles/insync.url"
-    mkdir -p "$(dirname "$STAMP_FILE")"
-    echo "$INSYNC_RPM_URL" > "$STAMP_FILE"
 
     # Desktop entry
     mkdir -p "$APPS_DIR"
@@ -528,26 +411,6 @@ install_work_repos() {
     bash "$REPO_DIR/scripts/clone-work-repos.sh"
 }
 
-install_updater() {
-    section "Login Auto-Updater (systemd user service)"
-    local SYSTEMD_USER_DIR="$HOME/.config/systemd/user"
-    local SERVICE_SRC="$REPO_DIR/config/systemd/dotfiles-update.service"
-    local SERVICE_DEST="$SYSTEMD_USER_DIR/dotfiles-update.service"
-
-    if [[ ! -f "$SERVICE_SRC" ]]; then
-        warn "Service unit not found: $SERVICE_SRC — skipping"
-        return
-    fi
-
-    mkdir -p "$SYSTEMD_USER_DIR"
-    cp "$SERVICE_SRC" "$SERVICE_DEST"
-
-    systemctl --user daemon-reload
-    systemctl --user enable dotfiles-update.service
-
-    success "dotfiles-update.service enabled (runs updown on login, at most once per 23h)"
-    info "Status: systemctl --user status dotfiles-update.service"
-}
 
 install_ai_instructions() {
     section "AI Instructions"
@@ -587,57 +450,12 @@ EOF
         fi
     done
     
-    mkdir -p "$HOME/Repos" "$HOME/Documents" "$HOME/Downloads"
-    
-    info "Hiding unwanted folders from KDE Dolphin sidebar..."
-    python3 - << 'PY'
-import xml.etree.ElementTree as ET
-import os
-
-places_file = os.path.expanduser('~/.local/share/user-places.xbel')
-if os.path.exists(places_file):
-    ET.register_namespace('', 'http://www.freedesktop.org/standards/desktop-bookmarks')
-    ET.register_namespace('bookmark', 'http://www.freedesktop.org/standards/desktop-bookmarks')
-    ET.register_namespace('kdepriv', 'http://www.kde.org/kdepriv')
-    ET.register_namespace('mime', 'http://www.freedesktop.org/standards/shared-mime-info')
-
-    tree = ET.parse(places_file)
-    root = tree.getroot()
-
-    hide_icons = {'user-desktop', 'folder-music', 'folder-pictures', 'folder-videos', 'folder-public', 'folder-templates'}
-    changed = False
-
-    for bookmark in root.findall('{http://www.freedesktop.org/standards/desktop-bookmarks}bookmark'):
-        info = bookmark.find('{http://www.freedesktop.org/standards/desktop-bookmarks}info')
-        if info is not None:
-            icon = None
-            for meta in info.findall('{http://www.freedesktop.org/standards/desktop-bookmarks}metadata'):
-                if meta.attrib.get('owner') == 'http://freedesktop.org':
-                    icon_node = meta.find('{http://www.freedesktop.org/standards/desktop-bookmarks}icon')
-                    if icon_node is not None:
-                        icon = icon_node.attrib.get('name')
-            
-            if icon in hide_icons:
-                kde_meta = None
-                for meta in info.findall('{http://www.freedesktop.org/standards/desktop-bookmarks}metadata'):
-                    if meta.attrib.get('owner') == 'http://www.kde.org':
-                        kde_meta = meta
-                        break
-                if kde_meta is None:
-                    kde_meta = ET.SubElement(info, '{http://www.freedesktop.org/standards/desktop-bookmarks}metadata', owner='http://www.kde.org')
-                
-                is_hidden = kde_meta.find('{http://www.freedesktop.org/standards/desktop-bookmarks}IsHidden')
-                if is_hidden is None:
-                    is_hidden = ET.SubElement(kde_meta, '{http://www.freedesktop.org/standards/desktop-bookmarks}IsHidden')
-                    is_hidden.text = 'true'
-                    changed = True
-                elif is_hidden.text != 'true':
-                    is_hidden.text = 'true'
-                    changed = True
-
-    if changed:
-        tree.write(places_file, encoding='UTF-8', xml_declaration=True)
-PY
+    info "Overwriting Dolphin sidebar places with clean template..."
+    if [[ -f "$REPO_DIR/config/kde/user-places.xbel" ]]; then
+        mkdir -p "$HOME/.local/share"
+        cp "$REPO_DIR/config/kde/user-places.xbel" "$HOME/.local/share/user-places.xbel"
+        success "Dolphin sidebar cleaned"
+    fi
 
     success "Directories configured (Documents, Downloads, Repos remain)"
 }
@@ -794,7 +612,6 @@ preset_desktop() {
     install_chrome
     install_yakuake
     install_insync
-    install_updater
 }
 
 preset_dev() {
@@ -809,53 +626,9 @@ preset_dev() {
     install_ponytail
     install_oc
     install_work_repos
-    install_updater
 }
 
-# ── TUI selector ─────────────────────────────────────────────────────────────
 
-run_tui() {
-    local items=(
-        "Google Chrome (Flatpak)"
-        "Yakuake (Drop-down Terminal, Flatpak)"
-        "Insync (RPM-extracted, no host mutation)"
-        "Nix (Determinate Systems OSTree installer)"
-        "Home-Manager dev profile (fnm, gh, hadolint, actionlint, yq, jq, rg, fzf, python3, uv)"
-        "Home-Manager desktop profile (minimal)"
-        "Antigravity Hub (agentic, latest from download page)"
-        "agy CLI"
-        "Cursor (AppImage)"
-        "Ponytail (Lazy Senior Dev rules for agy and Cursor)"
-        "OpenShift CLI (oc, GitHub binary)"
-        "Clone work repos (SSH key + ~/Repos/)"
-        "Login auto-updater (systemd user service, 23h guard)"
-    )
-    local selected=(0 0 0 0 0 0 0 0 0 0 0 0 0)
-
-    tui_menu items selected "Select components to install (↑↓ Space Enter)"
-
-    # Execute Nix/Home-Manager first so sudo password prompts don't block later
-    [[ "${selected[3]}"  == "1" ]] && install_nix
-    if [[ "${selected[4]}" == "1" && "${selected[5]}" == "1" ]]; then
-        warn "Both dev and desktop home-manager selected — using dev"
-        install_home_manager "dev"
-    elif [[ "${selected[4]}" == "1" ]]; then
-        install_home_manager "dev"
-    elif [[ "${selected[5]}" == "1" ]]; then
-        install_home_manager "desktop"
-    fi
-
-    [[ "${selected[0]}"  == "1" ]] && install_chrome
-    [[ "${selected[1]}"  == "1" ]] && install_yakuake
-    [[ "${selected[2]}"  == "1" ]] && install_insync
-    [[ "${selected[6]}"  == "1" ]] && install_antigravity
-    [[ "${selected[7]}"  == "1" ]] && install_agy
-    [[ "${selected[8]}"  == "1" ]] && install_cursor
-    [[ "${selected[9]}"  == "1" ]] && install_ponytail
-    [[ "${selected[10]}" == "1" ]] && install_oc
-    [[ "${selected[11]}" == "1" ]] && install_work_repos
-    [[ "${selected[12]}" == "1" ]] && install_updater
-}
 
 
 # ── Usage ─────────────────────────────────────────────────────────────────────
@@ -874,7 +647,6 @@ Options:
               Antigravity hub, agy CLI, Cursor, oc, work repos, auto-updater
   --desktop   Desktop essentials: Chrome, Yakuake, Insync, Nix/Home-Manager (desktop
               profile — no dev tools), auto-updater
-  --custom    Interactive TUI checkbox picker (select individual components)
   --help      Show this help
 
 Environment variables:
@@ -903,9 +675,6 @@ case "${1:-}" in
     --desktop)
         echo "Profile: desktop (essentials)"
         preset_desktop
-        ;;
-    --custom)
-        run_tui
         ;;
     --help|-h)
         usage

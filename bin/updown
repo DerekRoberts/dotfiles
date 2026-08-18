@@ -106,7 +106,7 @@ fi
 # ── 6. Insync ────────────────────────────────────────────────────────────────
 
 INSYNC_BIN="${HOME}/.local/bin/insync"
-if [[ -x "$INSYNC_BIN" ]]; then
+if [[ -x "$INSYNC_BIN" ]] || [[ "${1:-}" == "--install-insync" ]]; then
     info "Checking Insync for updates..."
     INSYNC_JS_URL="https://cdn.insynchq.com/web/webflow/js/linux_download_links.js"
     LATEST_INSYNC_URL="$(curl -fsSL "$INSYNC_JS_URL" | grep -oE 'https://cdn\.insynchq\.com/builds/linux/[^"]+\.x86_64\.rpm' | grep -v 'headless' | grep 'fc44' | head -n 1 || true)"
