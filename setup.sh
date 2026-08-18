@@ -116,12 +116,12 @@ DESKTOP
         mkdir -p "$(dirname "$YAKUAKE_CONFIG")"
         kwriteconfig6 --file "$YAKUAKE_CONFIG" --group Window --key ShowSystrayIcon false
 
-        if command -v qdbus &>/dev/null; then
-            qdbus org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel.reparseConfiguration 2>/dev/null || true
-        elif command -v qdbus6 &>/dev/null; then
-            qdbus6 org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel.reparseConfiguration 2>/dev/null || true
-        elif command -v qdbus-qt6 &>/dev/null; then
-            qdbus-qt6 org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel.reparseConfiguration 2>/dev/null || true
+        # Reload shortcuts in KDE Plasma 6
+        if command -v qdbus6 &>/dev/null; then
+            qdbus6 org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel.reloadConfig >/dev/null 2>&1 || true
+        elif command -v qdbus &>/dev/null; then
+            qdbus org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel.reloadConfig >/dev/null 2>&1 || \
+            qdbus org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel.reparseConfiguration >/dev/null 2>&1 || true
         fi
     else
         warn "kwriteconfig6 not found — cannot set global shortcut automatically."
@@ -141,6 +141,7 @@ install_insync() {
         local AUTOSTART_DIR="$HOME/.config/autostart"
         mkdir -p "$AUTOSTART_DIR"
         if [[ -f "$APPS_DIR/insync.desktop" ]]; then
+            rm -f "$AUTOSTART_DIR/insync.desktop"
             cp -f "$APPS_DIR/insync.desktop" "$AUTOSTART_DIR/insync.desktop"
             success "Insync added to autostart"
         fi
@@ -172,6 +173,7 @@ DESKTOP
 
     local AUTOSTART_DIR="$HOME/.config/autostart"
     mkdir -p "$AUTOSTART_DIR"
+    rm -f "$AUTOSTART_DIR/insync.desktop"
     cp -f "$APPS_DIR/insync.desktop" "$AUTOSTART_DIR/insync.desktop"
 
     success "Insync installed to $INSYNC_BIN and added to autostart"
