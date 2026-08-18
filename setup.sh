@@ -148,7 +148,7 @@ install_insync() {
     fi
 
     info "Downloading/Updating Insync..."
-    bash "$DOTFILES_DIR/bin/updown" --install-insync
+    bash "$DOTFILES_DIR/scripts/updown.sh" --install-insync
 
     if [[ ! -x "$INSYNC_BIN" ]]; then
         warn "Insync installation failed"
@@ -429,13 +429,11 @@ PY
         bash "$DOTFILES_DIR/scripts/git-setup.sh"
     fi
 
-    # 3. bin scripts
-    info "Installing bin scripts..."
+    # 3. User CLI tools
+    info "Installing updown to ~/.local/bin..."
     mkdir -p "$HOME/.local/bin"
-    rm -f "$HOME/.local/bin/update-antigravity" "$HOME/.local/bin/tpm-enroll"
-    if [[ -f "$DOTFILES_DIR/bin/updown" ]]; then
-        rm -f "$HOME/.local/bin/updown"
-        install -m 755 "$DOTFILES_DIR/bin/updown" "$HOME/.local/bin/updown"
+    if [[ -f "$DOTFILES_DIR/scripts/updown.sh" ]]; then
+        install -m 755 "$DOTFILES_DIR/scripts/updown.sh" "$HOME/.local/bin/updown"
         success "Installed updown → $HOME/.local/bin/updown"
     fi
 

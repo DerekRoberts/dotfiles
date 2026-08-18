@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Run ShellCheck
-        run: shellcheck setup.sh scripts/*.sh bin/*
+        run: shellcheck setup.sh scripts/*.sh
 
   test-ubuntu:
     name: Ubuntu Integration Test

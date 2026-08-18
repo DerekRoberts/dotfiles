@@ -63,8 +63,6 @@ source ~/.bashrc
 ├── bashrc                             # Shell configuration and aliases
 ├── gitconfig                          # Global git configuration include
 ├── .github/workflows/ci.yml           # ShellCheck & integration tests
-├── bin/
-│   └── updown                         # Workstation updater script
 ├── config/
 │   ├── prompts/
 │   │   └── global.instructions.md     # Unified AI agent instructions & guardrails
@@ -75,6 +73,7 @@ source ~/.bashrc
 │   ├── vscode/
 │   └── repos.txt                      # Repositories cloned during dev setup
 ├── scripts/
+│   ├── updown.sh                      # Workstation updater script (installed to ~/.local/bin/updown)
 │   ├── bootstrap-tools.sh             # CLI binary installer (`oc`)
 │   ├── clone-repos.sh                 # Idempotent repository cloner
 │   ├── tpm-enroll.sh                  # Optional TPM2 disk unlock helper
