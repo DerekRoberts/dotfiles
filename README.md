@@ -56,7 +56,6 @@ source ~/.bashrc
 | `DOTFILES_DIR` | `~/Repos/dotfiles` | Clone location |
 | `DOTFILES_REPO` | `https://github.com/DerekRoberts/dotfiles.git` | Git remote URL |
 | `DOTFILES_BRANCH` | `main` | Branch to clone/pull |
-| `DOTFILES_SKIP_PULL` | *(unset)* | Set to `1` to skip `git pull` on existing clone |
 | `OC_VERSION` | `latest` | Override version tag for `oc` |
 | `UPDATE` | `0` | Set `UPDATE=1` to force re-downloading CLI binaries |
 

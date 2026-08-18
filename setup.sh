@@ -11,32 +11,21 @@ DOTFILES_DIR="${DOTFILES_DIR:-$HOME/Repos/dotfiles}"
 DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/DerekRoberts/dotfiles.git}"
 DOTFILES_BRANCH="${DOTFILES_BRANCH:-main}"
 
-# ── Bootstrap: ensure dotfiles repo is present ───────────────────────────────
+# ── Bootstrap: ensure dotfiles repo is present if running via curl/pipe ───────
 
-ensure_dotfiles_repo() {
+SETUP_PATH="$(readlink -f "${BASH_SOURCE[0]:-}" 2>/dev/null || true)"
+if [[ -z "$SETUP_PATH" ]] || [[ "$SETUP_PATH" != "$DOTFILES_DIR/setup.sh" ]]; then
     if [[ ! -d "$DOTFILES_DIR/.git" ]]; then
         echo "Cloning dotfiles to $DOTFILES_DIR..."
         mkdir -p "$(dirname "$DOTFILES_DIR")"
         command git clone -b "$DOTFILES_BRANCH" "$DOTFILES_REPO" "$DOTFILES_DIR"
-    elif [[ -z "${DOTFILES_SKIP_PULL:-}" ]]; then
-        local current_branch
-        current_branch="$(command git -C "$DOTFILES_DIR" branch --show-current 2>/dev/null || true)"
-        if [[ "$current_branch" == "$DOTFILES_BRANCH" ]]; then
-            echo "Updating dotfiles ($DOTFILES_BRANCH)..."
-            command git -C "$DOTFILES_DIR" pull --ff-only origin "$DOTFILES_BRANCH"
-        else
-            echo "Note: dotfiles on branch '$current_branch' — skipping pull (not on $DOTFILES_BRANCH)."
-        fi
+    else
+        echo "Updating dotfiles ($DOTFILES_BRANCH)..."
+        command git -C "$DOTFILES_DIR" pull --ff-only origin "$DOTFILES_BRANCH" 2>/dev/null || true
     fi
-}
-
-ensure_dotfiles_repo
-
-# Re-exec from the cloned copy if running via pipe
-SETUP_PATH="$(readlink -f "${BASH_SOURCE[0]:-}" 2>/dev/null || true)"
-if [[ -z "$SETUP_PATH" ]] || [[ "$SETUP_PATH" != "$DOTFILES_DIR/setup.sh" ]]; then
     exec bash "$DOTFILES_DIR/setup.sh" "$@"
 fi
+
 BASHRC="$HOME/.bashrc"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -627,7 +616,6 @@ Environment variables:
   DOTFILES_DIR        Clone location (default: ~/Repos/dotfiles)
   DOTFILES_REPO       Clone URL (default: GitHub)
   DOTFILES_BRANCH     Branch (default: main)
-  DOTFILES_SKIP_PULL  Set to skip git pull on existing clone
   UPDATE              Set UPDATE=1 to force re-download of oc binary
   OC_VERSION          Override oc version tag (default: latest)
 EOF
