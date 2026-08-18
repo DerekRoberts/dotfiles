@@ -688,10 +688,14 @@ PY
     # 3. bin symlinks
     info "Symlinking bin scripts..."
     mkdir -p "$HOME/.local/bin"
-    ln -sf "$REPO_DIR/bin/updown" "$HOME/.local/bin/updown"
-    chmod +x "$REPO_DIR/bin/updown"
-    chmod +x "$REPO_DIR/bin/update-antigravity"
-    success "Symlinked updown → ~/.local/bin/updown"
+    for script in updown update-antigravity tpm-enroll; do
+        [[ -f "$REPO_DIR/bin/$script" ]] || { warn "bin/$script missing — skipping"; continue; }
+        chmod +x "$REPO_DIR/bin/$script"
+    done
+    if [[ -f "$REPO_DIR/bin/updown" ]]; then
+        ln -sf "$REPO_DIR/bin/updown" "$HOME/.local/bin/updown"
+        success "Symlinked updown → $HOME/.local/bin/updown"
+    fi
 
     # 4. Antigravity config symlinks
     info "Configuring Antigravity..."
