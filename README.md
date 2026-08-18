@@ -80,6 +80,4 @@ source ~/.bashrc
 │   ├── tpm-enroll.sh                  # Optional TPM2 disk unlock helper
 │   ├── update-antigravity.sh          # Runtime updater for Antigravity Hub
 │   └── git-setup.sh                   # Interactive git config & signing helper
-└── docs/
-    └── ai-architecture.md             # AI prompt integration notes
 ```
