@@ -210,7 +210,7 @@ install_cursor() {
 
     # Fix SELinux context
     if command -v restorecon &>/dev/null; then
-        restorecon -v "$CURSOR_BIN" 2>/dev/null || true
+        restorecon "$CURSOR_BIN" 2>/dev/null || true
     fi
 
     # Write version stamp for auto-updater
@@ -306,7 +306,7 @@ install_agy() {
     curl -fsSL https://antigravity.google/cli/install.sh | bash
 
     if command -v restorecon &>/dev/null && [[ -f "$AGY_BIN" ]]; then
-        restorecon -v "$AGY_BIN" 2>/dev/null || true
+        restorecon "$AGY_BIN" 2>/dev/null || true
     fi
     success "agy CLI installed"
 }
@@ -355,7 +355,7 @@ EOF
     info "Overwriting Dolphin sidebar places with clean template..."
     if [[ -f "$DOTFILES_DIR/config/kde/user-places.xbel" ]]; then
         mkdir -p "$HOME/.local/share"
-        cp "$DOTFILES_DIR/config/kde/user-places.xbel" "$HOME/.local/share/user-places.xbel"
+        sed "s|/var/home/derek|$HOME|g" "$DOTFILES_DIR/config/kde/user-places.xbel" > "$HOME/.local/share/user-places.xbel"
         success "Dolphin sidebar cleaned"
     fi
 
@@ -405,12 +405,24 @@ PY
         bash "$DOTFILES_DIR/scripts/git-setup.sh"
     fi
 
-    # 3. User CLI tools
+    # 3. User CLI tools & update service
     info "Installing updown to ~/.local/bin..."
     mkdir -p "$HOME/.local/bin"
     if [[ -f "$DOTFILES_DIR/scripts/updown.sh" ]]; then
         install -m 755 "$DOTFILES_DIR/scripts/updown.sh" "$HOME/.local/bin/updown"
         success "Installed updown → $HOME/.local/bin/updown"
+    fi
+
+    if [[ -f "$DOTFILES_DIR/config/systemd/dotfiles-update.service" ]]; then
+        info "Configuring update service..."
+        local SYSTEMD_USER_DIR="$HOME/.config/systemd/user"
+        mkdir -p "$SYSTEMD_USER_DIR"
+        cp -f "$DOTFILES_DIR/config/systemd/dotfiles-update.service" "$SYSTEMD_USER_DIR/dotfiles-update.service"
+        if command -v systemctl &>/dev/null; then
+            systemctl --user daemon-reload >/dev/null 2>&1 || true
+            systemctl --user enable dotfiles-update.service >/dev/null 2>&1 || true
+        fi
+        success "dotfiles-update.service installed & enabled"
     fi
 
     # 4. Antigravity global instructions + skills
@@ -443,7 +455,7 @@ PY
 
     # 5. Cursor instructions
     local CURSOR_USER_DIR="$HOME/.config/Cursor/User"
-    if [[ -d "$CURSOR_USER_DIR" && -f "$INSTRUCTIONS_FILE" ]]; then
+    if [[ -f "$INSTRUCTIONS_FILE" ]]; then
         info "Configuring Cursor..."
         mkdir -p "$CURSOR_USER_DIR/prompts"
         rm -f "$CURSOR_USER_DIR/prompts/global.instructions.md"
@@ -492,7 +504,7 @@ install_native_tools() {
         curl -fsSL "https://raw.githubusercontent.com/containers/podman-compose/main/podman_compose.py" -o "$BIN_DIR/podman-compose"
         chmod +x "$BIN_DIR/podman-compose"
     fi
-    if [ ! -d "$HOME/.nvm" ]; then
+    if [[ ! -s "$HOME/.nvm/nvm.sh" ]]; then
         info "Installing nvm..."
         curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | PROFILE=/dev/null bash
         success "nvm installed"
@@ -512,17 +524,12 @@ install_native_tools() {
 }
 
 preset_desktop() {
-    
-    
     install_chrome
-    install_yakuake
     install_insync
 }
 
 preset_dev() {
     install_native_tools
-    
-    
     install_chrome
     install_yakuake
     install_insync
@@ -533,6 +540,7 @@ preset_dev() {
     install_oc
     install_repos
 }
+
 # ── Usage ─────────────────────────────────────────────────────────────────────
 
 usage() {
@@ -544,9 +552,10 @@ Usage:
 Default (no flags): full dev stack, same as --dev.
 
 Options:
-              Antigravity hub, agy CLI, Cursor, oc, work repos, auto-updater
-              profile — no dev tools), auto-updater
-  --help      Show this help
+  --dev       Full developer stack: Node LTS, CLI tools, Chrome, Yakuake, Insync,
+              Antigravity hub, agy CLI, Cursor, oc, Ponytail, and work repos
+  --desktop   Minimal desktop essentials: Chrome and Insync
+  --help, -h  Show this help
 
 Environment variables:
   UPDATE              Set UPDATE=1 to force re-download of oc binary

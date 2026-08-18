@@ -169,7 +169,7 @@ install_oc() {
 
     if [[ "${CURRENT_VER}" != "${TARGET_OC_VER}" ]]; then
         echo " -> Installing/Updating oc (${TARGET_OC_VER})..."
-        local OC_URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz"
+        local OC_URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${TARGET_OC_VER}/openshift-client-linux.tar.gz"
         download_tarball_binary "${OC_URL}" "oc" "${BIN_DIR}/oc"
         
         if command -v restorecon &>/dev/null; then

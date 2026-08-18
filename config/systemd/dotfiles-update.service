@@ -3,13 +3,11 @@ Description=Dotfiles silent maintenance (rpm-ostree, flatpak, binaries, antigrav
 Documentation=file://%h/Repos/dotfiles/scripts/updown.sh
 After=network-online.target graphical-session.target
 Wants=network-online.target
-# Skip if we already ran in the last 23 hours
-ConditionPathIsNewer=!%h/.local/share/dotfiles/last-update
 
 [Service]
 Type=oneshot
 # 23-hour guard: stamp file must be older than 82800 seconds
-ExecStartPre=/bin/sh -c '\
+ExecCondition=/bin/sh -c '\
   stamp="%h/.local/share/dotfiles/last-update"; \
   if [ -f "$stamp" ]; then \
     age=$(( $(date +%%s) - $(stat -c %%Y "$stamp") )); \

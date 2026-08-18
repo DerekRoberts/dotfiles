@@ -9,7 +9,31 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-REPOS_FILE="${1:-$REPO_DIR/config/repos.txt}"
+REPOS_FILE="$REPO_DIR/config/repos.txt"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --repos-file)
+            [[ -n "${2:-}" ]] || { echo "❌ Missing path after --repos-file" >&2; exit 1; }
+            REPOS_FILE="$2"
+            shift 2
+            ;;
+        --help|-h)
+            echo "Usage: clone-repos.sh [--repos-file PATH]"
+            exit 0
+            ;;
+        *)
+            if [[ -f "$1" ]]; then
+                REPOS_FILE="$1"
+                shift
+            else
+                echo "❌ Unknown option or missing file: $1" >&2
+                exit 1
+            fi
+            ;;
+    esac
+done
+
 CLONE_DIR="${HOME}/Repos"
 SSH_KEY="${HOME}/.ssh/id_ed25519"
 

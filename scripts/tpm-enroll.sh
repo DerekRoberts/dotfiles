@@ -5,25 +5,42 @@ echo "=== TPM 2.0 LUKS Enrollment ==="
 echo "This script configures your system to automatically unlock your encrypted drive at boot."
 
 if [[ $EUID -ne 0 ]]; then
-   echo "This requires root privileges. Promping for sudo..."
+   echo "This requires root privileges. Prompting for sudo..."
    exec sudo "$0" "$@"
 fi
 
 if ! command -v systemd-cryptenroll &>/dev/null; then
-    echo "Error: systemd-cryptenroll not found."
+    echo "Error: systemd-cryptenroll not found." >&2
     exit 1
 fi
 
 if ! systemd-cryptenroll --tpm2-device=list | grep -q "tpm"; then
-    echo "Error: No TPM 2.0 device found on this system."
+    echo "Error: No TPM 2.0 device found on this system." >&2
     exit 1
 fi
 
-LUKS_DEV=$(lsblk -o NAME,TYPE,FSTYPE -p -l | awk '$3=="crypto_LUKS" {print $1}' | head -n1)
+LUKS_DEV="${1:-}"
 
 if [[ -z "$LUKS_DEV" ]]; then
-    echo "Error: Could not automatically detect a LUKS encrypted partition."
-    exit 1
+    mapfile -t luks_devices < <(lsblk -o NAME,TYPE,FSTYPE -p -l | awk '$3=="crypto_LUKS" {print $1}')
+    if [[ ${#luks_devices[@]} -eq 0 ]]; then
+        echo "Error: Could not detect any LUKS encrypted partitions." >&2
+        exit 1
+    elif [[ ${#luks_devices[@]} -eq 1 ]]; then
+        LUKS_DEV="${luks_devices[0]}"
+    else
+        echo "Multiple LUKS devices found:"
+        for i in "${!luks_devices[@]}"; do
+            echo "  $((i+1))) ${luks_devices[$i]}"
+        done
+        read -r -p "Select device [1-${#luks_devices[@]}]: " choice
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [[ "$choice" -ge 1 ]] && [[ "$choice" -le ${#luks_devices[@]} ]]; then
+            LUKS_DEV="${luks_devices[$((choice-1))]}"
+        else
+            echo "Invalid selection." >&2
+            exit 1
+        fi
+    fi
 fi
 
 echo "Detected LUKS device: $LUKS_DEV"

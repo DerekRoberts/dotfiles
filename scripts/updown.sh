@@ -50,56 +50,58 @@ info()    { echo "$LOG_PREFIX $*"; }
 success() { echo "$LOG_PREFIX ✓ $*"; }
 warn()    { echo "$LOG_PREFIX ⚠ $*" >&2; }
 
-# ── 1. rpm-ostree ────────────────────────────────────────────────────────────
-# Stages the update; does NOT reboot automatically.
-# On Kinoite, apply takes effect on next reboot (user-controlled).
+if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
+    # ── 1. rpm-ostree ────────────────────────────────────────────────────────────
+    # Stages the update; does NOT reboot automatically.
+    # On Kinoite, apply takes effect on next reboot (user-controlled).
 
-info "Staging rpm-ostree upgrade..."
-if rpm-ostree upgrade --quiet 2>&1; then
-    success "rpm-ostree upgrade staged (reboot when ready to apply)"
-else
-    warn "rpm-ostree upgrade failed or nothing to do — continuing"
-fi
-
-# ── 2. Flatpak ───────────────────────────────────────────────────────────────
-
-info "Updating Flatpaks..."
-if flatpak update -y --noninteractive 2>&1; then
-    success "Flatpaks updated"
-else
-    warn "Flatpak update failed — continuing"
-fi
-
-# ── 4. Antigravity Hub ───────────────────────────────────────────────────────
-
-ANTI_UPDATER="$DOTFILES_DIR/scripts/update-antigravity.sh"
-if [[ -f "$ANTI_UPDATER" ]]; then
-    bash "$ANTI_UPDATER" || warn "Antigravity hub update exited with error"
-else
-    info "scripts/update-antigravity.sh not found — skipping"
-fi
-
-# ── 5. agy CLI ───────────────────────────────────────────────────────────────
-# agy has its own update mechanism: agy update (or re-running the install script)
-
-AGY_BIN="${HOME}/.local/bin/agy"
-if [[ -x "$AGY_BIN" ]]; then
-    info "Checking agy CLI for updates..."
-    LATEST_AGY_VER=$(curl -fsSL https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests/linux_amd64.json | jq -r .version 2>/dev/null || echo "unknown")
-    CURRENT_AGY_VER=$("$AGY_BIN" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "none")
-
-    if [[ "$LATEST_AGY_VER" != "unknown" ]] && [[ "$CURRENT_AGY_VER" == "$LATEST_AGY_VER" ]]; then
-        success "agy CLI is up to date ($CURRENT_AGY_VER)"
+    info "Staging rpm-ostree upgrade..."
+    if rpm-ostree upgrade --quiet 2>&1; then
+        success "rpm-ostree upgrade staged (reboot when ready to apply)"
     else
-        info "Updating agy CLI ($CURRENT_AGY_VER -> $LATEST_AGY_VER)..."
-        if curl -fsSL https://antigravity.google/cli/install.sh | bash 2>&1; then
-            success "agy CLI updated"
-        else
-            warn "agy update failed — continuing"
-        fi
+        warn "rpm-ostree upgrade failed or nothing to do — continuing"
     fi
-else
-    info "agy CLI not installed — skipping"
+
+    # ── 2. Flatpak ───────────────────────────────────────────────────────────────
+
+    info "Updating Flatpaks..."
+    if flatpak update -y --noninteractive 2>&1; then
+        success "Flatpaks updated"
+    else
+        warn "Flatpak update failed — continuing"
+    fi
+
+    # ── 4. Antigravity Hub ───────────────────────────────────────────────────────
+
+    ANTI_UPDATER="$DOTFILES_DIR/scripts/update-antigravity.sh"
+    if [[ -f "$ANTI_UPDATER" ]]; then
+        bash "$ANTI_UPDATER" || warn "Antigravity hub update exited with error"
+    else
+        info "scripts/update-antigravity.sh not found — skipping"
+    fi
+
+    # ── 5. agy CLI ───────────────────────────────────────────────────────────────
+    # agy has its own update mechanism: agy update (or re-running the install script)
+
+    AGY_BIN="${HOME}/.local/bin/agy"
+    if [[ -x "$AGY_BIN" ]]; then
+        info "Checking agy CLI for updates..."
+        LATEST_AGY_VER=$(curl -fsSL https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests/linux_amd64.json | jq -r .version 2>/dev/null || echo "unknown")
+        CURRENT_AGY_VER=$("$AGY_BIN" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "none")
+
+        if [[ "$LATEST_AGY_VER" != "unknown" ]] && [[ "$CURRENT_AGY_VER" == "$LATEST_AGY_VER" ]]; then
+            success "agy CLI is up to date ($CURRENT_AGY_VER)"
+        else
+            info "Updating agy CLI ($CURRENT_AGY_VER -> $LATEST_AGY_VER)..."
+            if curl -fsSL https://antigravity.google/cli/install.sh | bash 2>&1; then
+                success "agy CLI updated"
+            else
+                warn "agy update failed — continuing"
+            fi
+        fi
+    else
+        info "agy CLI not installed — skipping"
+    fi
 fi
 
 # ── 6. Insync ────────────────────────────────────────────────────────────────
@@ -144,35 +146,37 @@ else
     info "Insync not installed — skipping"
 fi
 
-# ── 7. Cursor ────────────────────────────────────────────────────────────────
+if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
+    # ── 7. Cursor ────────────────────────────────────────────────────────────────
 
-CURSOR_BIN="${HOME}/.local/bin/cursor.AppImage"
-if [[ -x "$CURSOR_BIN" ]]; then
-    info "Checking Cursor for updates..."
-    LATEST_CURSOR_URL="$(curl -fsSL 'https://www.cursor.com/api/download?platform=linux-x64&releaseTrack=stable' | grep -o '"downloadUrl":"[^"]*"' | cut -d'"' -f4 || true)"
-    
-    STAMP_FILE="${HOME}/.local/share/dotfiles/cursor.url"
-    if [[ -n "$LATEST_CURSOR_URL" ]]; then
-        if [[ -f "$STAMP_FILE" ]] && [[ "$(cat "$STAMP_FILE")" == "$LATEST_CURSOR_URL" ]]; then
-            success "Cursor is up to date"
-        else
-            info "Updating Cursor..."
-            if curl -L -fsS "$LATEST_CURSOR_URL" -o "${CURSOR_BIN}.tmp"; then
-                mv "${CURSOR_BIN}.tmp" "$CURSOR_BIN"
-                chmod +x "$CURSOR_BIN"
-                mkdir -p "$(dirname "$STAMP_FILE")"
-                echo "$LATEST_CURSOR_URL" > "$STAMP_FILE"
-                success "Cursor updated"
+    CURSOR_BIN="${HOME}/.local/bin/cursor.AppImage"
+    if [[ -x "$CURSOR_BIN" ]]; then
+        info "Checking Cursor for updates..."
+        LATEST_CURSOR_URL="$(curl -fsSL 'https://www.cursor.com/api/download?platform=linux-x64&releaseTrack=stable' | grep -o '"downloadUrl":"[^"]*"' | cut -d'"' -f4 || true)"
+        
+        STAMP_FILE="${HOME}/.local/share/dotfiles/cursor.url"
+        if [[ -n "$LATEST_CURSOR_URL" ]]; then
+            if [[ -f "$STAMP_FILE" ]] && [[ "$(cat "$STAMP_FILE")" == "$LATEST_CURSOR_URL" ]]; then
+                success "Cursor is up to date"
             else
-                warn "Cursor update failed (download error)"
-                rm -f "${CURSOR_BIN}.tmp"
+                info "Updating Cursor..."
+                if curl -L -fsS "$LATEST_CURSOR_URL" -o "${CURSOR_BIN}.tmp"; then
+                    mv "${CURSOR_BIN}.tmp" "$CURSOR_BIN"
+                    chmod +x "$CURSOR_BIN"
+                    mkdir -p "$(dirname "$STAMP_FILE")"
+                    echo "$LATEST_CURSOR_URL" > "$STAMP_FILE"
+                    success "Cursor updated"
+                else
+                    warn "Cursor update failed (download error)"
+                    rm -f "${CURSOR_BIN}.tmp"
+                fi
             fi
+        else
+            warn "Could not resolve Cursor URL — skipping update"
         fi
     else
-        warn "Could not resolve Cursor URL — skipping update"
+        info "Cursor not installed — skipping"
     fi
-else
-    info "Cursor not installed — skipping"
 fi
 
 # ── 8. SELinux context fix ───────────────────────────────────────────────────
