@@ -50,22 +50,7 @@ info()    { echo "$LOG_PREFIX $*"; }
 success() { echo "$LOG_PREFIX ✓ $*"; }
 warn()    { echo "$LOG_PREFIX ⚠ $*" >&2; }
 
-# Force close target running apps before updating them to prevent file locking & crashes
-kill_running_apps() {
-    local apps=("cursor" "cursor.AppImage" "insync" "antigravity" "agy")
-    for app in "${apps[@]}"; do
-        if pgrep -x "$app" &>/dev/null || pgrep -f "$app" &>/dev/null; then
-            info "Closing running process for $app..."
-            pkill -TERM -f "$app" 2>/dev/null || true
-            sleep 1
-            pkill -KILL -f "$app" 2>/dev/null || true
-        fi
-    done
-}
-
 if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
-    kill_running_apps
-
     # ── 1. rpm-ostree ────────────────────────────────────────────────────────────
     # Stages the update; does NOT reboot automatically.
     # On Kinoite, apply takes effect on next reboot (user-controlled).
@@ -160,8 +145,14 @@ if [[ -x "$INSYNC_BIN" ]] || [[ "$INSTALL_INSYNC" -eq 1 ]]; then
                     mkdir -p "${HOME}/.local/lib" "${HOME}/.local/bin"
                     rm -rf "${INSYNC_LIB_DIR}.old"
                     [[ -d "$INSYNC_LIB_DIR" ]] && mv "$INSYNC_LIB_DIR" "${INSYNC_LIB_DIR}.old"
-                    cp -rf "$extracted_lib" "$INSYNC_LIB_DIR"
-                    rm -rf "${INSYNC_LIB_DIR}.old"
+                    if cp -rf "$extracted_lib" "$INSYNC_LIB_DIR"; then
+                        rm -rf "${INSYNC_LIB_DIR}.old"
+                    else
+                        warn "Insync copy failed — restoring previous installation"
+                        [[ -d "${INSYNC_LIB_DIR}.old" ]] && mv "${INSYNC_LIB_DIR}.old" "$INSYNC_LIB_DIR"
+                        rm -rf "$tmp_dir"
+                        continue
+                    fi
                     chmod +x "$INSYNC_LIB_DIR/insync"
                     
                     cat > "$INSYNC_BIN" << 'EOF'

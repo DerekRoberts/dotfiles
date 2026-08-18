@@ -318,7 +318,7 @@ install_oc() {
 
 install_repos() {
     section "Repositories"
-    bash "$DOTFILES_DIR/scripts/clone-repos.sh"
+    bash "$DOTFILES_DIR/scripts/clone-repos.sh" || warn "Some repositories could not be cloned. Run 'scripts/clone-repos.sh' once your SSH key is authorized on GitHub."
 }
 
 # ── Core wiring (always runs regardless of profile) ──────────────────────────
