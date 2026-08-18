@@ -112,11 +112,11 @@ clone_repos() {
     echo "  Cloned:  $cloned"
     echo "  Skipped: $skipped (already present)"
     if [[ "$failed" -gt 0 ]]; then
-        echo "  Failed:  $failed (check SSH access)"
+        warn "$failed repo(s) failed to clone (SSH key not yet authorized on GitHub)."
+        info "Once your key is added to https://github.com/settings/keys, re-run:"
+        info "  scripts/clone-repos.sh"
     fi
     echo ""
-
-    [[ "$failed" -eq 0 ]] || return 1
 }
 
 # ── Main ─────────────────────────────────────────────────────────────────────
