@@ -37,8 +37,6 @@ SETUP_PATH="$(readlink -f "${BASH_SOURCE[0]:-}" 2>/dev/null || true)"
 if [[ -z "$SETUP_PATH" ]] || [[ "$SETUP_PATH" != "$DOTFILES_DIR/setup.sh" ]]; then
     exec bash "$DOTFILES_DIR/setup.sh" "$@"
 fi
-
-REPO_DIR="$DOTFILES_DIR"
 BASHRC="$HOME/.bashrc"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -51,8 +49,6 @@ section() { echo ""; echo "=== $* ==="; }
 # ── Pure-Bash TUI checkbox menu ───────────────────────────────────────────────
 # Arrow keys navigate, Space toggles, Enter confirms.
 # Reads from /dev/tty so it works when stdin is piped.
-
-
 # ── Installer functions ───────────────────────────────────────────────────────
 # Each function is idempotent: checks for presence before acting.
 
@@ -160,7 +156,7 @@ install_insync() {
     fi
 
     info "Downloading/Updating Insync..."
-    bash "$REPO_DIR/bin/updown" --install-insync
+    bash "$DOTFILES_DIR/bin/updown" --install-insync
 
     if [[ ! -x "$INSYNC_BIN" ]]; then
         warn "Insync installation failed"
@@ -297,13 +293,9 @@ install_ponytail() {
         fi
     fi
 }
-
-
-
-
 install_antigravity() {
     section "Antigravity Hub"
-    local UPDATER="$REPO_DIR/bin/update-antigravity"
+    local UPDATER="$DOTFILES_DIR/bin/update-antigravity"
     if [[ ! -x "$UPDATER" ]]; then
         warn "bin/update-antigravity not found — skipping"
         return
@@ -353,20 +345,12 @@ install_agy() {
 
 install_oc() {
     section "OpenShift CLI (oc)"
-    bash "$REPO_DIR/scripts/bootstrap-tools.sh"
+    bash "$DOTFILES_DIR/scripts/bootstrap-tools.sh"
 }
 
 install_work_repos() {
     section "Work Repositories"
-    bash "$REPO_DIR/scripts/clone-work-repos.sh"
-}
-
-
-install_ai_instructions() {
-    section "AI Instructions"
-    if [[ -f "$REPO_DIR/scripts/bundle-ai-instructions.sh" ]]; then
-        bash "$REPO_DIR/scripts/bundle-ai-instructions.sh"
-    fi
+    bash "$DOTFILES_DIR/scripts/clone-work-repos.sh"
 }
 
 # ── Core wiring (always runs regardless of profile) ──────────────────────────
@@ -401,9 +385,9 @@ EOF
     done
     
     info "Overwriting Dolphin sidebar places with clean template..."
-    if [[ -f "$REPO_DIR/config/kde/user-places.xbel" ]]; then
+    if [[ -f "$DOTFILES_DIR/config/kde/user-places.xbel" ]]; then
         mkdir -p "$HOME/.local/share"
-        cp "$REPO_DIR/config/kde/user-places.xbel" "$HOME/.local/share/user-places.xbel"
+        cp "$DOTFILES_DIR/config/kde/user-places.xbel" "$HOME/.local/share/user-places.xbel"
         success "Dolphin sidebar cleaned"
     fi
 
@@ -418,7 +402,7 @@ wire_core() {
         info "Updating ~/.bashrc sourcing..."
         cp "$BASHRC" "$BASHRC.bak.$(date +%s)"
 
-        python3 - "$BASHRC" "$REPO_DIR" << 'PY'
+        python3 - "$BASHRC" "$DOTFILES_DIR" << 'PY'
 import sys, re
 path, repo_dir = sys.argv[1], sys.argv[2]
 with open(path) as f:
@@ -446,22 +430,22 @@ PY
 
     # 2. Git global include
     info "Configuring Git global settings..."
-    command git config --global include.path "$REPO_DIR/gitconfig"
+    command git config --global include.path "$DOTFILES_DIR/gitconfig"
     success "Git include path set"
 
-    if [[ -f "$REPO_DIR/scripts/git-setup.sh" ]]; then
-        bash "$REPO_DIR/scripts/git-setup.sh"
+    if [[ -f "$DOTFILES_DIR/scripts/git-setup.sh" ]]; then
+        bash "$DOTFILES_DIR/scripts/git-setup.sh"
     fi
 
     # 3. bin symlinks
     info "Symlinking bin scripts..."
     mkdir -p "$HOME/.local/bin"
     for script in updown update-antigravity tpm-enroll; do
-        [[ -f "$REPO_DIR/bin/$script" ]] || { warn "bin/$script missing — skipping"; continue; }
-        chmod +x "$REPO_DIR/bin/$script"
+        [[ -f "$DOTFILES_DIR/bin/$script" ]] || { warn "bin/$script missing — skipping"; continue; }
+        chmod +x "$DOTFILES_DIR/bin/$script"
     done
-    if [[ -f "$REPO_DIR/bin/updown" ]]; then
-        ln -sf "$REPO_DIR/bin/updown" "$HOME/.local/bin/updown"
+    if [[ -f "$DOTFILES_DIR/bin/updown" ]]; then
+        ln -sf "$DOTFILES_DIR/bin/updown" "$HOME/.local/bin/updown"
         success "Symlinked updown → $HOME/.local/bin/updown"
     fi
 
@@ -470,7 +454,7 @@ PY
     local ANTIGRAVITY_DIR="$HOME/.config/antigravity"
     mkdir -p "$ANTIGRAVITY_DIR"
     for f in instructions.json; do
-        local src="$REPO_DIR/config/antigravity/$f"
+        local src="$DOTFILES_DIR/config/antigravity/$f"
         local dest="$ANTIGRAVITY_DIR/$f"
         [[ -f "$src" ]] || continue
         if [[ -f "$dest" && ! -L "$dest" ]]; then
@@ -482,7 +466,7 @@ PY
     if [[ -f "$HOME/.config/antigravity-flags.conf" && ! -L "$HOME/.config/antigravity-flags.conf" ]]; then
         mv "$HOME/.config/antigravity-flags.conf" "$HOME/.config/antigravity-flags.conf.bak"
     fi
-    ln -sf "$REPO_DIR/config/antigravity/antigravity-flags.conf" "$HOME/.config/antigravity-flags.conf"
+    ln -sf "$DOTFILES_DIR/config/antigravity/antigravity-flags.conf" "$HOME/.config/antigravity-flags.conf"
     success "Antigravity config symlinked"
 
     # 5. VS Code config symlinks
@@ -492,14 +476,13 @@ PY
         if [[ -f "$VSCODE_DIR/settings.json" && ! -L "$VSCODE_DIR/settings.json" ]]; then
             mv "$VSCODE_DIR/settings.json" "$VSCODE_DIR/settings.json.bak"
         fi
-        ln -sf "$REPO_DIR/config/vscode/settings.json" "$VSCODE_DIR/settings.json"
+        ln -sf "$DOTFILES_DIR/config/vscode/settings.json" "$VSCODE_DIR/settings.json"
         success "VS Code settings.json symlinked"
     else
         info "VS Code not found — skipping"
     fi
 
     # 6. AI instructions
-    install_ai_instructions
 
     local GLOBAL_PROMPT_FILE="$DOTFILES_DIR/config/prompts/global.instructions.md"
 
@@ -513,9 +496,9 @@ PY
         warn "~/.gemini/GEMINI.md is a physical file — skipping symlink"
     fi
 
-    if [[ -d "$REPO_DIR/config/ai/skills" ]]; then
+    if [[ -d "$DOTFILES_DIR/config/ai/skills" ]]; then
         mkdir -p "$HOME/.agents/skills"
-        for skill_dir in "$REPO_DIR/config/ai/skills"/*; do
+        for skill_dir in "$DOTFILES_DIR/config/ai/skills"/*; do
             [[ -d "$skill_dir" ]] || continue
             local skill_name; skill_name="$(basename "$skill_dir")"
             ln -sfn "$skill_dir" "$HOME/.agents/skills/$skill_name"
@@ -544,8 +527,6 @@ PY
             warn "$CURSOR_USER_DIR/prompts/global.instructions.md is a physical file — skipping"
         fi
     fi
-
-
     # 10. Remove legacy Kilo symlink
     [[ -L "$HOME/.copilot.md" ]] && rm -f "$HOME/.copilot.md" && info "Removed legacy ~/.copilot.md"
 
@@ -627,10 +608,6 @@ preset_dev() {
     install_oc
     install_work_repos
 }
-
-
-
-
 # ── Usage ─────────────────────────────────────────────────────────────────────
 
 usage() {

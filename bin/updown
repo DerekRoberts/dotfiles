@@ -156,7 +156,7 @@ fi
 
 info "Restoring SELinux contexts on ~/.local/bin..."
 if command -v restorecon &>/dev/null; then
-    restorecon -Rv "${HOME}/.local/bin" 2>&1 | grep -v "^$" || true
+    restorecon -R "${HOME}/.local/bin" 2>&1 | grep -v "^$" || true
     success "SELinux contexts restored"
 else
     info "restorecon not available — skipping (not on SELinux system?)"
