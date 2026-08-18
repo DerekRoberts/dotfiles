@@ -13,9 +13,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run ShellCheck
-        run: shellcheck setup.sh scripts/*.sh bin/* || true
+        run: shellcheck setup.sh scripts/*.sh bin/* 
 
   test-fedora:
+    needs: shellcheck
     name: Fedora Integration Test
     runs-on: ubuntu-latest
     container:
