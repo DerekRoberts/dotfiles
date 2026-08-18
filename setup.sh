@@ -358,6 +358,32 @@ DESKTOP
 
     success "Cursor AppImage installed to $CURSOR_BIN"
 }
+install_ponytail() {
+    section "Ponytail (Lazy Senior Dev)"
+    
+    info "Configuring Ponytail for Cursor..."
+    local CURSOR_RULES_DIR="$HOME/.cursor/rules"
+    mkdir -p "$CURSOR_RULES_DIR"
+    if curl -fsSL "https://raw.githubusercontent.com/dietrichgebert/ponytail/main/.cursor/rules/ponytail.mdc" -o "$CURSOR_RULES_DIR/ponytail.mdc"; then
+        success "Cursor rule downloaded to $CURSOR_RULES_DIR/ponytail.mdc"
+    else
+        warn "Failed to download Cursor rule"
+    fi
+
+    info "Configuring Ponytail for Antigravity (agy)..."
+    local AGY_BIN="${HOME}/.local/bin/agy"
+    if ! command -v agy &>/dev/null && [[ ! -x "$AGY_BIN" ]]; then
+        warn "agy CLI not found. Run setup.sh --dev or agy update first. Skipping plugin install."
+    else
+        [[ -x "$AGY_BIN" ]] || AGY_BIN="agy"
+        if "$AGY_BIN" plugin install https://github.com/DietrichGebert/ponytail 2>/dev/null; then
+            success "agy plugin installed"
+        else
+            warn "agy plugin install failed (it might already be installed, or network issue)"
+        fi
+    fi
+}
+
 
 install_nix() {
     section "Nix (Determinate Systems)"
@@ -640,15 +666,6 @@ PY
         fi
     fi
 
-    # 9. Ponytail rule
-    local PONYTAIL_RULE="$HOME/.copilot/installed-plugins/ponytail/ponytail/.cursor/rules/ponytail.mdc"
-    if [[ -f "$PONYTAIL_RULE" ]]; then
-        mkdir -p "$HOME/.cursor/rules"
-        if [[ -L "$HOME/.cursor/rules/ponytail.mdc" || ! -f "$HOME/.cursor/rules/ponytail.mdc" ]]; then
-            ln -sf "$PONYTAIL_RULE" "$HOME/.cursor/rules/ponytail.mdc"
-            success "Ponytail rule symlinked"
-        fi
-    fi
 
     # 10. Remove legacy Kilo symlink
     [[ -L "$HOME/.copilot.md" ]] && rm -f "$HOME/.copilot.md" && info "Removed legacy ~/.copilot.md"
@@ -676,6 +693,7 @@ preset_dev() {
     install_antigravity
     install_agy
     install_cursor
+    install_ponytail
     install_oc
     install_work_repos
     install_updater
@@ -694,11 +712,12 @@ run_tui() {
         "Antigravity Hub (agentic, latest from download page)"
         "agy CLI"
         "Cursor (AppImage)"
+        "Ponytail (Lazy Senior Dev rules for agy and Cursor)"
         "OpenShift CLI (oc, GitHub binary)"
         "Clone work repos (SSH key + ~/Repos/)"
         "Login auto-updater (systemd user service, 23h guard)"
     )
-    local selected=(0 0 0 0 0 0 0 0 0 0 0 0)
+    local selected=(0 0 0 0 0 0 0 0 0 0 0 0 0)
 
     tui_menu items selected "Select components to install (↑↓ Space Enter)"
 
@@ -717,9 +736,10 @@ run_tui() {
     [[ "${selected[6]}"  == "1" ]] && install_antigravity
     [[ "${selected[7]}"  == "1" ]] && install_agy
     [[ "${selected[8]}"  == "1" ]] && install_cursor
-    [[ "${selected[9]}"  == "1" ]] && install_oc
-    [[ "${selected[10]}" == "1" ]] && install_work_repos
-    [[ "${selected[11]}" == "1" ]] && install_updater
+    [[ "${selected[9]}"  == "1" ]] && install_ponytail
+    [[ "${selected[10]}" == "1" ]] && install_oc
+    [[ "${selected[11]}" == "1" ]] && install_work_repos
+    [[ "${selected[12]}" == "1" ]] && install_updater
 }
 
 
