@@ -273,15 +273,29 @@ DESKTOP
 
 install_nix() {
     section "Nix (Determinate Systems)"
+    local NIX_PROFILE="/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
+
     if [[ -d /nix ]]; then
         success "Nix already installed (/nix exists)"
+        # Ensure Nix is active in the current shell session
+        # shellcheck disable=SC1090
+        [[ -f "$NIX_PROFILE" ]] && . "$NIX_PROFILE"
         return
     fi
 
     info "Installing Nix via Determinate Systems OSTree-aware installer..."
     curl --proto '=https' --tlsv1.2 -sSf -L \
         https://install.determinate.systems/nix | sh -s -- install --no-confirm
-    success "Nix installed — source your shell or restart to use nix commands"
+
+    # Source immediately so nix commands work in the rest of this script run
+    # without requiring a shell restart
+    if [[ -f "$NIX_PROFILE" ]]; then
+        # shellcheck disable=SC1090
+        . "$NIX_PROFILE"
+        success "Nix installed and active in this session"
+    else
+        warn "Nix installed but profile script not found — shell restart may be needed"
+    fi
 }
 
 install_home_manager() {
@@ -625,20 +639,24 @@ setup.sh — Dotfiles setup for Fedora 44 Kinoite + Nix/Home-Manager
 Usage:
   setup.sh [OPTIONS]
 
+Default (no flags): full dev stack, same as --dev.
+
 Options:
-  --dev       Install full dev stack non-interactively
-  --desktop   Install desktop essentials non-interactively
-  --custom    Launch interactive TUI component selector
+  --dev       Full dev stack: Chrome, Insync, Nix/Home-Manager (dev profile),
+              Antigravity hub, agy CLI, Cursor, oc, work repos, auto-updater
+  --desktop   Desktop essentials: Chrome, Insync, Nix/Home-Manager (desktop
+              profile — no dev tools), auto-updater
+  --custom    Interactive TUI checkbox picker (select individual components)
   --help      Show this help
 
 Environment variables:
-  DOTFILES_DIR      Clone location (default: ~/Repos/dotfiles)
-  DOTFILES_REPO     Clone URL (default: GitHub)
-  DOTFILES_BRANCH   Branch (default: main)
+  DOTFILES_DIR        Clone location (default: ~/Repos/dotfiles)
+  DOTFILES_REPO       Clone URL (default: GitHub)
+  DOTFILES_BRANCH     Branch (default: main)
   DOTFILES_SKIP_PULL  Set to skip git pull on existing clone
-  UPDATE            Set UPDATE=1 to force re-download of CLI tools
-  OC_VERSION        Override oc version tag (default: latest)
-  DOTFILES_PROFILE  Active profile written to ~/.bashrc by setup
+  UPDATE              Set UPDATE=1 to force re-download of oc binary
+  OC_VERSION          Override oc version tag (default: latest)
+  DOTFILES_PROFILE    Active profile written to ~/.bashrc by setup
 EOF
 }
 
@@ -650,7 +668,7 @@ echo "=== Bootstrapping Dotfiles (Fedora Kinoite + Nix) ==="
 wire_core
 
 case "${1:-}" in
-    --dev)
+    --dev|"")
         echo "Profile: dev (full stack)"
         preset_dev
         ;;
@@ -658,12 +676,12 @@ case "${1:-}" in
         echo "Profile: desktop (essentials)"
         preset_desktop
         ;;
+    --custom)
+        run_tui
+        ;;
     --help|-h)
         usage
         exit 0
-        ;;
-    --custom|"")
-        run_tui
         ;;
     *)
         echo "Unknown option: $1" >&2
