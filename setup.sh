@@ -203,32 +203,6 @@ install_cursor() {
 
     info "Downloading Cursor: $CURSOR_URL"
     mkdir -p "$BIN_DIR"
-    # jq
-    if ! command -v jq &>/dev/null; then
-        info "Downloading jq..."
-        curl -fsSL "https://github.com/jqlang/jq/releases/latest/download/jq-linux-amd64" -o "$BIN_DIR/jq"
-        chmod +x "$BIN_DIR/jq"
-    fi
-
-    # gh
-    if ! command -v gh &>/dev/null; then
-        info "Downloading gh..."
-        local tmp_dir; tmp_dir="$(mktemp -d)"
-        # Get latest version using grep since we might not have jq yet if it fails
-        local gh_latest; gh_latest=$(curl -sI https://github.com/cli/cli/releases/latest | grep -i "^location:" | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+" || echo "v2.54.0")
-        gh_latest=${gh_latest#v}
-        curl -fsSL "https://github.com/cli/cli/releases/download/v${gh_latest}/gh_${gh_latest}_linux_amd64.tar.gz" | tar -xz -C "$tmp_dir"
-        mv "$tmp_dir"/gh_${gh_latest}_linux_amd64/bin/gh "$BIN_DIR/gh"
-        chmod +x "$BIN_DIR/gh"
-        rm -rf "$tmp_dir"
-    fi
-
-    # podman-compose
-    if ! command -v podman-compose &>/dev/null; then
-        info "Downloading podman-compose..."
-        curl -fsSL "https://raw.githubusercontent.com/containers/podman-compose/main/podman_compose.py" -o "$BIN_DIR/podman-compose"
-        chmod +x "$BIN_DIR/podman-compose"
-    fi
     curl -fsSL "$CURSOR_URL" -o "$CURSOR_BIN"
     chmod +x "$CURSOR_BIN"
 
@@ -417,7 +391,7 @@ loader = (
 with open(path, "w") as f:
     f.write(content.rstrip() + loader)
 PY
-        success "~/.bashrc sourcing updated"
+        success "bashrc sourcing updated"
     fi
 
     # 2. Git global include
@@ -439,15 +413,6 @@ PY
 
     # 4. Antigravity config
     info "Configuring Antigravity..."
-    local ANTIGRAVITY_DIR="$HOME/.config/antigravity"
-    mkdir -p "$ANTIGRAVITY_DIR"
-    for f in instructions.json; do
-        local src="$DOTFILES_DIR/config/antigravity/$f"
-        local dest="$ANTIGRAVITY_DIR/$f"
-        [[ -f "$src" ]] || continue
-        rm -f "$dest"
-        cp -f "$src" "$dest"
-    done
     if [[ -f "$DOTFILES_DIR/config/antigravity/antigravity-flags.conf" ]]; then
         rm -f "$HOME/.config/antigravity-flags.conf"
         cp -f "$DOTFILES_DIR/config/antigravity/antigravity-flags.conf" "$HOME/.config/antigravity-flags.conf"
@@ -522,7 +487,7 @@ install_native_tools() {
         local gh_latest; gh_latest=$(curl -sI https://github.com/cli/cli/releases/latest | grep -i "^location:" | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+" || echo "v2.54.0")
         gh_latest=${gh_latest#v}
         curl -fsSL "https://github.com/cli/cli/releases/download/v${gh_latest}/gh_${gh_latest}_linux_amd64.tar.gz" | tar -xz -C "$tmp_dir"
-        mv "$tmp_dir"/gh_${gh_latest}_linux_amd64/bin/gh "$BIN_DIR/gh"
+        mv "$tmp_dir/gh_${gh_latest}_linux_amd64/bin/gh" "$BIN_DIR/gh"
         chmod +x "$BIN_DIR/gh"
         rm -rf "$tmp_dir"
     fi
@@ -542,6 +507,7 @@ install_native_tools() {
     # Ensure Node LTS is installed via NVM
     export NVM_DIR="$HOME/.nvm"
     if [ -s "$NVM_DIR/nvm.sh" ]; then
+        # shellcheck source=/dev/null
         \. "$NVM_DIR/nvm.sh"
         info "Ensuring Node LTS is installed..."
         nvm install --lts >/dev/null 2>&1

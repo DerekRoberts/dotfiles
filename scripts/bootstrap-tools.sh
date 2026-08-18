@@ -30,16 +30,14 @@ OC_VERSION="${OC_VERSION:-latest}"
 # Detect OS
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 case "${OS}" in
-    linux)  OS_NAME="linux"  ;;
-    darwin) OS_NAME="darwin" ;;
+    linux) ;;
     *) echo "❌ Unsupported OS: ${OS}" >&2; exit 1 ;;
 esac
 
 # Detect Architecture
 ARCH="$(uname -m)"
 case "${ARCH}" in
-    x86_64|amd64)  ARCH_OC="amd64" ;;
-    aarch64|arm64) ARCH_OC="arm64" ;;
+    x86_64|amd64) ;;
     *) echo "❌ Unsupported architecture: ${ARCH}" >&2; exit 1 ;;
 esac
 
@@ -166,7 +164,8 @@ install_oc() {
     fi
 
     # oc version --client returns e.g. "Client Version: 4.14.0"
-    local CURRENT_VER=$(oc version --client 2>/dev/null | grep "Client Version:" | awk '{print $3}' || echo "none")
+    local CURRENT_VER
+    CURRENT_VER="$(oc version --client 2>/dev/null | grep "Client Version:" | awk '{print $3}' || echo "none")"
 
     if [[ "${CURRENT_VER}" != "${TARGET_OC_VER}" ]]; then
         echo " -> Installing/Updating oc (${TARGET_OC_VER})..."

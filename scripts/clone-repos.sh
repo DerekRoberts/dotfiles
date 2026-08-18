@@ -111,7 +111,9 @@ clone_repos() {
     echo "=== Clone Summary ==="
     echo "  Cloned:  $cloned"
     echo "  Skipped: $skipped (already present)"
-    [[ "$failed" -gt 0 ]] && echo "  Failed:  $failed (check SSH access)" || true
+    if [[ "$failed" -gt 0 ]]; then
+        echo "  Failed:  $failed (check SSH access)"
+    fi
     echo ""
 
     [[ "$failed" -eq 0 ]] || return 1
