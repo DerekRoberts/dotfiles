@@ -386,29 +386,55 @@ install_ponytail() {
 
 
 install_nix() {
-    section "Nix (Determinate Systems)"
-    local NIX_PROFILE="/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
+    section "Nix (Fedora Native)"
 
-    if [[ -d /nix ]]; then
-        success "Nix already installed (/nix exists)"
-        # Ensure Nix is active in the current shell session
-        # shellcheck disable=SC1090
-        [[ -f "$NIX_PROFILE" ]] && . "$NIX_PROFILE"
+    if command -v nix &>/dev/null && [[ -d /nix ]]; then
+        success "Nix is installed."
+        
+        # Ensure flakes are enabled
+        local NIX_CONF_DIR="$HOME/.config/nix"
+        mkdir -p "$NIX_CONF_DIR"
+        if ! grep -q "experimental-features" "$NIX_CONF_DIR/nix.conf" 2>/dev/null; then
+            echo "experimental-features = nix-command flakes" >> "$NIX_CONF_DIR/nix.conf"
+            success "Enabled Nix flakes in $NIX_CONF_DIR/nix.conf"
+        fi
+
+        # Try to ensure daemon is active, prompt for sudo if necessary
+        if ! systemctl status nix-daemon.socket &>/dev/null; then
+            info "Enabling nix-daemon.socket (requires sudo)..."
+            sudo systemctl enable --now nix-daemon.socket || true
+        fi
         return
     fi
 
-    info "Installing Nix via Determinate Systems OSTree-aware installer..."
-    curl --proto '=https' --tlsv1.2 -sSf -L \
-        https://install.determinate.systems/nix | sh -s -- install --no-confirm
-
-    # Source immediately so nix commands work in the rest of this script run
-    # without requiring a shell restart
-    if [[ -f "$NIX_PROFILE" ]]; then
-        # shellcheck disable=SC1090
-        . "$NIX_PROFILE"
-        success "Nix installed and active in this session"
+    info "Installing Nix via rpm-ostree..."
+    
+    if rpm-ostree status | grep -q " nix"; then
+        warn "Nix is staged but not active. A reboot is required to mount /nix."
+        warn "Please REBOOT and run ./setup.sh again to continue setup."
+        exit 0
     else
-        warn "Nix installed but profile script not found — shell restart may be needed"
+        # Try to apply live
+        if rpm-ostree install --idempotent --apply-live -y nix; then
+            success "Nix installed and applied live!"
+            local NIX_CONF_DIR="$HOME/.config/nix"
+            mkdir -p "$NIX_CONF_DIR"
+            if ! grep -q "experimental-features" "$NIX_CONF_DIR/nix.conf" 2>/dev/null; then
+                echo "experimental-features = nix-command flakes" >> "$NIX_CONF_DIR/nix.conf"
+            fi
+            if ! systemctl status nix-daemon.socket &>/dev/null; then
+                info "Enabling nix-daemon.socket (requires sudo)..."
+                sudo systemctl enable --now nix-daemon.socket || true
+            fi
+        else
+            warn "Live apply failed (expected for sysusers/daemons on immutable roots)."
+            info "Falling back to standard staging install..."
+            rpm-ostree install --idempotent -y nix
+            warn "Nix has been successfully staged."
+            warn "A REBOOT IS REQUIRED to mount /nix and initialize the daemon."
+            warn "Please REBOOT and run ./setup.sh again."
+            exit 0
+        fi
     fi
 }
 
@@ -416,14 +442,11 @@ install_home_manager() {
     section "Home-Manager"
     local profile="${1:-dev}"
     local HM_FLAKE="$REPO_DIR/config/home-manager"
-    local NIX_PROFILE="/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
 
-    if [[ ! -f "$NIX_PROFILE" ]]; then
-        warn "Nix not installed — skipping home-manager setup"
+    if ! command -v nix &>/dev/null; then
+        warn "Nix not found in PATH — skipping home-manager setup"
         return
     fi
-    # shellcheck disable=SC1090
-    . "$NIX_PROFILE"
 
     if ! command -v home-manager &>/dev/null; then
         info "Bootstrapping home-manager..."

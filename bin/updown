@@ -45,10 +45,9 @@ fi
 NIX_PROFILE="/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
 HM_FLAKE="$DOTFILES_DIR/config/home-manager"
 
-if [[ -f "$NIX_PROFILE" ]] && command -v home-manager &>/dev/null; then
-    # Source Nix environment so nix commands are available
-    # shellcheck disable=SC1090
-    . "$NIX_PROFILE"
+if command -v home-manager &>/dev/null || ( [[ -f "$NIX_PROFILE" ]] && source "$NIX_PROFILE" && command -v home-manager &>/dev/null ); then
+    # Ensure nix commands are available if profile exists
+    [[ -f "$NIX_PROFILE" ]] && source "$NIX_PROFILE"
 
     info "Updating Nix flake inputs..."
     if nix flake update --flake "$HM_FLAKE" 2>&1; then
