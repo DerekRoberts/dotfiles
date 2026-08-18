@@ -60,10 +60,10 @@ source ~/.bashrc
 
 ```
 ├── setup.sh                           # Main idempotent workstation setup
-├── bashrc                             # Shell configuration and aliases
-├── gitconfig                          # Global git configuration include
 ├── .github/workflows/ci.yml           # ShellCheck & integration tests
 ├── config/
+│   ├── bashrc                         # Shell configuration and aliases
+│   ├── gitconfig                      # Global git configuration include
 │   ├── prompts/
 │   │   └── global.instructions.md     # Unified AI agent instructions & guardrails
 │   ├── kde/

@@ -402,7 +402,7 @@ with open(path) as f:
 
 content = re.sub(r".*/Documents/1-Personal/Linux/bashrc.*\n*", "", content)
 content = re.sub(
-    r"# Source personal dotfiles configuration\nif \[ -f \"[^\"]+/bashrc\" \]; then\n    \. \"[^\"]+/bashrc\"\nfi\n*",
+    r"# Source personal dotfiles configuration\nif \[ -f \"[^\"]+/(?:config/)?bashrc\" \]; then\n    \. \"[^\"]+/(?:config/)?bashrc\"\nfi\n*",
     "",
     content,
 )
@@ -410,8 +410,8 @@ content = re.sub(r"# Source personal dotfiles configuration\nfi\n*", "", content
 
 loader = (
     f"\n\n# Source personal dotfiles configuration\n"
-    f'if [ -f "{repo_dir}/bashrc" ]; then\n'
-    f'    . "{repo_dir}/bashrc"\n'
+    f'if [ -f "{repo_dir}/config/bashrc" ]; then\n'
+    f'    . "{repo_dir}/config/bashrc"\n'
     f"fi\n"
 )
 with open(path, "w") as f:
@@ -422,7 +422,7 @@ PY
 
     # 2. Git global include
     info "Configuring Git global settings..."
-    command git config --global include.path "$DOTFILES_DIR/gitconfig"
+    command git config --global include.path "$DOTFILES_DIR/config/gitconfig"
     success "Git include path set"
 
     if [[ -f "$DOTFILES_DIR/scripts/git-setup.sh" ]]; then

@@ -1,0 +1,126 @@
+# .bashrc (common, shared across machines)
+
+# Git Prompt and Helpers
+set_git_prompt() {
+    local lines
+    # Query git once for both branch name and status counts
+    mapfile -t lines < <(git status --porcelain -b 2>/dev/null)
+    
+    # If array is empty, we are not in a git repo
+    if [ ${#lines[@]} -eq 0 ]; then
+        return
+    fi
+    
+    # Extract branch from the header line (e.g. ## main...origin/main)
+    local first_line="${lines[0]}"
+    local branch="${first_line#"## "}"
+    branch="${branch%%...*}"
+    
+    # Handle initial commit or detached HEAD
+    if [[ "$branch" == "HEAD (no branch)" ]]; then
+        return
+    fi
+    if [[ "$branch" == "No commits yet on "* ]]; then
+        branch="${branch#No commits yet on }"
+    fi
+
+    if [ "$branch" = "main" ]; then
+        echo -ne "\033[41;37m[MAIN]\033[0m"
+    else
+        echo -ne "\033[32m[$branch]\033[0m"
+    fi
+    
+    # Calculate change count (total lines minus the header line)
+    local changes=$((${#lines[@]} - 1))
+    if [ "$changes" -gt 0 ]; then
+        echo -ne "\033[33m*$changes\033[0m"
+    fi
+}
+
+# Prompt
+if [[ $- == *i* ]]; then
+    export PS1="\[\033[34m\]\w\[\033[0m\] \$(set_git_prompt)\n$ "
+fi
+
+# Agent environment overrides (keeps prompt clean for AI agents)
+if [[ -n "${ANTIGRAVITY_AGENT:-}" ]]; then
+    export PS1='$ '
+    unset PROMPT_COMMAND
+    unset GITHUB_TOKEN
+    unset GH_TOKEN
+fi
+
+# History settings
+export HISTCONTROL=ignoredups:erasedups
+export HISTSIZE=10000
+export HISTFILESIZE=20000
+shopt -s histappend
+
+# Environment
+export EDITOR=nano
+export PODMAN_COMPOSE_WARNING_LOGS=false
+
+# Aliases - Navigation & General
+alias ..="cd .."
+alias ...="cd ../.."
+alias repos='cd ~/Repos'
+alias ls='ls --color=auto'
+alias ll="ls -alF"
+alias la="ls -A"
+alias l="ls -CF"
+alias grep='grep --color=auto'
+alias c='code'
+
+# Aliases - Git
+alias gs='git status'
+alias gd='git diff'
+alias gpu='git push -u origin $(git branch --show-current)'
+alias grm='git fetch origin main && git pull origin main --rebase'
+alias gbc='git branch --merged | grep -v "\*" | xargs -n 1 git branch -d'
+alias gprune='git switch main && git pull --ff-only --no-tags && git fetch --prune --no-tags && git branch -vv | grep ": gone]" | grep -v "^+" | awk "{sub(/^[+* ]+/, \"\"); print \$1}" | xargs -r git branch -D && git branch -a'
+
+# Aliases - Podman Containers
+alias p='podman'
+alias pb='podman build -t'
+alias pc='podman compose'
+alias pd='podman compose down'
+alias pu='podman compose up'
+alias prm='podman rm -afv'
+alias pprune='podman rm -fv $(podman ps -aq) || echo "Nothing to remove"; podman system prune -f'
+alias docker='podman'
+alias docker-compose='podman-compose'
+
+# Aliases - Kubernetes / OpenShift
+alias ocpc='oc delete po --field-selector=status.phase==Succeeded'
+
+# Aliases - Antigravity / AI
+alias a='antigravity'
+
+# Functions
+ga() {
+    if [ -n "${1:-}" ]; then
+        git add -A
+        git commit -m "$*"
+    else
+        echo "Git Add => Please provide a commit message" >&2
+        return 1
+    fi
+}
+
+gap() {
+    ga "$@" && (git push || git push -u origin "$(git branch --show-current)")
+}
+
+pub() {
+    cleanup() {
+        echo -e "\nInterrupted: Cleaning up..."
+        podman compose down ${REMOVE_VOLUMES:+"-v"}
+    }
+    trap cleanup INT
+    podman compose up --build
+}
+
+# ── NVM ────────────────────────────────────────────────────────────────────
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
