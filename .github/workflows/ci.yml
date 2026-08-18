@@ -41,7 +41,7 @@ jobs:
       - name: Run setup.sh (Dry Run / CI mode)
         run: |
           # Start dbus so flatpak doesn't crash in CI
-          dbus-daemon --system --fork
+          mkdir -p /run/dbus && dbus-daemon --system --fork
           
           # Execute as standard user
           su - runner -c "cd ~/dotfiles && ./setup.sh --dev"
