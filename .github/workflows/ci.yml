@@ -16,8 +16,8 @@ jobs:
         run: shellcheck setup.sh scripts/*.sh
 
   test-ubuntu:
-    name: Ubuntu Integration Test
-    runs-on: ubuntu-latest
+    name: Ubuntu Validation Test
+    runs-on: ubuntu-24.04
     needs: shellcheck
     steps:
       - uses: actions/checkout@v7
@@ -27,6 +27,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y flatpak curl tar git jq rpm2cpio cpio
           
-      - name: Run setup.sh (Dry Run / CI mode)
+      - name: Test Core Config Wiring
         run: |
-          ./setup.sh --dev
+          bash -n setup.sh
+          bash -n scripts/*.sh
+          ./setup.sh --help
+

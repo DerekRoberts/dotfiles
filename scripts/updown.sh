@@ -94,12 +94,21 @@ if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
 
     # ── 4. Antigravity Hub ───────────────────────────────────────────────────────
 
-    ANTI_UPDATER="$DOTFILES_DIR/scripts/update-antigravity.sh"
-    if [[ -f "$ANTI_UPDATER" ]]; then
+    ANTI_UPDATER=""
+    if command -v update-antigravity &>/dev/null; then
+        ANTI_UPDATER="update-antigravity"
+    elif [[ -x "$HOME/.local/bin/update-antigravity" ]]; then
+        ANTI_UPDATER="$HOME/.local/bin/update-antigravity"
+    elif [[ -f "$DOTFILES_DIR/scripts/update-antigravity.sh" ]]; then
+        ANTI_UPDATER="$DOTFILES_DIR/scripts/update-antigravity.sh"
+    fi
+
+    if [[ -n "$ANTI_UPDATER" ]]; then
         bash "$ANTI_UPDATER" || warn "Antigravity hub update exited with error"
     else
-        info "scripts/update-antigravity.sh not found — skipping"
+        info "update-antigravity not found — skipping"
     fi
+
 
     # ── 5. agy CLI ───────────────────────────────────────────────────────────────
     # agy has its own update mechanism: agy update (or re-running the install script)

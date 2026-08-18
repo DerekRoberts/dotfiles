@@ -1,6 +1,6 @@
 # Dotfiles
 
-Declarative, single-command workstation setup and configuration for **Fedora Kinoite** (and desktop Linux).
+Declarative, single-command workstation setup and configuration for **Fedora Kinoite** (KDE Plasma OSTree).
 
 ## Features
 

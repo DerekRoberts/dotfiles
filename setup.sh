@@ -371,7 +371,7 @@ wire_core() {
         cp "$BASHRC" "$BASHRC.bak.$(date +%s)"
 
         python3 - "$BASHRC" "$DOTFILES_DIR" << 'PY'
-import sys, re
+import sys, re, shlex
 path, repo_dir = sys.argv[1], sys.argv[2]
 with open(path) as f:
     content = f.read()
@@ -384,16 +384,18 @@ content = re.sub(
 )
 content = re.sub(r"# Source personal dotfiles configuration\nfi\n*", "", content)
 
+quoted_target = shlex.quote(f"{repo_dir}/config/bashrc")
 loader = (
     f"\n\n# Source personal dotfiles configuration\n"
-    f'if [ -f "{repo_dir}/config/bashrc" ]; then\n'
-    f'    . "{repo_dir}/config/bashrc"\n'
+    f"if [ -f {quoted_target} ]; then\n"
+    f"    . {quoted_target}\n"
     f"fi\n"
 )
 with open(path, "w") as f:
     f.write(content.rstrip() + loader)
 PY
         success "bashrc sourcing updated"
+
     fi
 
     # 2. Git global include
@@ -406,11 +408,15 @@ PY
     fi
 
     # 3. User CLI tools & update service
-    info "Installing updown to ~/.local/bin..."
+    info "Installing maintenance scripts to ~/.local/bin..."
     mkdir -p "$HOME/.local/bin"
     if [[ -f "$DOTFILES_DIR/scripts/updown.sh" ]]; then
         install -m 755 "$DOTFILES_DIR/scripts/updown.sh" "$HOME/.local/bin/updown"
         success "Installed updown → $HOME/.local/bin/updown"
+    fi
+    if [[ -f "$DOTFILES_DIR/scripts/update-antigravity.sh" ]]; then
+        install -m 755 "$DOTFILES_DIR/scripts/update-antigravity.sh" "$HOME/.local/bin/update-antigravity"
+        success "Installed update-antigravity → $HOME/.local/bin/update-antigravity"
     fi
 
     if [[ -f "$DOTFILES_DIR/config/systemd/dotfiles-update.service" ]]; then
