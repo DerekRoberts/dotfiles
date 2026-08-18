@@ -41,7 +41,16 @@ in {
 
     # Dynamic linker compatibility for pre-built binaries (Cursor, AppImages)
     nix-ld
+
+    # Fonts
+    nerd-fonts.fira-code
+    nerd-fonts.jetbrains-mono
   ]);
+
+  # ---------------------------------------------------------------------------
+  # Fonts Config
+  # ---------------------------------------------------------------------------
+  fonts.fontconfig.enable = true;
 
   # ---------------------------------------------------------------------------
   # gh: use file keyring to prevent KWallet DBus hangs on KDE/Kinoite
@@ -54,16 +63,38 @@ in {
   };
 
   # ---------------------------------------------------------------------------
-  # Bash integration
+  # Bash integration & Aliases
   # ---------------------------------------------------------------------------
   programs.bash = lib.mkIf isDev {
     enable = true;
+
+    shellAliases = {
+      # Container aliases
+      docker = "podman";
+      docker-compose = "podman-compose";
+      
+      # Quality of life
+      ll = "ls -alF";
+      la = "ls -A";
+      l = "ls -CF";
+      ".." = "cd ..";
+      "..." = "cd ../..";
+    };
+
     # fnm hook: auto-switches Node version when entering a directory with .nvmrc
     initExtra = ''
       if command -v fnm &>/dev/null; then
         eval "$(fnm env --use-on-cd --shell bash)"
       fi
     '';
+  };
+
+  # ---------------------------------------------------------------------------
+  # Starship Prompt
+  # ---------------------------------------------------------------------------
+  programs.starship = lib.mkIf isDev {
+    enable = true;
+    enableBashIntegration = true;
   };
 
   # ---------------------------------------------------------------------------
