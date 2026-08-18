@@ -412,12 +412,12 @@ PY
     fi
 
     # 4. Antigravity global instructions + skills
-    local GLOBAL_PROMPT_FILE="$DOTFILES_DIR/config/prompts/global.instructions.md"
+    local INSTRUCTIONS_FILE="$DOTFILES_DIR/config/instructions.md"
     info "Configuring Antigravity global instructions and skills..."
     mkdir -p "$HOME/.gemini/config" "$HOME/.gemini/antigravity" "$HOME/.agents/skills"
-    if [[ -f "$GLOBAL_PROMPT_FILE" ]]; then
+    if [[ -f "$INSTRUCTIONS_FILE" ]]; then
         rm -f "$HOME/.gemini/GEMINI.md"
-        cp -f "$GLOBAL_PROMPT_FILE" "$HOME/.gemini/GEMINI.md"
+        cp -f "$INSTRUCTIONS_FILE" "$HOME/.gemini/GEMINI.md"
         success "Installed ~/.gemini/GEMINI.md"
     fi
 
@@ -441,11 +441,11 @@ PY
 
     # 5. Cursor instructions
     local CURSOR_USER_DIR="$HOME/.config/Cursor/User"
-    if [[ -d "$CURSOR_USER_DIR" && -f "$GLOBAL_PROMPT_FILE" ]]; then
+    if [[ -d "$CURSOR_USER_DIR" && -f "$INSTRUCTIONS_FILE" ]]; then
         info "Configuring Cursor..."
         mkdir -p "$CURSOR_USER_DIR/prompts"
         rm -f "$CURSOR_USER_DIR/prompts/global.instructions.md"
-        cp -f "$GLOBAL_PROMPT_FILE" "$CURSOR_USER_DIR/prompts/global.instructions.md"
+        cp -f "$INSTRUCTIONS_FILE" "$CURSOR_USER_DIR/prompts/global.instructions.md"
         success "Cursor instructions installed"
     fi
 
