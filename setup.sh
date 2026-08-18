@@ -411,15 +411,7 @@ PY
         success "Installed updown → $HOME/.local/bin/updown"
     fi
 
-    # 4. Antigravity config
-    info "Configuring Antigravity..."
-    if [[ -f "$DOTFILES_DIR/config/antigravity/antigravity-flags.conf" ]]; then
-        rm -f "$HOME/.config/antigravity-flags.conf"
-        cp -f "$DOTFILES_DIR/config/antigravity/antigravity-flags.conf" "$HOME/.config/antigravity-flags.conf"
-    fi
-    success "Antigravity config installed"
-
-    # 5. Antigravity global instructions + skills
+    # 4. Antigravity global instructions + skills
     local GLOBAL_PROMPT_FILE="$DOTFILES_DIR/config/prompts/global.instructions.md"
     info "Configuring Antigravity global instructions and skills..."
     mkdir -p "$HOME/.gemini/config" "$HOME/.gemini/antigravity" "$HOME/.agents/skills"
@@ -447,7 +439,7 @@ PY
     fi
     [[ -L "$HOME/.agents/skills/skills" ]] && rm -f "$HOME/.agents/skills/skills"
 
-    # 6. Cursor instructions
+    # 5. Cursor instructions
     local CURSOR_USER_DIR="$HOME/.config/Cursor/User"
     if [[ -d "$CURSOR_USER_DIR" && -f "$GLOBAL_PROMPT_FILE" ]]; then
         info "Configuring Cursor..."
@@ -457,7 +449,7 @@ PY
         success "Cursor instructions installed"
     fi
 
-    # 7. Remove legacy Kilo symlink
+    # 6. Remove legacy Kilo symlink
     [[ -L "$HOME/.copilot.md" ]] && rm -f "$HOME/.copilot.md" && info "Removed legacy ~/.copilot.md"
 
     configure_user_dirs
