@@ -140,6 +140,51 @@ install_chrome() {
     success "Chrome installed"
 }
 
+install_yakuake() {
+    section "Yakuake (Drop-down Terminal)"
+    
+    if flatpak list --user 2>/dev/null | grep -q "org.kde.yakuake"; then
+        success "Yakuake already installed (Flatpak)"
+    else
+        ensure_flathub
+        info "Installing Yakuake via Flatpak..."
+        flatpak install --user -y flathub org.kde.yakuake
+        success "Yakuake installed"
+    fi
+
+    info "Configuring Yakuake autostart..."
+    local AUTOSTART_DIR="$HOME/.config/autostart"
+    mkdir -p "$AUTOSTART_DIR"
+    cat > "$AUTOSTART_DIR/org.kde.yakuake.desktop" << 'DESKTOP'
+[Desktop Entry]
+Categories=Qt;KDE;System;TerminalEmulator;
+Comment=A drop-down terminal emulator based on KDE Konsole technology.
+DBusActivatable=true
+Exec=flatpak run org.kde.yakuake
+GenericName=Drop-down Terminal
+Icon=org.kde.yakuake
+Name=Yakuake
+StartupNotify=false
+Terminal=false
+Type=Application
+X-Flatpak=org.kde.yakuake
+DESKTOP
+
+    info "Setting Yakuake toggle shortcut to Ctrl+Space..."
+    if command -v kwriteconfig6 &>/dev/null; then
+        kwriteconfig6 --file kglobalshortcutsrc --group yakuake --key toggle-window-state "Ctrl+Space,F12,Open/Retract Yakuake"
+        if command -v qdbus &>/dev/null; then
+            qdbus org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel.reparseConfiguration 2>/dev/null || true
+        elif command -v qdbus6 &>/dev/null; then
+            qdbus6 org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel.reparseConfiguration 2>/dev/null || true
+        elif command -v qdbus-qt6 &>/dev/null; then
+            qdbus-qt6 org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel.reparseConfiguration 2>/dev/null || true
+        fi
+    else
+        warn "kwriteconfig6 not found — cannot set global shortcut automatically."
+    fi
+}
+
 install_insync() {
     section "Insync"
     # Insync has no Flatpak or AppImage. We download the RPM, extract the
@@ -593,6 +638,7 @@ PY
 
 preset_desktop() {
     install_chrome
+    install_yakuake
     install_insync
     install_nix
     install_home_manager "desktop"
@@ -601,6 +647,7 @@ preset_desktop() {
 
 preset_dev() {
     install_chrome
+    install_yakuake
     install_insync
     install_nix
     install_home_manager "dev"
@@ -617,6 +664,7 @@ preset_dev() {
 run_tui() {
     local items=(
         "Google Chrome (Flatpak)"
+        "Yakuake (Drop-down Terminal, Flatpak)"
         "Insync (RPM-extracted, no host mutation)"
         "Nix (Determinate Systems OSTree installer)"
         "Home-Manager dev profile (fnm, gh, hadolint, actionlint, yq, jq, rg, fzf, python3, uv)"
@@ -628,28 +676,30 @@ run_tui() {
         "Clone work repos (SSH key + ~/Repos/)"
         "Login auto-updater (systemd user service, 23h guard)"
     )
-    local selected=(0 0 0 0 0 0 0 0 0 0 0)
+    local selected=(0 0 0 0 0 0 0 0 0 0 0 0)
 
     tui_menu items selected "Select components to install (↑↓ Space Enter)"
 
     [[ "${selected[0]}"  == "1" ]] && install_chrome
-    [[ "${selected[1]}"  == "1" ]] && install_insync
-    [[ "${selected[2]}"  == "1" ]] && install_nix
-    if [[ "${selected[3]}" == "1" && "${selected[4]}" == "1" ]]; then
+    [[ "${selected[1]}"  == "1" ]] && install_yakuake
+    [[ "${selected[2]}"  == "1" ]] && install_insync
+    [[ "${selected[3]}"  == "1" ]] && install_nix
+    if [[ "${selected[4]}" == "1" && "${selected[5]}" == "1" ]]; then
         warn "Both dev and desktop home-manager selected — using dev"
         install_home_manager "dev"
-    elif [[ "${selected[3]}" == "1" ]]; then
-        install_home_manager "dev"
     elif [[ "${selected[4]}" == "1" ]]; then
+        install_home_manager "dev"
+    elif [[ "${selected[5]}" == "1" ]]; then
         install_home_manager "desktop"
     fi
-    [[ "${selected[5]}"  == "1" ]] && install_antigravity
-    [[ "${selected[6]}"  == "1" ]] && install_agy
-    [[ "${selected[7]}"  == "1" ]] && install_cursor
-    [[ "${selected[8]}"  == "1" ]] && install_oc
-    [[ "${selected[9]}"  == "1" ]] && install_work_repos
-    [[ "${selected[10]}" == "1" ]] && install_updater
+    [[ "${selected[6]}"  == "1" ]] && install_antigravity
+    [[ "${selected[7]}"  == "1" ]] && install_agy
+    [[ "${selected[8]}"  == "1" ]] && install_cursor
+    [[ "${selected[9]}"  == "1" ]] && install_oc
+    [[ "${selected[10]}" == "1" ]] && install_work_repos
+    [[ "${selected[11]}" == "1" ]] && install_updater
 }
+
 
 # ── Usage ─────────────────────────────────────────────────────────────────────
 
@@ -663,9 +713,9 @@ Usage:
 Default (no flags): full dev stack, same as --dev.
 
 Options:
-  --dev       Full dev stack: Chrome, Insync, Nix/Home-Manager (dev profile),
+  --dev       Full dev stack: Chrome, Yakuake, Insync, Nix/Home-Manager (dev profile),
               Antigravity hub, agy CLI, Cursor, oc, work repos, auto-updater
-  --desktop   Desktop essentials: Chrome, Insync, Nix/Home-Manager (desktop
+  --desktop   Desktop essentials: Chrome, Yakuake, Insync, Nix/Home-Manager (desktop
               profile — no dev tools), auto-updater
   --custom    Interactive TUI checkbox picker (select individual components)
   --help      Show this help
