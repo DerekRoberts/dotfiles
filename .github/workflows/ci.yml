@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, feat/* ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run ShellCheck
+        run: shellcheck setup.sh scripts/*.sh bin/* || true
+
+  test-fedora:
+    name: Fedora Integration Test
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+      options: --privileged # Required for flatpak inside docker
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Dependencies
+        run: |
+          dnf install -y flatpak curl tar git jq unzip bc sudo dbus-daemon
+          
+      - name: Prepare unprivileged user
+        run: |
+          # setup.sh shouldn't be run as root
+          useradd -m -G wheel -d /var/home/runner runner
+          echo "%wheel ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+          
+          # Copy dotfiles to runner's home
+          cp -r $PWD /var/home/runner/dotfiles
+          chown -R runner:runner /var/home/runner/dotfiles
+          
+      - name: Run setup.sh (Dry Run / CI mode)
+        run: |
+          # Start dbus so flatpak doesn't crash in CI
+          dbus-daemon --system --fork
+          
+          # Execute as standard user
+          su - runner -c "cd ~/dotfiles && ./setup.sh --dev"
