@@ -154,11 +154,22 @@ install_insync() {
     fi
 
     info "Resolving latest Insync RPM for Fedora..."
-    # Insync provides a stable direct-download URL pattern for the latest RPM
+    # The downloads page is JS-rendered; the real URLs live in linux_download_links.js.
+    # Prefer fc44 (Kinoite target), fall back to the newest Fedora build available.
+    local INSYNC_JS_URL="https://cdn.insynchq.com/web/webflow/js/linux_download_links.js"
     local INSYNC_RPM_URL
-    INSYNC_RPM_URL="$(curl -fsSL 'https://www.insynchq.com/downloads' \
-        | grep -oE 'https://cdn\.insynchq\.com/builds/linux/[0-9][^"]+\.x86_64\.rpm' \
-        | head -n 1 || true)"
+    INSYNC_RPM_URL="$(curl -fsSL "$INSYNC_JS_URL" \
+        | grep -oE 'https://cdn\.insynchq\.com/builds/linux/[^"]+\.x86_64\.rpm' \
+        | grep -v 'headless' \
+        | grep 'fc44' | head -n 1 || true)"
+
+    # Fall back to newest available Fedora build if fc44 not yet listed
+    if [[ -z "$INSYNC_RPM_URL" ]]; then
+        INSYNC_RPM_URL="$(curl -fsSL "$INSYNC_JS_URL" \
+            | grep -oE 'https://cdn\.insynchq\.com/builds/linux/[^"]+\.x86_64\.rpm' \
+            | grep -v 'headless' \
+            | grep -E 'fc[0-9]+' | sort -t'c' -k2 -rn | head -n 1 || true)"
+    fi
 
     if [[ -z "$INSYNC_RPM_URL" ]]; then
         warn "Could not resolve Insync RPM URL — skipping"
