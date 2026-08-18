@@ -36,6 +36,13 @@ else
         exit 1
     fi
 
+    # Check if we already have this exact build AND the binary exists
+    STAMP_FILE="$HOME/.local/share/dotfiles/antigravity.url"
+    if [ -f "$STAMP_FILE" ] && [ -x "$INSTALL_DIR/antigravity" ] && [ "$(cat "$STAMP_FILE")" = "$DOWNLOAD_URL" ]; then
+        echo "Antigravity hub is already up to date."
+        exit 0
+    fi
+
     echo "Found latest release URL: $DOWNLOAD_URL"
     TARBALL_PATH=$(mktemp /tmp/antigravity-XXXXXX.tar.gz)
     IS_TEMP_FILE=true
@@ -44,6 +51,7 @@ else
     echo "Downloading to $TARBALL_PATH..."
     curl -L --progress-bar --max-redirs 5 "$DOWNLOAD_URL" -o "$TARBALL_PATH"
 fi
+
 
 if [ ! -f "$TARBALL_PATH" ]; then
     echo "Error: Archive file '$TARBALL_PATH' does not exist." >&2
@@ -61,8 +69,28 @@ if tar -tzf "$TARBALL_PATH" | grep -qE '(^|/)\.\.(/|$)|^/'; then
 fi
 
 echo "Updating Antigravity in $INSTALL_DIR..."
-mkdir -p "$INSTALL_DIR"
-tar -xzf "$TARBALL_PATH" -C "$INSTALL_DIR" --strip-components=1 --no-same-owner
+TMP_EXTRACT="$(mktemp -d "${INSTALL_DIR}.tmp.XXXXXX")"
+tar -xzf "$TARBALL_PATH" -C "$TMP_EXTRACT" --strip-components=1 --no-same-owner
+
+# Atomic swap into INSTALL_DIR
+mkdir -p "$(dirname "$INSTALL_DIR")"
+BACKUP_DIR="${INSTALL_DIR}.old"
+rm -rf "$BACKUP_DIR"
+if [ -d "$INSTALL_DIR" ]; then
+    mv "$INSTALL_DIR" "$BACKUP_DIR"
+fi
+mv "$TMP_EXTRACT" "$INSTALL_DIR"
+rm -rf "$BACKUP_DIR"
+
+# Fix SELinux file contexts after extraction (required on Fedora Kinoite)
+if command -v restorecon &>/dev/null; then
+    restorecon -R "$INSTALL_DIR" 2>/dev/null || true
+fi
 
 NEW_VER=$(jq -r '.version' "$INSTALL_DIR/resources/app/package.json" 2>/dev/null || echo "Unknown")
+if [ -n "${DOWNLOAD_URL:-}" ] && [ -n "${STAMP_FILE:-}" ]; then
+    mkdir -p "$(dirname "$STAMP_FILE")"
+    echo "$DOWNLOAD_URL" > "$STAMP_FILE"
+fi
 echo "Update complete! Installed version: $NEW_VER"
+

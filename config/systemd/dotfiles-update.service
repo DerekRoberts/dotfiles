@@ -1,0 +1,28 @@
+[Unit]
+Description=Dotfiles silent maintenance (rpm-ostree, flatpak, binaries, antigravity)
+Documentation=file://%h/Repos/dotfiles/scripts/updown.sh
+After=network-online.target graphical-session.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# 23-hour guard: stamp file must be older than 82800 seconds
+ExecCondition=/bin/sh -c '\
+  stamp="%h/.local/share/dotfiles/last-update"; \
+  if [ -f "$stamp" ]; then \
+    age=$(( $(date +%%s) - $(stat -c %%Y "$stamp") )); \
+    [ "$age" -gt 82800 ] || exit 1; \
+  fi'
+ExecStart=%h/.local/bin/updown --no-shutdown
+ExecStartPost=/bin/sh -c 'mkdir -p %h/.local/share/dotfiles && touch %h/.local/share/dotfiles/last-update'
+# Don't fail the login session if updates error
+SuccessExitStatus=0 1
+StandardOutput=journal
+StandardError=journal
+# Limit resource impact during the session
+Nice=15
+IOSchedulingClass=idle
+CPUSchedulingPolicy=idle
+
+[Install]
+WantedBy=graphical-session.target

@@ -305,12 +305,19 @@ configure_commit_signing() {
   command git config --global gpg.format ssh
   command git config --global user.signingkey "$key_path"
   print_success "Commit signing configured using key: $key_path"
+  
+  echo ""
+  echo -e "${YELLOW}IMPORTANT: To get 'Verified' badges on GitHub, you must upload this key TWICE:${NC}"
+  echo -e "${YELLOW}  1. Once as an 'Authentication Key' (to push/pull code)${NC}"
+  echo -e "${YELLOW}  2. Once as a 'Signing Key' (to verify commits)${NC}"
+  echo -e "${YELLOW}You can do this at: https://github.com/settings/keys${NC}"
+  echo ""
 }
 
 # Main execution
 main() {
   echo -e "${BLUE}=== Git Configuration Setup ===${NC}"
-  echo -e "${BLUE}bcgov/agent-guardrails${NC}"
+  echo -e "${BLUE}Git Setup${NC}"
   
   configure_user
   configure_gitignore

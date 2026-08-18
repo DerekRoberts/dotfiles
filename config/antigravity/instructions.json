@@ -1,7 +1,0 @@
-{
-  "global_rules": [
-    "Only use Claude Opus 4.6 when explicitly requested for 'Deep Logic Review'.",
-    "Never perform background indexing on directories containing more than 500 files.",
-    "Always use standard POSIX commands to ensure compatibility with Fedora 43."
-  ]
-}

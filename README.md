@@ -1,10 +1,17 @@
 # Dotfiles
 
-Personal machine config: shell, git, personal-instruction sync (from GitHub main), and tool symlinks.
+Declarative, single-command workstation setup and configuration for **Fedora Kinoite** (KDE Plasma OSTree).
 
-See **[docs/ai-architecture.md](docs/ai-architecture.md)** for how this fits the wider AI stack.
+## Features
 
-## Quick start
+- **Zero OS Layering**: Keeps the base OSTree image pristine; all userland tools run in userspace (`~/.local/bin`, `~/.nvm`, `~/.local/share/flatpak`).
+- **Profiles**:
+  - `--dev` (default): Full developer workstation (Node LTS via NVM, `gh`, `jq`, `podman-compose`, `oc`, Cursor, Antigravity, Ponytail, repositories).
+  - `--desktop`: Minimal desktop essentials (Google Chrome and Insync).
+- **Automated Updates**: Systemd user service (`dotfiles-update.service`) running `updown` at login with a 23-hour idempotency guard.
+- **Unified AI Instructions**: Self-contained guardrails and instructions in `config/instructions.md` deployed to Cursor and Antigravity.
+
+## Quick Start
 
 **Fresh machine (curl bootstrap):**
 
@@ -20,80 +27,57 @@ source ~/.bashrc
 source ~/.bashrc
 ```
 
-`setup.sh` clones or updates the repo, wires local configs from the clone, then syncs the **personal** instructions block from GitHub `main` into your global prompt hub. Work standards in the hub come from org Copilot / VS Code — dotfiles does not manage those.
-
-Guardrails are separate — two install paths:
-
-**Clone and run (preferred when you will hack on guardrails):**
+## Profiles & Presets
 
 ```bash
-git clone https://github.com/bcgov/agent-guardrails.git ~/Repos/agent-guardrails
-~/Repos/agent-guardrails/setup.sh
+./setup.sh              # Full developer workstation (default)
+./setup.sh --dev        # Explicit dev stack preset
+./setup.sh --desktop    # Minimal desktop essentials (Chrome + Insync)
+./setup.sh --help       # Show usage and available environment variables
 ```
 
-**Or curl bootstrap (no clone yet):**
+| Component | `--desktop` | `--dev` (default) |
+|---|---|---|
+| Chrome (Flatpak) | ✅ | ✅ |
+| Insync (rpm2cpio extraction) | ✅ | ✅ |
+| Yakuake (Flatpak + config) | ❌ | ✅ |
+| Node.js LTS (via NVM) | ❌ | ✅ |
+| CLI Tools (`gh`, `jq`, `podman-compose`, `oc`) | ❌ | ✅ |
+| Antigravity Hub & `agy` CLI | ❌ | ✅ |
+| Cursor (AppImage) | ❌ | ✅ |
+| Ponytail (Cursor + AGY rules) | ❌ | ✅ |
+| Repositories & SSH Key | ❌ | ✅ |
+| Login Auto-Updater | ✅ | ✅ |
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/bcgov/agent-guardrails/main/setup.sh | bash
-```
 
-The wrapper script uses whichever applies: local clone if present, otherwise curl:
-
-```bash
-~/Repos/dotfiles/scripts/install-guardrails.sh
-```
-
-## AI layout (summary)
-
-| Component | Location |
-|-----------|----------|
-| Work standards | `~/.config/Code/User/prompts/global.instructions.md` (org Copilot / VS Code) |
-| Personal instructions (canonical) | GitHub `main` → `config/ai/personal.instructions.md` |
-| Personal block in hub | Delimited section synced by `bundle-ai-instructions.sh` |
-| Guardrails | [bcgov/agent-guardrails](https://github.com/bcgov/agent-guardrails) via `setup.sh` |
-
-Tools symlinked to the hub: **VS Code Copilot**, **Cursor**, **Antigravity**.
-
-## Environment variables
+## Environment Variables
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `DOTFILES_DIR` | `~/Repos/dotfiles` | Clone location |
-| `DOTFILES_REPO` | `https://github.com/DerekRoberts/dotfiles.git` | Clone URL |
-| `DOTFILES_BRANCH` | `main` | Branch to clone/pull |
-| `DOTFILES_SKIP_PULL` | *(unset)* | Set to skip `git pull` |
-| `PERSONAL_INSTRUCTIONS_URL` | raw GitHub `main` URL | Override for local dev only |
-| `GLOBAL_INSTRUCTIONS_OUTPUT` | `~/.config/Code/User/prompts/global.instructions.md` | Prompt hub path |
-| `UPDATE` | `0` | Set `UPDATE=1` to force re-downloading dev tools |
-| `ACTIONLINT_VERSION` | `latest` | Override version tag for actionlint |
-| `YQ_VERSION` | `latest` | Override version tag for yq |
-| `HADOLINT_VERSION` | `latest` | Override version tag for hadolint |
+| `UPDATE` | `0` | Set `UPDATE=1` to force re-downloading CLI binaries |
+| `OC_VERSION` | `latest` | Override version tag for `oc` |
 
-## CLI Dev Tooling (`~/.local/bin`)
-
-During `setup.sh`, `scripts/bootstrap-tools.sh` verifies and installs required CLI development tools (`actionlint`, `yq`, `hadolint`) into `~/.local/bin`.
-
-- **Dynamic Version Resolution**: Tool versions default to `latest`. The script resolves newest GitHub release tags dynamically via the GitHub API (with fallback HTTP redirect header resolution to bypass rate limits).
-- **Atomic Installation**: Binaries write to `mktemp` staging files before atomic replacement to prevent partial download corruption.
-- **Architecture Aware**: Automatically detects OS (`linux`/`darwin`) and CPU architecture (`x86_64`/`arm64`).
-- **Forced Tool Updates**: Run `UPDATE=1 ./setup.sh` or `./scripts/bootstrap-tools.sh --update` to force re-downloading the latest releases.
-
-## Structure
+## Repository Structure
 
 ```
-├── setup.sh                        # clone/pull + wire + sync + dev tools bootstrap
-├── bashrc
-├── gitconfig
-├── bin/updown
-├── scripts/
-│   ├── bootstrap-tools.sh          # dynamic CLI tool installer (actionlint, yq, hadolint)
-│   ├── bundle-ai-instructions.sh   # fetch personal from GitHub → hub
-│   └── install-guardrails.sh       # thin wrapper → agent-guardrails
+├── setup.sh                           # Main idempotent workstation setup
+├── .github/workflows/ci.yml           # ShellCheck & integration tests
 ├── config/
-│   ├── ai/personal.instructions.md # canonical source (on main)
-│   ├── antigravity/
-│   └── vscode/
-└── docs/
-    └── ai-architecture.md
+│   ├── bashrc                         # Shell configuration and aliases
+│   ├── gitconfig                      # Global git configuration include
+│   ├── instructions.md                # Unified AI agent instructions & guardrails
+│   ├── skills/
+│   │   └── typescript-standards/      # Modular agent skills
+│   ├── kde/
+│   │   └── user-places.xbel           # Dolphin sidebar bookmarks
+│   ├── systemd/
+│   │   └── dotfiles-update.service    # User systemd service for updates
+│   └── repos.txt                      # Repositories cloned during dev setup
+├── scripts/
+│   ├── updown.sh                      # Workstation updater script (installed to ~/.local/bin/updown)
+│   ├── bootstrap-tools.sh             # CLI binary installer (`oc`)
+│   ├── clone-repos.sh                 # Idempotent repository cloner
+│   ├── tpm-enroll.sh                  # Optional TPM2 disk unlock helper
+│   ├── update-antigravity.sh          # Runtime updater for Antigravity Hub
+│   └── git-setup.sh                   # Interactive git config & signing helper
 ```
-

@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions: {}
+jobs:
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run ShellCheck
+        run: shellcheck setup.sh scripts/*.sh
+
+  test-ubuntu:
+    name: Ubuntu Validation Test
+    runs-on: ubuntu-24.04
+    needs: shellcheck
+    steps:
+      - uses: actions/checkout@v7
+      
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak curl tar git jq rpm2cpio cpio
+          
+      - name: Test Core Config Wiring
+        run: |
+          bash -n setup.sh
+          bash -n scripts/*.sh
+          ./setup.sh --help
+
