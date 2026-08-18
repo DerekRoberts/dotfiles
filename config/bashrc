@@ -94,7 +94,8 @@ alias docker-compose='podman-compose'
 alias ocpc='oc delete po --field-selector=status.phase==Succeeded'
 
 # Aliases - Antigravity / AI
-alias a='antigravity'
+alias a='~/.local/bin/antigravity/antigravity'
+
 
 # Functions
 ga() {
