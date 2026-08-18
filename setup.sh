@@ -203,5 +203,30 @@ if [ -L "$HOME/.copilot.md" ]; then
     echo "✓ Removed legacy Kilo ~/.copilot.md symlink."
 fi
 
+# 11. Configure natural/inverted scrolling globally in KDE Plasma
+if command -v kwriteconfig6 &>/dev/null; then
+    echo "Configuring natural scrolling globally in KDE..."
+    # Global fallback groups for new devices
+    kwriteconfig6 --file kcminputrc --group Mouse --key NaturalScroll true
+    kwriteconfig6 --file kcminputrc --group Mouse --key XLbInptNaturalScroll true
+    kwriteconfig6 --file kcminputrc --group Touchpad --key NaturalScroll true
+    kwriteconfig6 --file kcminputrc --group Touchpad --key XLbInptNaturalScroll true
+
+    # Update any already-registered libinput devices in kcminputrc
+    if [ -f "$HOME/.config/kcminputrc" ]; then
+        sed -i 's/^NaturalScroll=false/NaturalScroll=true/' "$HOME/.config/kcminputrc"
+        sed -i 's/^XLbInptNaturalScroll=false/XLbInptNaturalScroll=true/' "$HOME/.config/kcminputrc"
+    fi
+
+    # Notify KWin / KDE input daemon to reconfigure
+    if command -v qdbus6 &>/dev/null; then
+        qdbus6 org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
+    elif command -v qdbus &>/dev/null; then
+        qdbus org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
+    fi
+    echo "✓ Enabled natural scrolling globally in KDE."
+fi
+
 echo ""
 echo "✅ Setup complete! Please run 'source ~/.bashrc' or restart your terminal."
+
