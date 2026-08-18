@@ -1,10 +1,5 @@
 # .bashrc (common, shared across machines)
 
-# ── Nix (no-op if not installed) ────────────────────────────────────────────
-if [[ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]]; then
-    # shellcheck disable=SC1091
-    . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-fi
 
 # 4. Strict local diagnostic flush for locks and rendering caches
 #alias fix-anti='pkill -f Antigravity; pkill -f agy; rm -f ~/.config/Antigravity/SingletonLock; rm -rf ~/.config/Antigravity/GPUCache ~/.config/Antigravity/Cache; antigravity'
@@ -139,3 +134,21 @@ function ailog() {
 
 # Lower Compose verbosity
 export PODMAN_COMPOSE_WARNING_LOGS=false
+
+# ── Quality of Life ────────────────────────────────────────────────────────
+alias ll="ls -alF"
+alias la="ls -A"
+alias l="ls -CF"
+alias ..="cd .."
+alias ...="cd ../.."
+alias docker-compose="podman-compose"
+
+# ── FNM ────────────────────────────────────────────────────────────────────
+if command -v fnm &>/dev/null; then
+    eval "$(fnm env --use-on-cd --shell bash)"
+fi
+
+# ── Starship Prompt ────────────────────────────────────────────────────────
+if command -v starship &>/dev/null; then
+    eval "$(starship init bash)"
+fi

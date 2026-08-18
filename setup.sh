@@ -1,10 +1,9 @@
 #!/bin/bash
-# setup.sh — Declarative workstation setup for Fedora 44 Kinoite + Nix/Home-Manager
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/DerekRoberts/dotfiles/main/setup.sh | bash
 #   setup.sh --dev      # Full dev stack, non-interactive
-#   setup.sh --desktop  # Desktop essentials (Chrome + Insync + Nix minimal)
+#   setup.sh --desktop  # Desktop essentials (Chrome + Insync  minimal)
 
 set -euo pipefail
 
@@ -274,82 +273,7 @@ install_ponytail() {
 }
 
 
-install_nix() {
-    section "Nix (Determinate Systems OSTree Installer)"
 
-    # The official Determinate Systems installer natively supports OSTree (Silverblue/Kinoite)
-    # by using systemd mount units to bypass the immutable root restrictions.
-    
-    # 1. Check if it's already installed via Determinate Systems
-    if [[ -d "/nix" ]] && [[ -f "/nix/var/nix/profiles/default/bin/nix" ]]; then
-        success "Nix is already installed."
-        
-        # Ensure it's in the PATH for this script session
-        if ! command -v nix &>/dev/null; then
-            source "/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
-        fi
-
-        # Ensure flakes are enabled
-        local NIX_CONF_DIR="$HOME/.config/nix"
-        mkdir -p "$NIX_CONF_DIR"
-        if ! grep -q "experimental-features" "$NIX_CONF_DIR/nix.conf" 2>/dev/null; then
-            echo "experimental-features = nix-command flakes" >> "$NIX_CONF_DIR/nix.conf"
-            success "Enabled Nix flakes in $NIX_CONF_DIR/nix.conf"
-        fi
-        return
-    fi
-
-    info "Nix is missing. Installing via Determinate Systems (native OSTree support)..."
-    info "This will prompt for your sudo password."
-    
-    if curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install --no-confirm; then
-        success "Nix successfully installed!"
-        
-        # Source it immediately so the rest of the script (Home-Manager) works
-        if [[ -f "/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh" ]]; then
-            source "/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
-        fi
-
-        local NIX_CONF_DIR="$HOME/.config/nix"
-        mkdir -p "$NIX_CONF_DIR"
-        if ! grep -q "experimental-features" "$NIX_CONF_DIR/nix.conf" 2>/dev/null; then
-            echo "experimental-features = nix-command flakes" >> "$NIX_CONF_DIR/nix.conf"
-        fi
-    else
-        warn "Nix installation failed."
-        exit 1
-    fi
-}
-
-install_home_manager() {
-    section "Home-Manager"
-    local profile="${1:-dev}"
-    local HM_FLAKE="$REPO_DIR/config/home-manager"
-
-    if ! command -v nix &>/dev/null; then
-        warn "Nix not found in PATH — skipping home-manager setup"
-        return
-    fi
-
-    if ! command -v home-manager &>/dev/null; then
-        info "Bootstrapping home-manager..."
-        nix run "nixpkgs#home-manager" -- init --switch --flake "$HM_FLAKE#$profile"
-    else
-        info "Applying home-manager switch (profile: $profile)..."
-        home-manager switch --flake "$HM_FLAKE#$profile"
-    fi
-
-    # Persist profile choice for updown auto-updater
-    if ! grep -q "DOTFILES_PROFILE" "$BASHRC" 2>/dev/null; then
-        echo "" >> "$BASHRC"
-        echo "# Dotfiles profile (used by bin/updown for home-manager switch)" >> "$BASHRC"
-        echo "export DOTFILES_PROFILE=\"$profile\"" >> "$BASHRC"
-    else
-        sed -i "s/^export DOTFILES_PROFILE=.*/export DOTFILES_PROFILE=\"$profile\"/" "$BASHRC"
-    fi
-
-    success "home-manager active (profile: $profile)"
-}
 
 install_antigravity() {
     section "Antigravity Hub"
@@ -606,17 +530,38 @@ PY
 
 # ── Profile presets ───────────────────────────────────────────────────────────
 
+install_native_tools() {
+    section "Native Dev Tools"
+    local SYSTEM_PKGS="gh jq ripgrep fzf python3 podman-compose fira-code-fonts jetbrains-mono-fonts"
+    info "Installing native system packages via rpm-ostree..."
+    for pkg in $SYSTEM_PKGS; do
+        if ! rpm-ostree status | grep -q "$pkg"; then
+            rpm-ostree install --idempotent -y "$pkg" || true
+        fi
+    done
+    info "Installing standalone binaries..."
+    local BIN_DIR="$HOME/.local/bin"
+    mkdir -p "$BIN_DIR"
+    if ! command -v fnm &>/dev/null; then curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell; fi
+    if ! command -v uv &>/dev/null; then curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="$BIN_DIR" sh; fi
+    if ! command -v yq &>/dev/null; then curl -fsSL "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64" -o "$BIN_DIR/yq" && chmod +x "$BIN_DIR/yq"; fi
+    if ! command -v hadolint &>/dev/null; then curl -fsSL "https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64" -o "$BIN_DIR/hadolint" && chmod +x "$BIN_DIR/hadolint"; fi
+    if ! command -v starship &>/dev/null; then curl -sS https://starship.rs/install.sh | sh -s -- -y -b "$BIN_DIR"; fi
+    success "Native tools installed"
+}
+
 preset_desktop() {
-    install_nix
-    install_home_manager "desktop"
+    
+    
     install_chrome
     install_yakuake
     install_insync
 }
 
 preset_dev() {
-    install_nix
-    install_home_manager "dev"
+    install_native_tools
+    
+    
     install_chrome
     install_yakuake
     install_insync
@@ -635,7 +580,6 @@ preset_dev() {
 
 usage() {
     cat << EOF
-setup.sh — Dotfiles setup for Fedora 44 Kinoite + Nix/Home-Manager
 
 Usage:
   setup.sh [OPTIONS]
@@ -643,9 +587,7 @@ Usage:
 Default (no flags): full dev stack, same as --dev.
 
 Options:
-  --dev       Full dev stack: Chrome, Yakuake, Insync, Nix/Home-Manager (dev profile),
               Antigravity hub, agy CLI, Cursor, oc, work repos, auto-updater
-  --desktop   Desktop essentials: Chrome, Yakuake, Insync, Nix/Home-Manager (desktop
               profile — no dev tools), auto-updater
   --help      Show this help
 
@@ -656,13 +598,12 @@ Environment variables:
   DOTFILES_SKIP_PULL  Set to skip git pull on existing clone
   UPDATE              Set UPDATE=1 to force re-download of oc binary
   OC_VERSION          Override oc version tag (default: latest)
-  DOTFILES_PROFILE    Active profile written to ~/.bashrc by setup
 EOF
 }
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
-echo "=== Bootstrapping Dotfiles (Fedora Kinoite + Nix) ==="
+echo "=== Bootstrapping Dotfiles (Fedora Kinoite ) ==="
 
 # Always wire core configs (bashrc, git, symlinks)
 wire_core
@@ -690,6 +631,3 @@ esac
 echo ""
 echo "✅ Setup complete!"
 echo "   Run: source ~/.bashrc   (or restart terminal)"
-if [[ -d /nix ]]; then
-    echo "   Apply Nix packages: home-manager switch --flake $REPO_DIR/config/home-manager#\${DOTFILES_PROFILE:-dev}"
-fi

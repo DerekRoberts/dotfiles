@@ -40,9 +40,6 @@ else
     warn "Flatpak update failed — continuing"
 fi
 
-# ── 3. Nix / Home-Manager ────────────────────────────────────────────────────
-
-NIX_PROFILE="/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
 HM_FLAKE="$DOTFILES_DIR/config/home-manager"
 
 if command -v home-manager &>/dev/null || ( [[ -f "$NIX_PROFILE" ]] && source "$NIX_PROFILE" && command -v home-manager &>/dev/null ); then
@@ -63,8 +60,33 @@ if command -v home-manager &>/dev/null || ( [[ -f "$NIX_PROFILE" ]] && source "$
         warn "home-manager switch failed — continuing"
     fi
 else
-    info "Nix / home-manager not installed — skipping Nix updates"
 fi
+
+# ── 3. Standalone Binaries ───────────────────────────────────────────────────
+
+info "Updating standalone binaries..."
+BIN_DIR="${HOME}/.local/bin"
+
+if command -v uv &>/dev/null; then
+    uv self update 2>&1 >/dev/null || warn "uv update failed"
+fi
+
+if command -v fnm &>/dev/null; then
+    curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell 2>&1 >/dev/null || warn "fnm update failed"
+fi
+
+if command -v starship &>/dev/null; then
+    curl -sS https://starship.rs/install.sh | sh -s -- -y -b "$BIN_DIR" 2>&1 >/dev/null || warn "starship update failed"
+fi
+
+if command -v yq &>/dev/null; then
+    curl -fsSL "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64" -o "$BIN_DIR/yq" 2>/dev/null && chmod +x "$BIN_DIR/yq" || warn "yq update failed"
+fi
+
+if command -v hadolint &>/dev/null; then
+    curl -fsSL "https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64" -o "$BIN_DIR/hadolint" 2>/dev/null && chmod +x "$BIN_DIR/hadolint" || warn "hadolint update failed"
+fi
+success "Standalone binaries updated"
 
 # ── 4. Antigravity Hub ───────────────────────────────────────────────────────
 
