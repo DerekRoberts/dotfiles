@@ -215,6 +215,32 @@ install_cursor() {
 
     info "Downloading Cursor: $CURSOR_URL"
     mkdir -p "$BIN_DIR"
+    # jq
+    if ! command -v jq &>/dev/null; then
+        info "Downloading jq..."
+        curl -fsSL "https://github.com/jqlang/jq/releases/latest/download/jq-linux-amd64" -o "$BIN_DIR/jq"
+        chmod +x "$BIN_DIR/jq"
+    fi
+
+    # gh
+    if ! command -v gh &>/dev/null; then
+        info "Downloading gh..."
+        local tmp_dir; tmp_dir="$(mktemp -d)"
+        # Get latest version using grep since we might not have jq yet if it fails
+        local gh_latest; gh_latest=$(curl -sI https://github.com/cli/cli/releases/latest | grep -i "^location:" | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+" || echo "v2.54.0")
+        gh_latest=${gh_latest#v}
+        curl -fsSL "https://github.com/cli/cli/releases/download/v${gh_latest}/gh_${gh_latest}_linux_amd64.tar.gz" | tar -xz -C "$tmp_dir"
+        mv "$tmp_dir"/gh_${gh_latest}_linux_amd64/bin/gh "$BIN_DIR/gh"
+        chmod +x "$BIN_DIR/gh"
+        rm -rf "$tmp_dir"
+    fi
+
+    # podman-compose
+    if ! command -v podman-compose &>/dev/null; then
+        info "Downloading podman-compose..."
+        curl -fsSL "https://raw.githubusercontent.com/containers/podman-compose/main/podman_compose.py" -o "$BIN_DIR/podman-compose"
+        chmod +x "$BIN_DIR/podman-compose"
+    fi
     curl -fsSL "$CURSOR_URL" -o "$CURSOR_BIN"
     chmod +x "$CURSOR_BIN"
 
@@ -532,16 +558,35 @@ PY
 
 install_native_tools() {
     section "Native Dev Tools"
-    local SYSTEM_PKGS="gh jq python3 podman-compose"
-    info "Installing native system packages via rpm-ostree..."
-    for pkg in $SYSTEM_PKGS; do
-        if ! rpm-ostree status | grep -q "$pkg"; then
-            rpm-ostree install --idempotent -y "$pkg" || true
-        fi
-    done
     info "Installing standalone binaries..."
     local BIN_DIR="$HOME/.local/bin"
     mkdir -p "$BIN_DIR"
+    # jq
+    if ! command -v jq &>/dev/null; then
+        info "Downloading jq..."
+        curl -fsSL "https://github.com/jqlang/jq/releases/latest/download/jq-linux-amd64" -o "$BIN_DIR/jq"
+        chmod +x "$BIN_DIR/jq"
+    fi
+
+    # gh
+    if ! command -v gh &>/dev/null; then
+        info "Downloading gh..."
+        local tmp_dir; tmp_dir="$(mktemp -d)"
+        # Get latest version using grep since we might not have jq yet if it fails
+        local gh_latest; gh_latest=$(curl -sI https://github.com/cli/cli/releases/latest | grep -i "^location:" | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+" || echo "v2.54.0")
+        gh_latest=${gh_latest#v}
+        curl -fsSL "https://github.com/cli/cli/releases/download/v${gh_latest}/gh_${gh_latest}_linux_amd64.tar.gz" | tar -xz -C "$tmp_dir"
+        mv "$tmp_dir"/gh_${gh_latest}_linux_amd64/bin/gh "$BIN_DIR/gh"
+        chmod +x "$BIN_DIR/gh"
+        rm -rf "$tmp_dir"
+    fi
+
+    # podman-compose
+    if ! command -v podman-compose &>/dev/null; then
+        info "Downloading podman-compose..."
+        curl -fsSL "https://raw.githubusercontent.com/containers/podman-compose/main/podman_compose.py" -o "$BIN_DIR/podman-compose"
+        chmod +x "$BIN_DIR/podman-compose"
+    fi
     if [ ! -d "$HOME/.nvm" ]; then
         info "Installing nvm..."
         curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | PROFILE=/dev/null bash
