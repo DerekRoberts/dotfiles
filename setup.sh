@@ -359,8 +359,33 @@ EOF
         success "Dolphin sidebar cleaned"
     fi
 
-    success "Directories configured (Documents, Downloads, Repos remain)"
+    # Configure natural/inverted scrolling globally for all current and future mice/touchpads
+    if command -v kwriteconfig6 &>/dev/null; then
+        info "Configuring natural scrolling globally in KDE..."
+        # Global fallback groups for new devices
+        kwriteconfig6 --file kcminputrc --group Mouse --key NaturalScroll true
+        kwriteconfig6 --file kcminputrc --group Mouse --key XLbInptNaturalScroll true
+        kwriteconfig6 --file kcminputrc --group Touchpad --key NaturalScroll true
+        kwriteconfig6 --file kcminputrc --group Touchpad --key XLbInptNaturalScroll true
+        
+        # Also ensure any already-registered libinput device entries in kcminputrc are updated
+        if [[ -f "$HOME/.config/kcminputrc" ]]; then
+            sed -i 's/^NaturalScroll=false/NaturalScroll=true/' "$HOME/.config/kcminputrc"
+            sed -i 's/^XLbInptNaturalScroll=false/XLbInptNaturalScroll=true/' "$HOME/.config/kcminputrc"
+        fi
+        
+        # Notify KWin / KDE input daemon of configuration changes
+        if command -v qdbus6 &>/dev/null; then
+            qdbus6 org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
+        elif command -v qdbus &>/dev/null; then
+            qdbus org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
+        fi
+        success "Natural scrolling enabled globally"
+    fi
+
+    success "Directories and input configured"
 }
+
 
 wire_core() {
     section "Core Wiring"
