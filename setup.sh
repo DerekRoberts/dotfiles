@@ -501,7 +501,7 @@ PY
     # 6. AI instructions
     install_ai_instructions
 
-    local GLOBAL_PROMPT_FILE="$HOME/.config/Code/User/prompts/global.instructions.md"
+    local GLOBAL_PROMPT_FILE="$DOTFILES_DIR/config/prompts/global.instructions.md"
 
     # 7. Antigravity global instructions + skills
     info "Configuring Antigravity global instructions and skills..."
