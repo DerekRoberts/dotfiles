@@ -528,8 +528,8 @@ PY
     fi
     success "Default applications configured"
 
-    # Configure KDE Plasma Panel layout (Left edge, Dodge Windows visibility, 72px thickness, remove Peek at Desktop)
-    info "Configuring KDE Plasma panel (Left edge, Dodge Windows, 72px thickness, no desktop peek)..."
+    # Configure KDE Plasma Panel layout & System Tray visibility
+    info "Configuring KDE Plasma panel & system tray entries..."
     local PANEL_SCRIPT='
 var p = panels();
 for (var i = 0; i < p.length; i++) {
@@ -540,6 +540,13 @@ for (var i = 0; i < p.length; i++) {
     for (var j = 0; j < ws.length; j++) {
         if (ws[j].type === "org.kde.plasma.showdesktop" || ws[j].type === "org.kde.plasma.peekatdesktop") {
             ws[j].remove();
+        } else if (ws[j].type === "org.kde.plasma.systemtray") {
+            ws[j].currentConfigGroup = ["General"];
+            ws[j].writeConfig("shownItems", "Insync");
+            ws[j].writeConfig("hiddenItems", "Antigravity_status_icon_1,Xwayland Video Bridge,org.kde.plasma.bluetooth,org.kde.plasma.cameraindicator,org.kde.kdeconnect,org.kde.plasma.clipboard,org.kde.plasma.notifications");
+            ws[j].writeConfig("disabledStatusNotifiers", "org.kde.yakuake");
+            ws[j].writeConfig("extraItems", "org.kde.plasma.vault,org.kde.plasma.battery,org.kde.plasma.devicenotifier,org.kde.plasma.keyboardindicator,org.kde.plasma.networkmanagement,org.kde.plasma.printmanager,org.kde.plasma.volume,org.kde.plasma.bluetooth,org.kde.plasma.cameraindicator,org.kde.kdeconnect,org.kde.plasma.clipboard,org.kde.plasma.notifications");
+            ws[j].reloadConfig();
         }
     }
 }
@@ -551,7 +558,7 @@ for (var i = 0; i < p.length; i++) {
     elif command -v qdbus &>/dev/null; then
         qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$PANEL_SCRIPT" >/dev/null 2>&1 || true
     fi
-    success "Panel layout configured (Left, Dodge Windows, 72px)"
+    success "Panel layout & system tray configured"
 
     success "Directories, input, panel, and defaults configured"
 }
