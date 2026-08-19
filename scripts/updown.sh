@@ -160,6 +160,7 @@ EOF
                         success "Insync updated"
                     else
                         warn "Insync copy failed — restoring previous installation"
+                        rm -rf "$INSYNC_LIB_DIR"
                         [[ -d "${INSYNC_LIB_DIR}.old" ]] && mv "${INSYNC_LIB_DIR}.old" "$INSYNC_LIB_DIR"
                     fi
                 else
