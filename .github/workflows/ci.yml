@@ -10,6 +10,7 @@ jobs:
   shellcheck:
     name: Shellcheck
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
       - uses: actions/checkout@v7
       - name: Run ShellCheck
@@ -18,14 +19,16 @@ jobs:
   test-ubuntu:
     name: Ubuntu Validation Test
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     needs: shellcheck
     steps:
       - uses: actions/checkout@v7
       
       - name: Install Dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y flatpak curl tar git jq rpm2cpio cpio
+          sudo apt-get update -o Acquire::http::Timeout="15" -o Acquire::Retries="3"
+          sudo apt-get install -y -o Acquire::http::Timeout="15" -o Acquire::Retries="3" \
+            flatpak curl tar git jq rpm2cpio cpio
           
       - name: Test Core Config Wiring
         run: |
