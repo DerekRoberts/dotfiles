@@ -396,31 +396,40 @@ wire_core() {
         cp "$BASHRC" "$BASHRC.bak.$(date +%s)"
 
         python3 - "$BASHRC" "$DOTFILES_DIR" << 'PY'
-import sys, re, shlex
+import sys, re
 path, repo_dir = sys.argv[1], sys.argv[2]
 with open(path) as f:
     content = f.read()
 
 content = re.sub(r".*/Documents/1-Personal/Linux/bashrc.*\n*", "", content)
 content = re.sub(
-    r"# Source personal dotfiles configuration\nif \[ -f \"[^\"]+/(?:config/)?bashrc\" \]; then\n    \. \"[^\"]+/(?:config/)?bashrc\"\nfi\n*",
+    r"# Source personal dotfiles configuration\nif \[ -f [\"']?[^\"'\n]+/(?:config/)?bashrc[\"']? \]; then\n    \. [\"']?[^\"'\n]+/(?:config/)?bashrc[\"']?\nfi\n*",
     "",
     content,
 )
 content = re.sub(r"# Source personal dotfiles configuration\nfi\n*", "", content)
 
-quoted_target = shlex.quote(f"{repo_dir}/config/bashrc")
+target = f"{repo_dir}/config/bashrc"
 loader = (
     f"\n\n# Source personal dotfiles configuration\n"
-    f"if [ -f {quoted_target} ]; then\n"
-    f"    . {quoted_target}\n"
+    f'if [ -f "{target}" ]; then\n'
+    f'    . "{target}"\n'
     f"fi\n"
 )
 with open(path, "w") as f:
     f.write(content.rstrip() + loader)
 PY
         success "bashrc sourcing updated"
+    fi
 
+    # Ensure ~/.bash_profile forwards to ~/.bashrc for login shells
+    local BASH_PROFILE="$HOME/.bash_profile"
+    if [[ -f "$BASH_PROFILE" ]]; then
+        if ! grep -q '\. ~/.bashrc' "$BASH_PROFILE" && ! grep -q 'source ~/.bashrc' "$BASH_PROFILE" && ! grep -q '\. "\$HOME/\.bashrc"' "$BASH_PROFILE"; then
+            info "Wiring ~/.bash_profile to source ~/.bashrc..."
+            printf '\nif [ -f "$HOME/.bashrc" ]; then\n    . "$HOME/.bashrc"\nfi\n' >> "$BASH_PROFILE"
+            success "~/.bash_profile sourcing wired"
+        fi
     fi
 
     # 2. Git global include
@@ -541,6 +550,18 @@ install_native_tools() {
         curl -fsSL "https://github.com/cli/cli/releases/download/v${gh_latest}/gh_${gh_latest}_linux_amd64.tar.gz" | tar -xz -C "$tmp_dir"
         mv "$tmp_dir/gh_${gh_latest}_linux_amd64/bin/gh" "$BIN_DIR/gh"
         chmod +x "$BIN_DIR/gh"
+        rm -rf "$tmp_dir"
+    fi
+
+    # gitleaks
+    if ! command -v gitleaks &>/dev/null; then
+        info "Downloading gitleaks..."
+        local tmp_dir; tmp_dir="$(mktemp -d)"
+        local gitleaks_latest; gitleaks_latest=$(curl -sI https://github.com/gitleaks/gitleaks/releases/latest | grep -i "^location:" | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+" || echo "v8.24.0")
+        gitleaks_latest=${gitleaks_latest#v}
+        curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${gitleaks_latest}/gitleaks_${gitleaks_latest}_linux_x64.tar.gz" | tar -xz -C "$tmp_dir" gitleaks
+        mv "$tmp_dir/gitleaks" "$BIN_DIR/gitleaks"
+        chmod +x "$BIN_DIR/gitleaks"
         rm -rf "$tmp_dir"
     fi
 
