@@ -154,8 +154,33 @@ if [[ -x "$INSYNC_BIN" ]] || [[ "$INSTALL_INSYNC" -eq 1 ]]; then
                         local extracted_icons
                         extracted_icons="$(find "$tmp_dir" -type d -path "*/usr/share/icons" | head -n 1 || true)"
                         if [[ -n "$extracted_icons" && -d "$extracted_icons" ]]; then
-                            mkdir -p "${HOME}/.local/share/icons"
+                            mkdir -p "${HOME}/.local/share/icons" "${HOME}/.icons"
                             cp -rf "$extracted_icons/"* "${HOME}/.local/share/icons/"
+                            [[ -f "/usr/share/icons/hicolor/index.theme" ]] && cp -f "/usr/share/icons/hicolor/index.theme" "${HOME}/.local/share/icons/hicolor/index.theme"
+                            python3 - << 'PY'
+import os
+from PIL import Image
+
+src_dir = os.path.expanduser("~/.local/share/icons/hicolor/48x48/status")
+sizes = [16, 22, 24, 32, 48, 64, 128, 256]
+icons = ["insync-alert", "insync-normal", "insync-offline", "insync-paused", "insync-synced", "insync-syncing"]
+
+for icon in icons:
+    src_file = os.path.join(src_dir, f"{icon}.png")
+    if not os.path.exists(src_file):
+        continue
+    img = Image.open(src_file)
+    for sz in sizes:
+        dest_dir = os.path.expanduser(f"~/.local/share/icons/hicolor/{sz}x{sz}/status")
+        os.makedirs(dest_dir, exist_ok=True)
+        dest_file = os.path.join(dest_dir, f"{icon}.png")
+        resized = img.resize((sz, sz), Image.LANCZOS)
+        resized.save(dest_file, "PNG")
+        for theme in ("breeze", "breeze-dark"):
+            bdir = os.path.expanduser(f"~/.local/share/icons/{theme}/status/{sz}")
+            os.makedirs(bdir, exist_ok=True)
+            resized.save(os.path.join(bdir, f"{icon}.png"), "PNG")
+PY
                             if command -v gtk-update-icon-cache &>/dev/null; then
                                 gtk-update-icon-cache -f -q "${HOME}/.local/share/icons/hicolor" 2>/dev/null || true
                             fi
@@ -165,7 +190,13 @@ if [[ -x "$INSYNC_BIN" ]] || [[ "$INSTALL_INSYNC" -eq 1 ]]; then
 #!/bin/bash
 export LC_TIME=C
 export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
-exec "$HOME/.local/lib/insync/insync" "$@"
+export XDG_DATA_DIRS="$HOME/.local/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+
+if command -v bwrap &>/dev/null && [[ -d "$HOME/.local/share/icons/hicolor" ]]; then
+    exec bwrap --dev-bind / / --bind "$HOME/.local/share/icons/hicolor" /usr/share/icons/hicolor "$HOME/.local/lib/insync/insync" "$@"
+else
+    exec "$HOME/.local/lib/insync/insync" "$@"
+fi
 EOF
                         chmod +x "$INSYNC_BIN"
                         mkdir -p "$(dirname "$STAMP_FILE")"

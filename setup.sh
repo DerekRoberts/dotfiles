@@ -154,7 +154,13 @@ install_insync() {
 #!/bin/bash
 export LC_TIME=C
 export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
-exec "$HOME/.local/lib/insync/insync" "$@"
+export XDG_DATA_DIRS="$HOME/.local/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+
+if command -v bwrap &>/dev/null && [[ -d "$HOME/.local/share/icons/hicolor" ]]; then
+    exec bwrap --dev-bind / / --bind "$HOME/.local/share/icons/hicolor" /usr/share/icons/hicolor "$HOME/.local/lib/insync/insync" "$@"
+else
+    exec "$HOME/.local/lib/insync/insync" "$@"
+fi
 EOF
         chmod +x "$INSYNC_BIN"
         success "Insync already installed (wrapper updated)"
