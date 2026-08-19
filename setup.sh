@@ -604,54 +604,123 @@ PY
     local PLASMA_CONFIG="$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
     if [[ -f "$PLASMA_CONFIG" ]]; then
         python3 - "$PLASMA_CONFIG" << 'PY'
-import sys, os
+import sys, os, re
 
 path = sys.argv[1]
 if not os.path.exists(path):
     sys.exit(0)
 
 with open(path, "r") as f:
-    lines = f.readlines()
+    content = f.read()
 
+# 1. Ensure all desktop containments use org.kde.desktopcontainment
+lines = content.splitlines(True)
 new_lines = []
-in_desktop_containment = False
-in_tray_general = False
+in_desktop = False
 
 for line in lines:
     stripped = line.strip()
-    if stripped.startswith("[") and stripped.endswith("]"):
-        if stripped.startswith("[Containments]["):
-            parts = stripped[1:-1].split("][")
-            in_desktop_containment = len(parts) == 2
-        else:
-            in_desktop_containment = False
-        
-        in_tray_general = stripped.endswith("[General]") and "Applets" in stripped
-        new_lines.append(line)
-        continue
-    
-    if in_desktop_containment and stripped == "plugin=org.kde.plasma.folder":
-        new_lines.append("plugin=org.kde.desktopcontainment\n")
-        continue
-
-    if in_tray_general:
-        if stripped.startswith("shownItems="):
-            new_lines.append("shownItems=Insync\n")
-            continue
-        if stripped.startswith("hiddenItems="):
-            new_lines.append("hiddenItems=Antigravity_status_icon_1,Xwayland Video Bridge,org.kde.plasma.cameraindicator,org.kde.kdeconnect,org.kde.plasma.clipboard,org.kde.plasma.notifications,chrome_status_icon_1@cursor,org.kde.plasma.bluetooth\n")
-            continue
-        if stripped.startswith("disabledStatusNotifiers="):
-            new_lines.append("disabledStatusNotifiers=org.kde.yakuake\n")
-            continue
-        if stripped.startswith("extraItems="):
-            new_lines.append("extraItems=org.kde.plasma.vault,org.kde.plasma.battery,org.kde.plasma.devicenotifier,org.kde.plasma.keyboardindicator,org.kde.plasma.networkmanagement,org.kde.plasma.printmanager,org.kde.plasma.volume,org.kde.plasma.bluetooth,org.kde.plasma.cameraindicator,org.kde.kdeconnect,org.kde.plasma.clipboard,org.kde.plasma.notifications\n")
-            continue
-
+    if stripped.startswith("[Containments][") and stripped.endswith("]"):
+        parts = stripped[1:-1].split("][")
+        in_desktop = len(parts) == 2
+    elif stripped.startswith("["):
+        in_desktop = False
+    elif in_desktop and stripped == "plugin=org.kde.plasma.folder":
+        line = "plugin=org.kde.desktopcontainment\n"
     new_lines.append(line)
 
+content = "".join(new_lines)
+
+# 2. System Tray sub-applets & visibility preferences
+core_plugins = [
+    "org.kde.plasma.volume",
+    "org.kde.plasma.networkmanagement",
+    "org.kde.plasma.battery",
+    "org.kde.plasma.bluetooth",
+    "org.kde.plasma.brightness",
+    "org.kde.plasma.notifications",
+    "org.kde.plasma.clipboard",
+    "org.kde.plasma.devicenotifier",
+    "org.kde.plasma.cameraindicator",
+    "org.kde.kdeconnect",
+    "org.kde.plasma.vault",
+    "org.kde.kscreen"
+]
+
+tray_match = re.search(r"(\[Containments\]\[\d+\]\[Applets\]\[\d+\])[\s\S]*?plugin=org\.kde\.plasma\.systemtray", content)
+if tray_match:
+    tray_hdr = tray_match.group(1)
+    
+    # Collect existing child applet IDs and plugins
+    existing_ids = [int(m) for m in re.findall(re.escape(tray_hdr) + r"\[Applets\]\[(\d+)\]", content)]
+    next_id = max(existing_ids) + 1 if existing_ids else 30
+    
+    existing_plugins = []
+    for m in re.finditer(re.escape(tray_hdr) + r"\[Applets\]\[\d+\][\s\S]*?plugin=([\w\.\-]+)", content):
+        existing_plugins.append(m.group(1))
+    
+    # Add missing core child applets
+    additions = []
+    for plugin in core_plugins:
+        if plugin not in existing_plugins:
+            additions.append(f"\n{tray_hdr}[Applets][{next_id}]\nimmutability=1\nplugin={plugin}\n")
+            next_id += 1
+    
+    if additions:
+        content += "".join(additions)
+
+    # Ensure [General] section exists with exact user preferences
+    gen_hdr = f"{tray_hdr}[General]"
+    gen_prefs = {
+        "disabledStatusNotifiers": "org.kde.yakuake",
+        "shownItems": "Insync",
+        "hiddenItems": "Antigravity_status_icon_1,Xwayland Video Bridge,org.kde.plasma.cameraindicator,org.kde.kdeconnect,org.kde.plasma.clipboard,org.kde.plasma.notifications,chrome_status_icon_1@cursor,org.kde.plasma.bluetooth",
+        "extraItems": "org.kde.plasma.vault,org.kde.plasma.battery,org.kde.plasma.devicenotifier,org.kde.plasma.keyboardindicator,org.kde.plasma.networkmanagement,org.kde.plasma.printmanager,org.kde.plasma.volume,org.kde.plasma.bluetooth,org.kde.plasma.cameraindicator,org.kde.kdeconnect,org.kde.plasma.clipboard,org.kde.plasma.notifications"
+    }
+    
+    if gen_hdr in content:
+        lines = content.splitlines(True)
+        out_lines = []
+        in_gen = False
+        seen_keys = set()
+        for line in lines:
+            stripped = line.strip()
+            if stripped == gen_hdr:
+                in_gen = True
+                out_lines.append(line)
+                continue
+            elif stripped.startswith("[") and stripped.endswith("]"):
+                if in_gen:
+                    for k, v in gen_prefs.items():
+                        if k not in seen_keys:
+                            out_lines.append(f"{k}={v}\n")
+                    in_gen = False
+                out_lines.append(line)
+                continue
+            
+            if in_gen:
+                matched = False
+                for k, v in gen_prefs.items():
+                    if stripped.startswith(f"{k}="):
+                        out_lines.append(f"{k}={v}\n")
+                        seen_keys.add(k)
+                        matched = True
+                        break
+                if not matched:
+                    out_lines.append(line)
+                continue
+            out_lines.append(line)
+        if in_gen:
+            for k, v in gen_prefs.items():
+                if k not in seen_keys:
+                    out_lines.append(f"{k}={v}\n")
+        content = "".join(out_lines)
+    else:
+        gen_block = f"\n{gen_hdr}\n" + "\n".join(f"{k}={v}" for k, v in gen_prefs.items()) + "\n"
+        content += gen_block
+
 with open(path, "w") as f:
-    f.writelines(new_lines)
+    f.write(content)
 PY
     fi
 
@@ -686,6 +755,11 @@ for (var i = 0; i < p.length; i++) {
         qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$PANEL_SCRIPT" >/dev/null 2>&1 || true
     elif command -v qdbus &>/dev/null; then
         qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$PANEL_SCRIPT" >/dev/null 2>&1 || true
+    fi
+
+    # Restart plasmashell service if active so all restored sub-applets and containment changes render cleanly
+    if command -v systemctl &>/dev/null && systemctl --user is-active plasma-plasmashell &>/dev/null; then
+        systemctl --user restart plasma-plasmashell >/dev/null 2>&1 || true
     fi
     success "Desktops (DarkestHour), panel layout & task manager configured"
 
