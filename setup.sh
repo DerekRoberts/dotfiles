@@ -77,6 +77,18 @@ DESKTOP
     success "Chrome added to autostart"
 }
 
+install_vlc() {
+    section "VLC Media Player"
+    if flatpak list --user 2>/dev/null | grep -q "org.videolan.VLC"; then
+        success "VLC already installed (Flatpak)"
+    else
+        ensure_flathub
+        info "Installing VLC via Flatpak..."
+        flatpak install --user -y flathub org.videolan.VLC
+        success "VLC installed"
+    fi
+}
+
 install_yakuake() {
     section "Yakuake (Drop-down Terminal)"
     
@@ -599,12 +611,14 @@ install_native_tools() {
 
 preset_desktop() {
     install_chrome
+    install_vlc
     install_insync
 }
 
 preset_dev() {
     install_native_tools
     install_chrome
+    install_vlc
     install_yakuake
     install_insync
     install_antigravity
@@ -626,9 +640,9 @@ Usage:
 Default (no flags): full dev stack, same as --dev.
 
 Options:
-  --dev       Full developer stack: Node LTS, CLI tools, Chrome, Yakuake, Insync,
+  --dev       Full developer stack: Node LTS, CLI tools, Chrome, VLC, Yakuake, Insync,
               Antigravity hub, agy CLI, Cursor, oc, Ponytail, and repositories
-  --desktop   Minimal desktop essentials: Chrome and Insync
+  --desktop   Minimal desktop essentials: Chrome, VLC, and Insync
   --help, -h  Show this help
 
 Environment variables:

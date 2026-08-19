@@ -39,6 +39,7 @@ source ~/.bashrc
 | Component | `--desktop` | `--dev` (default) |
 |---|---|---|
 | Chrome (Flatpak) | ✅ | ✅ |
+| VLC Media Player (Flatpak) | ✅ | ✅ |
 | Insync (rpm2cpio extraction) | ✅ | ✅ |
 | Yakuake (Flatpak + config) | ❌ | ✅ |
 | Node.js LTS (via NVM) | ❌ | ✅ |
