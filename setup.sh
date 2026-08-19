@@ -270,10 +270,14 @@ install_ponytail() {
     info "Configuring Ponytail for Cursor..."
     local CURSOR_RULES_DIR="$HOME/.cursor/rules"
     mkdir -p "$CURSOR_RULES_DIR"
-    if curl -fsSL "https://raw.githubusercontent.com/dietrichgebert/ponytail/main/.cursor/rules/ponytail.mdc" -o "$CURSOR_RULES_DIR/ponytail.mdc"; then
-        success "Cursor rule downloaded to $CURSOR_RULES_DIR/ponytail.mdc"
+    if [[ -f "$CURSOR_RULES_DIR/ponytail.mdc" ]]; then
+        success "Cursor rule already present"
     else
-        warn "Failed to download Cursor rule"
+        if curl -fsSL "https://raw.githubusercontent.com/dietrichgebert/ponytail/main/.cursor/rules/ponytail.mdc" -o "$CURSOR_RULES_DIR/ponytail.mdc"; then
+            success "Cursor rule downloaded to $CURSOR_RULES_DIR/ponytail.mdc"
+        else
+            warn "Failed to download Cursor rule"
+        fi
     fi
 
     info "Configuring Ponytail for Antigravity (agy)..."
@@ -282,10 +286,15 @@ install_ponytail() {
         warn "agy CLI not found. Run setup.sh --dev or agy update first. Skipping plugin install."
     else
         [[ -x "$AGY_BIN" ]] || AGY_BIN="agy"
-        if "$AGY_BIN" plugin install https://github.com/DietrichGebert/ponytail 2>/dev/null; then
-            success "agy plugin installed"
+        local PLUGIN_DIR="$HOME/.gemini/config/plugins/ponytail"
+        if [[ -d "$PLUGIN_DIR" ]] || "$AGY_BIN" plugin list 2>/dev/null | grep -q '"name": "ponytail"'; then
+            success "Ponytail plugin already installed for agy"
         else
-            warn "agy plugin install failed (it might already be installed, or network issue)"
+            if "$AGY_BIN" plugin install https://github.com/DietrichGebert/ponytail 2>/dev/null; then
+                success "agy plugin installed"
+            else
+                warn "agy plugin install failed (network issue or repo error)"
+            fi
         fi
     fi
 }
@@ -590,9 +599,48 @@ PY
     fi
     success "Default applications configured"
 
-    # Configure KDE Plasma Panel layout & System Tray visibility
-    info "Configuring KDE Plasma panel & system tray entries..."
+    # Configure KDE Plasma Desktops (Layout=Desktop), Panel layout & System Tray visibility
+    info "Configuring KDE Plasma desktops, panel & system tray entries..."
+    local PLASMA_CONFIG="$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
+    if [[ -f "$PLASMA_CONFIG" ]]; then
+        python3 - "$PLASMA_CONFIG" << 'PY'
+import sys, os
+
+path = sys.argv[1]
+if not os.path.exists(path):
+    sys.exit(0)
+
+with open(path, "r") as f:
+    lines = f.readlines()
+
+new_lines = []
+in_desktop_containment = False
+
+for line in lines:
+    stripped = line.strip()
+    if stripped.startswith("[Containments][") and stripped.endswith("]"):
+        parts = stripped[1:-1].split("][")
+        in_desktop_containment = len(parts) == 2
+        new_lines.append(line)
+        continue
+    
+    if in_desktop_containment and stripped == "plugin=org.kde.plasma.folder":
+        new_lines.append("plugin=org.kde.desktopcontainment\n")
+        continue
+
+    new_lines.append(line)
+
+with open(path, "w") as f:
+    f.writelines(new_lines)
+PY
+    fi
+
     local PANEL_SCRIPT='
+var d = desktops();
+for (var i = 0; i < d.length; i++) {
+    d[i].writeConfig("plugin", "org.kde.desktopcontainment");
+    d[i].reloadConfig();
+}
 var p = panels();
 for (var i = 0; i < p.length; i++) {
     p[i].location = "left";
@@ -620,7 +668,7 @@ for (var i = 0; i < p.length; i++) {
     elif command -v qdbus &>/dev/null; then
         qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$PANEL_SCRIPT" >/dev/null 2>&1 || true
     fi
-    success "Panel layout & system tray configured"
+    success "Desktops, panel layout & system tray configured"
 
     success "Directories, input, panel, and defaults configured"
 }
