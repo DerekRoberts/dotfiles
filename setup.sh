@@ -497,6 +497,21 @@ PY
     # 6. Remove legacy Kilo symlink
     [[ -L "$HOME/.copilot.md" ]] && rm -f "$HOME/.copilot.md" && info "Removed legacy ~/.copilot.md"
 
+    # 7. Global git hooks
+    local HOOKS_SRC_DIR="$DOTFILES_DIR/config/hooks"
+    local HOOKS_DEST_DIR="$HOME/.githooks"
+    if [[ -d "$HOOKS_SRC_DIR" ]]; then
+        info "Installing global git hooks..."
+        mkdir -p "$HOOKS_DEST_DIR"
+        for hook_file in "$HOOKS_SRC_DIR"/*; do
+            [[ -f "$hook_file" ]] || continue
+            local hook_name; hook_name="$(basename "$hook_file")"
+            cp -f "$hook_file" "$HOOKS_DEST_DIR/$hook_name"
+            chmod +x "$HOOKS_DEST_DIR/$hook_name"
+        done
+        success "Global git hooks installed → $HOOKS_DEST_DIR"
+    fi
+
     configure_user_dirs
 
     success "Core wiring complete"

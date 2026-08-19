@@ -1,6 +1,9 @@
 [init]
 	defaultBranch = main
 
+[core]
+	hooksPath = ~/.githooks
+
 [color]
 	ui = auto
 
