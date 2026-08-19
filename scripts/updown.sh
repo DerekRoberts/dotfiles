@@ -151,7 +151,6 @@ if [[ -x "$INSYNC_BIN" ]] || [[ "$INSTALL_INSYNC" -eq 1 ]]; then
                         chmod +x "$INSYNC_LIB_DIR/insync"
                         
                         # Extract application and status icons from RPM
-                        local extracted_icons
                         extracted_icons="$(find "$tmp_dir" -type d -path "*/usr/share/icons" | head -n 1 || true)"
                         if [[ -n "$extracted_icons" && -d "$extracted_icons" ]]; then
                             mkdir -p "${HOME}/.local/share/icons" "${HOME}/.icons"

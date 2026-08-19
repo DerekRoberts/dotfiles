@@ -609,10 +609,12 @@ PY
     # Ensure ~/.bash_profile forwards to ~/.bashrc for login shells
     local BASH_PROFILE="$HOME/.bash_profile"
     if [[ -f "$BASH_PROFILE" ]]; then
-        if ! grep -q '\. ~/.bashrc' "$BASH_PROFILE" && ! grep -q 'source ~/.bashrc' "$BASH_PROFILE" && ! grep -q '\. "\$HOME/\.bashrc"' "$BASH_PROFILE"; then
+        # shellcheck disable=SC2016
+        if ! grep -q '\. ~/.bashrc' "$BASH_PROFILE" && ! grep -q 'source ~/.bashrc' "$BASH_PROFILE" && ! grep -Fq '. "$HOME/.bashrc"' "$BASH_PROFILE"; then
             info "Wiring ~/.bash_profile to source ~/.bashrc..."
+            # shellcheck disable=SC2016
             printf '\nif [ -f "$HOME/.bashrc" ]; then\n    . "$HOME/.bashrc"\nfi\n' >> "$BASH_PROFILE"
-            success "~/.bash_profile sourcing wired"
+            success "bash_profile sourcing wired"
         fi
     fi
 
