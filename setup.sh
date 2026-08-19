@@ -599,8 +599,8 @@ PY
     fi
     success "Default applications configured"
 
-    # Configure KDE Plasma Desktops (Layout=Desktop), Panel layout & System Tray visibility
-    info "Configuring KDE Plasma desktops, panel & system tray entries..."
+    # Configure KDE Plasma Desktops (Layout=Desktop, DarkestHour wallpaper), Panel layout & System Tray visibility
+    info "Configuring KDE Plasma desktops (DarkestHour wallpaper), panel & task manager (Dolphin, Chrome)..."
     local PLASMA_CONFIG="$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
     if [[ -f "$PLASMA_CONFIG" ]]; then
         python3 - "$PLASMA_CONFIG" << 'PY'
@@ -639,6 +639,8 @@ PY
 var d = desktops();
 for (var i = 0; i < d.length; i++) {
     d[i].writeConfig("plugin", "org.kde.desktopcontainment");
+    d[i].currentConfigGroup = ["Wallpaper", "org.kde.image", "General"];
+    d[i].writeConfig("Image", "/usr/share/wallpapers/DarkestHour");
     d[i].reloadConfig();
 }
 var p = panels();
@@ -650,6 +652,10 @@ for (var i = 0; i < p.length; i++) {
     for (var j = 0; j < ws.length; j++) {
         if (ws[j].type === "org.kde.plasma.showdesktop" || ws[j].type === "org.kde.plasma.peekatdesktop") {
             ws[j].remove();
+        } else if (ws[j].type === "org.kde.plasma.icontasks") {
+            ws[j].currentConfigGroup = ["General"];
+            ws[j].writeConfig("launchers", "applications:org.kde.dolphin.desktop,applications:google-chrome.desktop");
+            ws[j].reloadConfig();
         } else if (ws[j].type === "org.kde.plasma.systemtray") {
             ws[j].currentConfigGroup = ["General"];
             ws[j].writeConfig("shownItems", "Insync");
@@ -668,7 +674,7 @@ for (var i = 0; i < p.length; i++) {
     elif command -v qdbus &>/dev/null; then
         qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$PANEL_SCRIPT" >/dev/null 2>&1 || true
     fi
-    success "Desktops, panel layout & system tray configured"
+    success "Desktops (DarkestHour), panel layout & task manager configured"
 
     success "Directories, input, panel, and defaults configured"
 }
