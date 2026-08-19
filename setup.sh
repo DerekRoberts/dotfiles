@@ -449,7 +449,7 @@ defaults = {
     "application/xhtml+xml": "com.google.Chrome.desktop",
     "x-scheme-handler/mailto": "com.google.Chrome.desktop",
     "text/calendar": "com.google.Chrome.desktop",
-    "x-scheme-handler/tel": "org.kde.kdeconnect.handler.desktop",
+    "x-scheme-handler/tel": "com.google.Chrome.desktop",
     # Multimedia
     "image/jpeg": "org.kde.gwenview.desktop",
     "image/png": "org.kde.gwenview.desktop",
