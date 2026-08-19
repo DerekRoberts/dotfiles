@@ -658,10 +658,10 @@ for (var i = 0; i < p.length; i++) {
             ws[j].reloadConfig();
         } else if (ws[j].type === "org.kde.plasma.systemtray") {
             ws[j].currentConfigGroup = ["General"];
-            ws[j].writeConfig("shownItems", "Insync,org.kde.plasma.volume,org.kde.plasma.networkmanagement,org.kde.plasma.battery,org.kde.plasma.notifications");
-            ws[j].writeConfig("hiddenItems", "Antigravity_status_icon_1,Xwayland Video Bridge,org.kde.plasma.bluetooth,org.kde.plasma.cameraindicator,org.kde.kdeconnect,org.kde.plasma.clipboard");
+            ws[j].writeConfig("shownItems", "Insync");
+            ws[j].writeConfig("hiddenItems", "Antigravity_status_icon_1,Xwayland Video Bridge,org.kde.plasma.cameraindicator,org.kde.kdeconnect,org.kde.plasma.clipboard,org.kde.plasma.notifications,chrome_status_icon_1@cursor,org.kde.plasma.bluetooth");
             ws[j].writeConfig("disabledStatusNotifiers", "org.kde.yakuake");
-            ws[j].writeConfig("extraItems", "org.kde.kdeconnect,org.kde.plasma.vault,org.kde.kscreen,org.kde.plasma.battery,org.kde.plasma.bluetooth,org.kde.plasma.brightness,org.kde.plasma.cameraindicator,org.kde.plasma.clipboard,org.kde.plasma.devicenotifier,org.kde.plasma.keyboardindicator,org.kde.plasma.keyboardlayout,org.kde.plasma.manage-inputmethod,org.kde.plasma.mediacontroller,org.kde.plasma.networkmanagement,org.kde.plasma.notifications,org.kde.plasma.printmanager,org.kde.plasma.volume,org.kde.plasma.weather");
+            ws[j].writeConfig("extraItems", "org.kde.plasma.vault,org.kde.plasma.battery,org.kde.plasma.devicenotifier,org.kde.plasma.keyboardindicator,org.kde.plasma.networkmanagement,org.kde.plasma.printmanager,org.kde.plasma.volume,org.kde.plasma.bluetooth,org.kde.plasma.cameraindicator,org.kde.kdeconnect,org.kde.plasma.clipboard,org.kde.plasma.notifications");
             ws[j].reloadConfig();
         }
     }
