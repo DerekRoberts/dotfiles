@@ -128,12 +128,13 @@ DESKTOP
         mkdir -p "$(dirname "$YAKUAKE_CONFIG")"
         kwriteconfig6 --file "$YAKUAKE_CONFIG" --group Window --key ShowSystrayIcon false
 
-        # Reload shortcuts in KDE Plasma 6
-        if command -v qdbus6 &>/dev/null; then
-            qdbus6 org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel.reloadConfig >/dev/null 2>&1 || true
+        # Reload shortcuts / KWin in KDE Plasma 6
+        if command -v qdbus-qt6 &>/dev/null; then
+            qdbus-qt6 org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
+        elif command -v qdbus6 &>/dev/null; then
+            qdbus6 org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
         elif command -v qdbus &>/dev/null; then
-            qdbus org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel.reloadConfig >/dev/null 2>&1 || \
-            qdbus org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel.reparseConfiguration >/dev/null 2>&1 || true
+            qdbus org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
         fi
     else
         warn "kwriteconfig6 not found — cannot set global shortcut automatically."
@@ -380,14 +381,51 @@ EOF
         kwriteconfig6 --file kcminputrc --group Touchpad --key NaturalScroll true
         kwriteconfig6 --file kcminputrc --group Touchpad --key XLbInptNaturalScroll true
         
-        # Also ensure any already-registered libinput device entries in kcminputrc are updated
+        # Ensure every registered libinput device section in kcminputrc has NaturalScroll=true
         if [[ -f "$HOME/.config/kcminputrc" ]]; then
-            sed -i 's/^NaturalScroll=false/NaturalScroll=true/' "$HOME/.config/kcminputrc"
-            sed -i 's/^XLbInptNaturalScroll=false/XLbInptNaturalScroll=true/' "$HOME/.config/kcminputrc"
+            python3 - "$HOME/.config/kcminputrc" << 'PY'
+import sys, re, os
+path = sys.argv[1]
+if not os.path.exists(path):
+    sys.exit(0)
+
+with open(path, "r") as f:
+    lines = f.readlines()
+
+new_lines = []
+in_target = False
+found_natural = False
+target_keys = ("NaturalScroll", "XLbInptNaturalScroll")
+
+for line in lines:
+    stripped = line.strip()
+    if stripped.startswith("[") and stripped.endswith("]"):
+        if in_target and not found_natural:
+            new_lines.append("NaturalScroll=true\n")
+        in_target = "Libinput" in stripped or stripped in ("[Mouse]", "[Touchpad]")
+        found_natural = False
+        new_lines.append(line)
+        continue
+
+    if in_target and any(stripped.startswith(k + "=") for k in target_keys):
+        new_lines.append(re.sub(r"=\s*(false|0)", "=true", line))
+        found_natural = True
+        continue
+
+    new_lines.append(line)
+
+if in_target and not found_natural:
+    new_lines.append("NaturalScroll=true\n")
+
+with open(path, "w") as f:
+    f.writelines(new_lines)
+PY
         fi
         
         # Notify KWin / KDE input daemon of configuration changes
-        if command -v qdbus6 &>/dev/null; then
+        if command -v qdbus-qt6 &>/dev/null; then
+            qdbus-qt6 org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
+        elif command -v qdbus6 &>/dev/null; then
             qdbus6 org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
         elif command -v qdbus &>/dev/null; then
             qdbus org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
