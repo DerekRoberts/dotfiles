@@ -387,30 +387,84 @@ EOF
         success "Dolphin sidebar cleaned"
     fi
 
-    # Configure natural/inverted scrolling globally for all current and future mice/touchpads
-    if command -v kwriteconfig6 &>/dev/null; then
-        info "Configuring natural scrolling globally in KDE..."
-        # Global fallback groups for new devices
-        kwriteconfig6 --file kcminputrc --group Mouse --key NaturalScroll true
-        kwriteconfig6 --file kcminputrc --group Mouse --key XLbInptNaturalScroll true
-        kwriteconfig6 --file kcminputrc --group Touchpad --key NaturalScroll true
-        kwriteconfig6 --file kcminputrc --group Touchpad --key XLbInptNaturalScroll true
+    # Configure natural/inverted scrolling globally for all current and connected mice/touchpads
+    if command -v kwriteconfig6 &>/dev/null || [[ -f "$HOME/.config/kcminputrc" ]]; then
+        info "Configuring natural scrolling globally for all devices in KDE..."
         
-        # Ensure every registered libinput device section in kcminputrc has NaturalScroll=true
-        if [[ -f "$HOME/.config/kcminputrc" ]]; then
-            python3 - "$HOME/.config/kcminputrc" << 'PY'
-import sys, re, os
-path = sys.argv[1]
-if not os.path.exists(path):
-    sys.exit(0)
+        # 1. Global fallback groups
+        if command -v kwriteconfig6 &>/dev/null; then
+            kwriteconfig6 --file kcminputrc --group Mouse --key NaturalScroll true
+            kwriteconfig6 --file kcminputrc --group Mouse --key XLbInptNaturalScroll true
+            kwriteconfig6 --file kcminputrc --group Touchpad --key NaturalScroll true
+            kwriteconfig6 --file kcminputrc --group Touchpad --key XLbInptNaturalScroll true
+        fi
+        
+        # 2. Discover all connected hardware pointers and ensure every section in kcminputrc has NaturalScroll=true
+        python3 - "$HOME/.config/kcminputrc" << 'PY'
+import sys, re, os, subprocess
 
-with open(path, "r") as f:
-    lines = f.readlines()
+path = sys.argv[1]
+discovered_devices = []
+
+# Query live KWin InputDeviceManager on D-Bus if available
+try:
+    cmd = ["qdbus-qt6", "org.kde.KWin", "/org/kde/KWin/InputDevice", "org.kde.KWin.InputDeviceManager.ListPointers"]
+    res = subprocess.run(cmd, capture_output=True, text=True, timeout=2)
+    if res.returncode == 0:
+        for dev in res.stdout.strip().splitlines():
+            dev = dev.strip()
+            if not dev:
+                continue
+            dev_path = f"/org/kde/KWin/InputDevice/{dev}"
+            def get_prop(prop):
+                r = subprocess.run(["qdbus-qt6", "org.kde.KWin", dev_path, "org.freedesktop.DBus.Properties.Get", "org.kde.KWin.InputDevice", prop], capture_output=True, text=True, timeout=1)
+                return r.stdout.strip()
+            
+            supports = get_prop("supportsNaturalScroll")
+            if supports.lower() == "true":
+                vendor = get_prop("vendor")
+                product = get_prop("product")
+                name = get_prop("name")
+                if vendor and product and name:
+                    discovered_devices.append((vendor, product, name))
+                    # Apply live to active session
+                    subprocess.run(["qdbus-qt6", "org.kde.KWin", dev_path, "org.freedesktop.DBus.Properties.Set", "org.kde.KWin.InputDevice", "naturalScroll", "true"], capture_output=True, timeout=1)
+except Exception:
+    pass
+
+# Supplementary hardware discovery via /proc/bus/input/devices
+proc_path = "/proc/bus/input/devices"
+if os.path.exists(proc_path):
+    try:
+        with open(proc_path, "r") as f:
+            content = f.read()
+        for b in content.strip().split("\n\n"):
+            handlers = re.search(r"H: Handlers=.*(mouse|event).*", b)
+            if not handlers:
+                continue
+            name_match = re.search(r'N: Name="([^"]+)"', b)
+            id_match = re.search(r"I: Bus=(\w+) Vendor=(\w+) Product=(\w+)", b)
+            if name_match and id_match:
+                name = name_match.group(1)
+                vendor_hex = id_match.group(2)
+                product_hex = id_match.group(3)
+                vendor_dec = str(int(vendor_hex, 16))
+                product_dec = str(int(product_hex, 16))
+                if any(k in name.lower() for k in ("mouse", "touchpad", "trackpoint", "trackball", "pointer")):
+                    discovered_devices.append((vendor_dec, product_dec, name))
+    except Exception:
+        pass
+
+lines = []
+if os.path.exists(path):
+    with open(path, "r") as f:
+        lines = f.readlines()
 
 new_lines = []
 in_target = False
 found_natural = False
 target_keys = ("NaturalScroll", "XLbInptNaturalScroll")
+seen_sections = set()
 
 for line in lines:
     stripped = line.strip()
@@ -419,6 +473,7 @@ for line in lines:
             new_lines.append("NaturalScroll=true\n")
         in_target = "Libinput" in stripped or stripped in ("[Mouse]", "[Touchpad]")
         found_natural = False
+        seen_sections.add(stripped)
         new_lines.append(line)
         continue
 
@@ -432,10 +487,17 @@ for line in lines:
 if in_target and not found_natural:
     new_lines.append("NaturalScroll=true\n")
 
+# Append newly discovered device sections if missing
+for v, p, n in set(discovered_devices):
+    section_hdr = f"[Libinput][{v}][{p}][{n}]"
+    if section_hdr not in seen_sections:
+        new_lines.append(f"\n{section_hdr}\nNaturalScroll=true\n")
+        seen_sections.add(section_hdr)
+
+os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
 with open(path, "w") as f:
     f.writelines(new_lines)
 PY
-        fi
         
         # Notify KWin / KDE input daemon of configuration changes
         if command -v qdbus-qt6 &>/dev/null; then
@@ -445,7 +507,7 @@ PY
         elif command -v qdbus &>/dev/null; then
             qdbus org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
         fi
-        success "Natural scrolling enabled globally"
+        success "Natural scrolling enabled for all connected and configured devices"
     fi
 
     info "Configuring default application associations..."
