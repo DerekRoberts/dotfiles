@@ -528,7 +528,25 @@ PY
     fi
     success "Default applications configured"
 
-    success "Directories, input, and defaults configured"
+    # Configure KDE Plasma Panel layout (Left edge, Dodge Windows visibility)
+    info "Configuring KDE Plasma panel (Left edge, Dodge Windows)..."
+    local PANEL_SCRIPT='
+var p = panels();
+for (var i = 0; i < p.length; i++) {
+    p[i].location = "left";
+    p[i].hiding = "dodgewindows";
+}
+'
+    if command -v qdbus-qt6 &>/dev/null; then
+        qdbus-qt6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$PANEL_SCRIPT" >/dev/null 2>&1 || true
+    elif command -v qdbus6 &>/dev/null; then
+        qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$PANEL_SCRIPT" >/dev/null 2>&1 || true
+    elif command -v qdbus &>/dev/null; then
+        qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$PANEL_SCRIPT" >/dev/null 2>&1 || true
+    fi
+    success "Panel layout configured (Left, Dodge Windows)"
+
+    success "Directories, input, panel, and defaults configured"
 }
 
 
