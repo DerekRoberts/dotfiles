@@ -188,6 +188,8 @@ Terminal=false
 Type=Application
 Categories=Network;FileTransfer;
 StartupNotify=true
+X-KDE-autostart-after=panel
+X-KDE-autostart-phase=2
 DESKTOP
     sed -i "s|%h|$HOME|g" "$APPS_DIR/insync.desktop"
 
