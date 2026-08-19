@@ -654,10 +654,16 @@ core_plugins = [
     "org.kde.kscreen"
 ]
 
-tray_match = re.search(r"(\[Containments\]\[\d+\]\[Applets\]\[\d+\])[\s\S]*?plugin=org\.kde\.plasma\.systemtray", content)
-if tray_match:
-    tray_hdr = tray_match.group(1)
-    
+tray_hdr = None
+for m in re.finditer(r"^(\[Containments\]\[\d+\]\[Applets\]\[\d+\])\s*$", content, re.M):
+    hdr = m.group(1)
+    body_end = content.find("\n[", m.end())
+    body = content[m.end():body_end if body_end != -1 else len(content)]
+    if "plugin=org.kde.plasma.systemtray" in body:
+        tray_hdr = hdr
+        break
+
+if tray_hdr:
     # Collect existing child applet IDs and plugins
     existing_ids = [int(m) for m in re.findall(re.escape(tray_hdr) + r"\[Applets\]\[(\d+)\]", content)]
     next_id = max(existing_ids) + 1 if existing_ids else 30
@@ -826,7 +832,12 @@ PY
     local BASH_PROFILE="$HOME/.bash_profile"
     if [[ -f "$BASH_PROFILE" ]]; then
         # shellcheck disable=SC2016
-        if ! grep -q '\. ~/.bashrc' "$BASH_PROFILE" && ! grep -q 'source ~/.bashrc' "$BASH_PROFILE" && ! grep -Fq '. "$HOME/.bashrc"' "$BASH_PROFILE"; then
+        if ! grep -q '\. ~/.bashrc' "$BASH_PROFILE" && \
+           ! grep -q 'source ~/.bashrc' "$BASH_PROFILE" && \
+           ! grep -Fq '. "$HOME/.bashrc"' "$BASH_PROFILE" && \
+           ! grep -Fq 'source "$HOME/.bashrc"' "$BASH_PROFILE" && \
+           ! grep -Fq '. "${HOME}/.bashrc"' "$BASH_PROFILE" && \
+           ! grep -Fq 'source "${HOME}/.bashrc"' "$BASH_PROFILE"; then
             info "Wiring ~/.bash_profile to source ~/.bashrc..."
             # shellcheck disable=SC2016
             printf '\nif [ -f "$HOME/.bashrc" ]; then\n    . "$HOME/.bashrc"\nfi\n' >> "$BASH_PROFILE"
