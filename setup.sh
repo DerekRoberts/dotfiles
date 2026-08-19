@@ -401,6 +401,13 @@ path, repo_dir = sys.argv[1], sys.argv[2]
 with open(path) as f:
     content = f.read()
 
+# Filter broken Fedora gnupg2 profile.d tty warning during /etc/bashrc sourcing in flatpak/subshells
+content = re.sub(
+    r"if \[ -f /etc/bashrc \]; then\n\s*\. /etc/bashrc(?:\s*2>.*)?\nfi",
+    "if [ -f /etc/bashrc ]; then\n    . /etc/bashrc 2> >(grep -v 'tty: ttyname error' >&2)\nfi",
+    content,
+)
+
 content = re.sub(r".*/Documents/1-Personal/Linux/bashrc.*\n*", "", content)
 content = re.sub(
     r"# Source personal dotfiles configuration\nif \[ -f [\"']?[^\"'\n]+/(?:config/)?bashrc[\"']? \]; then\n    \. [\"']?[^\"'\n]+/(?:config/)?bashrc[\"']?\nfi\n*",
