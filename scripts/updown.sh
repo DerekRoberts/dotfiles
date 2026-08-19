@@ -4,11 +4,11 @@
 # and updates Antigravity CLI + hub.
 #
 # Usage:
-#   updown                   — run updates then power off (default / interactive)
-#   updown --no-shutdown, -n — run updates without powering off (background / CI)
+#   updown                 — run updates then power off (default / interactive)
+#   updown --background, -b — run updates in the background without power off
 #
 # The systemd user service (config/systemd/dotfiles-update.service) calls
-# this script with --no-shutdown on graphical session start (at most once per 23h).
+# this script with --background on graphical session start (at most once per 23h).
 
 set -euo pipefail
 
@@ -17,7 +17,7 @@ INSTALL_INSYNC=0
 
 for arg in "$@"; do
     case "$arg" in
-        --no-shutdown|--background|-n)
+        --background|-b|--no-shutdown|-n)
             SHUTDOWN=0
             ;;
         --install-insync)
@@ -30,8 +30,9 @@ for arg in "$@"; do
         --help|-h)
             echo "Usage: updown [options]"
             echo "  (default)            Run updates and power off"
-            echo "  --no-shutdown, -n    Run updates without powering off"
-            echo "  --install-insync     Bootstrap/update Insync only without shutdown"
+            echo "  --background, -b     Run updates in background without power off"
+            echo "  --install-insync     Bootstrap/update Insync only without power off"
+            echo "  --help, -h           Show this help"
             exit 0
             ;;
     esac
@@ -50,22 +51,7 @@ info()    { echo "$LOG_PREFIX $*"; }
 success() { echo "$LOG_PREFIX ✓ $*"; }
 warn()    { echo "$LOG_PREFIX ⚠ $*" >&2; }
 
-# Force close target running apps before updating them to prevent file locking & crashes
-kill_running_apps() {
-    local apps=("cursor" "cursor.AppImage" "insync" "antigravity" "agy")
-    for app in "${apps[@]}"; do
-        if pgrep -x "$app" &>/dev/null || pgrep -f "$app" &>/dev/null; then
-            info "Closing running process for $app..."
-            pkill -TERM -f "$app" 2>/dev/null || true
-            sleep 1
-            pkill -KILL -f "$app" 2>/dev/null || true
-        fi
-    done
-}
-
 if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
-    kill_running_apps
-
     # ── 1. rpm-ostree ────────────────────────────────────────────────────────────
     # Stages the update; does NOT reboot automatically.
     # On Kinoite, apply takes effect on next reboot (user-controlled).
@@ -160,18 +146,22 @@ if [[ -x "$INSYNC_BIN" ]] || [[ "$INSTALL_INSYNC" -eq 1 ]]; then
                     mkdir -p "${HOME}/.local/lib" "${HOME}/.local/bin"
                     rm -rf "${INSYNC_LIB_DIR}.old"
                     [[ -d "$INSYNC_LIB_DIR" ]] && mv "$INSYNC_LIB_DIR" "${INSYNC_LIB_DIR}.old"
-                    cp -rf "$extracted_lib" "$INSYNC_LIB_DIR"
-                    rm -rf "${INSYNC_LIB_DIR}.old"
-                    chmod +x "$INSYNC_LIB_DIR/insync"
-                    
-                    cat > "$INSYNC_BIN" << 'EOF'
+                    if cp -rf "$extracted_lib" "$INSYNC_LIB_DIR"; then
+                        rm -rf "${INSYNC_LIB_DIR}.old"
+                        chmod +x "$INSYNC_LIB_DIR/insync"
+                        
+                        cat > "$INSYNC_BIN" << 'EOF'
 #!/bin/bash
 LC_TIME=C exec "$HOME/.local/lib/insync/insync" "$@"
 EOF
-                    chmod +x "$INSYNC_BIN"
-                    mkdir -p "$(dirname "$STAMP_FILE")"
-                    echo "$LATEST_INSYNC_URL" > "$STAMP_FILE"
-                    success "Insync updated"
+                        chmod +x "$INSYNC_BIN"
+                        mkdir -p "$(dirname "$STAMP_FILE")"
+                        echo "$LATEST_INSYNC_URL" > "$STAMP_FILE"
+                        success "Insync updated"
+                    else
+                        warn "Insync copy failed — restoring previous installation"
+                        [[ -d "${INSYNC_LIB_DIR}.old" ]] && mv "${INSYNC_LIB_DIR}.old" "$INSYNC_LIB_DIR"
+                    fi
                 else
                     warn "Insync update failed (library bundle not found in RPM)"
                 fi

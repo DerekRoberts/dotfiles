@@ -69,18 +69,27 @@ if tar -tzf "$TARBALL_PATH" | grep -qE '(^|/)\.\.(/|$)|^/'; then
 fi
 
 echo "Updating Antigravity in $INSTALL_DIR..."
+mkdir -p "$(dirname "$INSTALL_DIR")"
 TMP_EXTRACT="$(mktemp -d "${INSTALL_DIR}.tmp.XXXXXX")"
 tar -xzf "$TARBALL_PATH" -C "$TMP_EXTRACT" --strip-components=1 --no-same-owner
 
 # Atomic swap into INSTALL_DIR
-mkdir -p "$(dirname "$INSTALL_DIR")"
 BACKUP_DIR="${INSTALL_DIR}.old"
 rm -rf "$BACKUP_DIR"
 if [ -d "$INSTALL_DIR" ]; then
     mv "$INSTALL_DIR" "$BACKUP_DIR"
 fi
-mv "$TMP_EXTRACT" "$INSTALL_DIR"
-rm -rf "$BACKUP_DIR"
+
+if mv "$TMP_EXTRACT" "$INSTALL_DIR"; then
+    rm -rf "$BACKUP_DIR"
+else
+    echo "Error: Failed to move new Antigravity version into place. Restoring backup..." >&2
+    if [ -d "$BACKUP_DIR" ]; then
+        mv "$BACKUP_DIR" "$INSTALL_DIR"
+    fi
+    rm -rf "$TMP_EXTRACT"
+    exit 1
+fi
 
 # Fix SELinux file contexts after extraction (required on Fedora Kinoite)
 if command -v restorecon &>/dev/null; then

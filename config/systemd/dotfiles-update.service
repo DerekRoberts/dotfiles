@@ -13,7 +13,7 @@ ExecCondition=/bin/sh -c '\
     age=$(( $(date +%%s) - $(stat -c %%Y "$stamp") )); \
     [ "$age" -gt 82800 ] || exit 1; \
   fi'
-ExecStart=%h/.local/bin/updown --no-shutdown
+ExecStart=%h/.local/bin/updown --background
 ExecStartPost=/bin/sh -c 'mkdir -p %h/.local/share/dotfiles && touch %h/.local/share/dotfiles/last-update'
 # Don't fail the login session if updates error
 SuccessExitStatus=0 1

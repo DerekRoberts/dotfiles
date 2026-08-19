@@ -139,6 +139,8 @@ clone_repos() {
         warn "$failed repo(s) failed to clone (SSH key not yet authorized on GitHub)."
         info "Once your key is added to https://github.com/settings/keys, re-run:"
         info "  scripts/clone-repos.sh"
+        echo ""
+        return 1
     fi
     echo ""
 }
@@ -147,8 +149,12 @@ clone_repos() {
 
 main() {
     ensure_ssh_key
-    clone_repos
-    echo "✅ Repository setup complete."
+    if clone_repos; then
+        echo "✅ Repository setup complete."
+    else
+        echo "⚠ Repository setup completed with warnings."
+        exit 1
+    fi
 }
 
 
