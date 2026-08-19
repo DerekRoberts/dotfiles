@@ -77,6 +77,18 @@ DESKTOP
     success "Chrome added to autostart"
 }
 
+install_vlc() {
+    section "VLC Media Player"
+    if flatpak list --user 2>/dev/null | grep -q "org.videolan.VLC"; then
+        success "VLC already installed (Flatpak)"
+    else
+        ensure_flathub
+        info "Installing VLC via Flatpak..."
+        flatpak install --user -y flathub org.videolan.VLC
+        success "VLC installed"
+    fi
+}
+
 install_yakuake() {
     section "Yakuake (Drop-down Terminal)"
     
@@ -116,12 +128,13 @@ DESKTOP
         mkdir -p "$(dirname "$YAKUAKE_CONFIG")"
         kwriteconfig6 --file "$YAKUAKE_CONFIG" --group Window --key ShowSystrayIcon false
 
-        # Reload shortcuts in KDE Plasma 6
-        if command -v qdbus6 &>/dev/null; then
-            qdbus6 org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel.reloadConfig >/dev/null 2>&1 || true
+        # Reload shortcuts / KWin in KDE Plasma 6
+        if command -v qdbus-qt6 &>/dev/null; then
+            qdbus-qt6 org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
+        elif command -v qdbus6 &>/dev/null; then
+            qdbus6 org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
         elif command -v qdbus &>/dev/null; then
-            qdbus org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel.reloadConfig >/dev/null 2>&1 || \
-            qdbus org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel.reparseConfiguration >/dev/null 2>&1 || true
+            qdbus org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
         fi
     else
         warn "kwriteconfig6 not found — cannot set global shortcut automatically."
@@ -137,10 +150,24 @@ install_insync() {
     local APPS_DIR="$HOME/.local/share/applications"
 
     if [[ -x "$INSYNC_BIN" ]]; then
-        success "Insync already installed"
+        cat > "$INSYNC_BIN" << 'EOF'
+#!/bin/bash
+export LC_TIME=C
+export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
+export XDG_DATA_DIRS="$HOME/.local/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+
+if command -v bwrap &>/dev/null && [[ -d "$HOME/.local/share/icons/hicolor" ]]; then
+    exec bwrap --dev-bind / / --bind "$HOME/.local/share/icons/hicolor" /usr/share/icons/hicolor "$HOME/.local/lib/insync/insync" "$@" || exec "$HOME/.local/lib/insync/insync" "$@"
+else
+    exec "$HOME/.local/lib/insync/insync" "$@"
+fi
+EOF
+        chmod +x "$INSYNC_BIN"
+        success "Insync already installed (wrapper updated)"
         local AUTOSTART_DIR="$HOME/.config/autostart"
-        mkdir -p "$AUTOSTART_DIR"
+        mkdir -p "$AUTOSTART_DIR" "$APPS_DIR"
         if [[ -f "$APPS_DIR/insync.desktop" ]]; then
+            grep -q "X-KDE-autostart-after=panel" "$APPS_DIR/insync.desktop" || printf '\nX-KDE-autostart-after=panel\nX-KDE-autostart-phase=2\n' >> "$APPS_DIR/insync.desktop"
             rm -f "$AUTOSTART_DIR/insync.desktop"
             cp -f "$APPS_DIR/insync.desktop" "$AUTOSTART_DIR/insync.desktop"
             success "Insync added to autostart"
@@ -168,6 +195,8 @@ Terminal=false
 Type=Application
 Categories=Network;FileTransfer;
 StartupNotify=true
+X-KDE-autostart-after=panel
+X-KDE-autostart-phase=2
 DESKTOP
     sed -i "s|%h|$HOME|g" "$APPS_DIR/insync.desktop"
 
@@ -242,10 +271,14 @@ install_ponytail() {
     info "Configuring Ponytail for Cursor..."
     local CURSOR_RULES_DIR="$HOME/.cursor/rules"
     mkdir -p "$CURSOR_RULES_DIR"
-    if curl -fsSL "https://raw.githubusercontent.com/dietrichgebert/ponytail/main/.cursor/rules/ponytail.mdc" -o "$CURSOR_RULES_DIR/ponytail.mdc"; then
-        success "Cursor rule downloaded to $CURSOR_RULES_DIR/ponytail.mdc"
+    if [[ -f "$CURSOR_RULES_DIR/ponytail.mdc" ]]; then
+        success "Cursor rule already present"
     else
-        warn "Failed to download Cursor rule"
+        if curl -fsSL "https://raw.githubusercontent.com/dietrichgebert/ponytail/main/.cursor/rules/ponytail.mdc" -o "$CURSOR_RULES_DIR/ponytail.mdc"; then
+            success "Cursor rule downloaded to $CURSOR_RULES_DIR/ponytail.mdc"
+        else
+            warn "Failed to download Cursor rule"
+        fi
     fi
 
     info "Configuring Ponytail for Antigravity (agy)..."
@@ -254,10 +287,15 @@ install_ponytail() {
         warn "agy CLI not found. Run setup.sh --dev or agy update first. Skipping plugin install."
     else
         [[ -x "$AGY_BIN" ]] || AGY_BIN="agy"
-        if "$AGY_BIN" plugin install https://github.com/DietrichGebert/ponytail 2>/dev/null; then
-            success "agy plugin installed"
+        local PLUGIN_DIR="$HOME/.gemini/config/plugins/ponytail"
+        if [[ -d "$PLUGIN_DIR" ]] || "$AGY_BIN" plugin list 2>/dev/null | grep -q '"name": "ponytail"'; then
+            success "Ponytail plugin already installed for agy"
         else
-            warn "agy plugin install failed (it might already be installed, or network issue)"
+            if "$AGY_BIN" plugin install https://github.com/DietrichGebert/ponytail 2>/dev/null; then
+                success "agy plugin installed"
+            else
+                warn "agy plugin install failed (network issue or repo error)"
+            fi
         fi
     fi
 }
@@ -359,31 +397,392 @@ EOF
         success "Dolphin sidebar cleaned"
     fi
 
-    # Configure natural/inverted scrolling globally for all current and future mice/touchpads
-    if command -v kwriteconfig6 &>/dev/null; then
-        info "Configuring natural scrolling globally in KDE..."
-        # Global fallback groups for new devices
-        kwriteconfig6 --file kcminputrc --group Mouse --key NaturalScroll true
-        kwriteconfig6 --file kcminputrc --group Mouse --key XLbInptNaturalScroll true
-        kwriteconfig6 --file kcminputrc --group Touchpad --key NaturalScroll true
-        kwriteconfig6 --file kcminputrc --group Touchpad --key XLbInptNaturalScroll true
+    # Configure natural/inverted scrolling globally for all current and connected mice/touchpads
+    if command -v kwriteconfig6 &>/dev/null || [[ -f "$HOME/.config/kcminputrc" ]]; then
+        info "Configuring natural scrolling globally for all devices in KDE..."
         
-        # Also ensure any already-registered libinput device entries in kcminputrc are updated
-        if [[ -f "$HOME/.config/kcminputrc" ]]; then
-            sed -i 's/^NaturalScroll=false/NaturalScroll=true/' "$HOME/.config/kcminputrc"
-            sed -i 's/^XLbInptNaturalScroll=false/XLbInptNaturalScroll=true/' "$HOME/.config/kcminputrc"
+        # 1. Global fallback groups
+        if command -v kwriteconfig6 &>/dev/null; then
+            kwriteconfig6 --file kcminputrc --group Mouse --key NaturalScroll true
+            kwriteconfig6 --file kcminputrc --group Mouse --key XLbInptNaturalScroll true
+            kwriteconfig6 --file kcminputrc --group Touchpad --key NaturalScroll true
+            kwriteconfig6 --file kcminputrc --group Touchpad --key XLbInptNaturalScroll true
         fi
         
+        # 2. Discover all connected hardware pointers and ensure every section in kcminputrc has NaturalScroll=true
+        python3 - "$HOME/.config/kcminputrc" << 'PY'
+import sys, re, os, subprocess
+
+path = sys.argv[1]
+discovered_devices = []
+
+# Query live KWin InputDeviceManager on D-Bus if available
+try:
+    cmd = ["qdbus-qt6", "org.kde.KWin", "/org/kde/KWin/InputDevice", "org.kde.KWin.InputDeviceManager.ListPointers"]
+    res = subprocess.run(cmd, capture_output=True, text=True, timeout=2)
+    if res.returncode == 0:
+        for dev in res.stdout.strip().splitlines():
+            dev = dev.strip()
+            if not dev:
+                continue
+            dev_path = f"/org/kde/KWin/InputDevice/{dev}"
+            def get_prop(prop):
+                r = subprocess.run(["qdbus-qt6", "org.kde.KWin", dev_path, "org.freedesktop.DBus.Properties.Get", "org.kde.KWin.InputDevice", prop], capture_output=True, text=True, timeout=1)
+                return r.stdout.strip()
+            
+            supports = get_prop("supportsNaturalScroll")
+            if supports.lower() == "true":
+                vendor = get_prop("vendor")
+                product = get_prop("product")
+                name = get_prop("name")
+                if vendor and product and name:
+                    discovered_devices.append((vendor, product, name))
+                    # Apply live to active session
+                    subprocess.run(["qdbus-qt6", "org.kde.KWin", dev_path, "org.freedesktop.DBus.Properties.Set", "org.kde.KWin.InputDevice", "naturalScroll", "true"], capture_output=True, timeout=1)
+except Exception:
+    pass
+
+# Supplementary hardware discovery via /proc/bus/input/devices
+proc_path = "/proc/bus/input/devices"
+if os.path.exists(proc_path):
+    try:
+        with open(proc_path, "r") as f:
+            content = f.read()
+        for b in content.strip().split("\n\n"):
+            handlers = re.search(r"H: Handlers=.*(mouse|event).*", b)
+            if not handlers:
+                continue
+            name_match = re.search(r'N: Name="([^"]+)"', b)
+            id_match = re.search(r"I: Bus=(\w+) Vendor=(\w+) Product=(\w+)", b)
+            if name_match and id_match:
+                name = name_match.group(1)
+                vendor_hex = id_match.group(2)
+                product_hex = id_match.group(3)
+                vendor_dec = str(int(vendor_hex, 16))
+                product_dec = str(int(product_hex, 16))
+                if any(k in name.lower() for k in ("mouse", "touchpad", "trackpoint", "trackball", "pointer")):
+                    discovered_devices.append((vendor_dec, product_dec, name))
+    except Exception:
+        pass
+
+lines = []
+if os.path.exists(path):
+    with open(path, "r") as f:
+        lines = f.readlines()
+
+new_lines = []
+in_target = False
+found_natural = False
+target_keys = ("NaturalScroll", "XLbInptNaturalScroll")
+seen_sections = set()
+
+for line in lines:
+    stripped = line.strip()
+    if stripped.startswith("[") and stripped.endswith("]"):
+        if in_target and not found_natural:
+            new_lines.append("NaturalScroll=true\n")
+        in_target = "Libinput" in stripped or stripped in ("[Mouse]", "[Touchpad]")
+        found_natural = False
+        seen_sections.add(stripped)
+        new_lines.append(line)
+        continue
+
+    if in_target and any(stripped.startswith(k + "=") for k in target_keys):
+        new_lines.append(re.sub(r"=\s*(false|0)", "=true", line))
+        found_natural = True
+        continue
+
+    new_lines.append(line)
+
+if in_target and not found_natural:
+    new_lines.append("NaturalScroll=true\n")
+
+# Append newly discovered device sections if missing
+for v, p, n in set(discovered_devices):
+    section_hdr = f"[Libinput][{v}][{p}][{n}]"
+    if section_hdr not in seen_sections:
+        new_lines.append(f"\n{section_hdr}\nNaturalScroll=true\n")
+        seen_sections.add(section_hdr)
+
+os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+with open(path, "w") as f:
+    f.writelines(new_lines)
+PY
+        
         # Notify KWin / KDE input daemon of configuration changes
-        if command -v qdbus6 &>/dev/null; then
+        if command -v qdbus-qt6 &>/dev/null; then
+            qdbus-qt6 org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
+        elif command -v qdbus6 &>/dev/null; then
             qdbus6 org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
         elif command -v qdbus &>/dev/null; then
             qdbus org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
         fi
-        success "Natural scrolling enabled globally"
+        success "Natural scrolling enabled for all connected and configured devices"
     fi
 
-    success "Directories and input configured"
+    info "Configuring default application associations..."
+    local MIMEAPPS="$HOME/.config/mimeapps.list"
+    python3 - "$MIMEAPPS" << 'PY'
+import sys, os, configparser
+
+path = sys.argv[1]
+os.makedirs(os.path.dirname(path), exist_ok=True)
+
+defaults = {
+    # Internet
+    "x-scheme-handler/http": "com.google.Chrome.desktop",
+    "x-scheme-handler/https": "com.google.Chrome.desktop",
+    "text/html": "com.google.Chrome.desktop",
+    "application/xhtml+xml": "com.google.Chrome.desktop",
+    "x-scheme-handler/mailto": "com.google.Chrome.desktop",
+    "text/calendar": "com.google.Chrome.desktop",
+    "x-scheme-handler/tel": "com.google.Chrome.desktop",
+    # Multimedia
+    "image/jpeg": "org.kde.gwenview.desktop",
+    "image/png": "org.kde.gwenview.desktop",
+    "image/gif": "org.kde.gwenview.desktop",
+    "image/webp": "org.kde.gwenview.desktop",
+    "image/bmp": "org.kde.gwenview.desktop",
+    "image/svg+xml": "org.kde.gwenview.desktop",
+    "image/tiff": "org.kde.gwenview.desktop",
+    "image/avif": "org.kde.gwenview.desktop",
+    "audio/mpeg": "org.videolan.VLC.desktop",
+    "audio/mp3": "org.videolan.VLC.desktop",
+    "audio/mp4": "org.videolan.VLC.desktop",
+    "audio/flac": "org.videolan.VLC.desktop",
+    "audio/ogg": "org.videolan.VLC.desktop",
+    "audio/x-wav": "org.videolan.VLC.desktop",
+    "audio/wav": "org.videolan.VLC.desktop",
+    "audio/aac": "org.videolan.VLC.desktop",
+    "audio/x-vorbis+ogg": "org.videolan.VLC.desktop",
+    "audio/x-opus+ogg": "org.videolan.VLC.desktop",
+    "video/mp4": "org.videolan.VLC.desktop",
+    "video/x-matroska": "org.videolan.VLC.desktop",
+    "video/webm": "org.videolan.VLC.desktop",
+    "video/quicktime": "org.videolan.VLC.desktop",
+    "video/x-msvideo": "org.videolan.VLC.desktop",
+    "video/mpeg": "org.videolan.VLC.desktop",
+    "video/ogg": "org.videolan.VLC.desktop",
+    "video/x-flv": "org.videolan.VLC.desktop",
+    # Documents
+    "text/plain": "org.kde.kwrite.desktop",
+    "application/pdf": "com.google.Chrome.desktop",
+    # Utilities
+    "inode/directory": "org.kde.dolphin.desktop",
+    "application/zip": "org.kde.ark.desktop",
+    "application/x-tar": "org.kde.ark.desktop",
+    "application/x-7z-compressed": "org.kde.ark.desktop",
+    "application/x-compressed-tar": "org.kde.ark.desktop",
+    "application/x-bzip-compressed-tar": "org.kde.ark.desktop",
+    "application/x-xz-compressed-tar": "org.kde.ark.desktop",
+    "application/x-rar": "org.kde.ark.desktop",
+    "x-scheme-handler/geo": "openstreetmap-geo-handler.desktop",
+    "x-scheme-handler/antigravity": "antigravity.desktop",
+}
+
+config = configparser.RawConfigParser()
+if os.path.exists(path):
+    config.read(path)
+
+for section in ("Default Applications", "Added Associations"):
+    if not config.has_section(section):
+        config.add_section(section)
+    for mime, desktop in defaults.items():
+        val = desktop if section == "Default Applications" else f"{desktop};"
+        config.set(section, mime, val)
+
+with open(path, "w") as f:
+    config.write(f, space_around_delimiters=False)
+PY
+    if command -v kwriteconfig6 &>/dev/null; then
+        kwriteconfig6 --file kdeglobals --group General --key TerminalApplication org.kde.konsole.desktop
+        kwriteconfig6 --file kdeglobals --group General --key TerminalService org.kde.konsole.desktop
+    fi
+    success "Default applications configured"
+
+    # Configure KDE Plasma Desktops (Layout=Desktop, DarkestHour wallpaper), Panel layout & System Tray visibility
+    info "Configuring KDE Plasma desktops (DarkestHour wallpaper), panel & task manager (Dolphin, Chrome)..."
+    local PLASMA_CONFIG="$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
+    local WAS_PLASMASHELL_ACTIVE=false
+    if command -v systemctl &>/dev/null && systemctl --user is-active plasma-plasmashell &>/dev/null; then
+        WAS_PLASMASHELL_ACTIVE=true
+        systemctl --user stop plasma-plasmashell >/dev/null 2>&1 || true
+    fi
+
+    if [[ -f "$PLASMA_CONFIG" ]]; then
+        python3 - "$PLASMA_CONFIG" << 'PY'
+import sys, os, re
+
+path = sys.argv[1]
+if not os.path.exists(path):
+    sys.exit(0)
+
+with open(path, "r") as f:
+    content = f.read()
+
+# 1. Ensure all desktop containments use org.kde.desktopcontainment
+lines = content.splitlines(True)
+new_lines = []
+in_desktop = False
+
+for line in lines:
+    stripped = line.strip()
+    if stripped.startswith("[Containments][") and stripped.endswith("]"):
+        parts = stripped[1:-1].split("][")
+        in_desktop = len(parts) == 2
+    elif stripped.startswith("["):
+        in_desktop = False
+    elif in_desktop and stripped == "plugin=org.kde.plasma.folder":
+        line = "plugin=org.kde.desktopcontainment\n"
+    new_lines.append(line)
+
+content = "".join(new_lines)
+
+# 2. System Tray sub-applets & visibility preferences
+core_plugins = [
+    "org.kde.plasma.volume",
+    "org.kde.plasma.networkmanagement",
+    "org.kde.plasma.battery",
+    "org.kde.plasma.bluetooth",
+    "org.kde.plasma.brightness",
+    "org.kde.plasma.notifications",
+    "org.kde.plasma.clipboard",
+    "org.kde.plasma.devicenotifier",
+    "org.kde.plasma.cameraindicator",
+    "org.kde.kdeconnect",
+    "org.kde.plasma.vault",
+    "org.kde.kscreen"
+]
+
+tray_hdr = None
+for m in re.finditer(r"^(\[Containments\]\[\d+\]\[Applets\]\[\d+\])\s*$", content, re.M):
+    hdr = m.group(1)
+    body_end = content.find("\n[", m.end())
+    body = content[m.end():body_end if body_end != -1 else len(content)]
+    if "plugin=org.kde.plasma.systemtray" in body:
+        tray_hdr = hdr
+        break
+
+if tray_hdr:
+    # Collect existing child applet IDs and plugins
+    existing_ids = [int(m) for m in re.findall(re.escape(tray_hdr) + r"\[Applets\]\[(\d+)\]", content)]
+    next_id = max(existing_ids) + 1 if existing_ids else 30
+    
+    existing_plugins = []
+    for m in re.finditer(re.escape(tray_hdr) + r"\[Applets\]\[\d+\][\s\S]*?plugin=([\w\.\-]+)", content):
+        existing_plugins.append(m.group(1))
+    
+    # Add missing core child applets
+    additions = []
+    for plugin in core_plugins:
+        if plugin not in existing_plugins:
+            additions.append(f"\n{tray_hdr}[Applets][{next_id}]\nimmutability=1\nplugin={plugin}\n")
+            next_id += 1
+    
+    if additions:
+        content += "".join(additions)
+
+    # Ensure [General] section exists with exact user preferences
+    gen_hdr = f"{tray_hdr}[General]"
+    gen_prefs = {
+        "disabledStatusNotifiers": "org.kde.yakuake",
+        "shownItems": "Insync,org.kde.plasma.volume,org.kde.plasma.networkmanagement",
+        "hiddenItems": "Antigravity_status_icon_1,Xwayland Video Bridge,org.kde.plasma.cameraindicator,org.kde.kdeconnect,org.kde.plasma.clipboard,org.kde.plasma.notifications,chrome_status_icon_1@cursor,org.kde.plasma.bluetooth,org.kde.plasma.devicenotifier",
+        "extraItems": "org.kde.plasma.battery,org.kde.plasma.devicenotifier,org.kde.plasma.networkmanagement,org.kde.plasma.printmanager,org.kde.plasma.volume,org.kde.plasma.bluetooth,org.kde.plasma.cameraindicator,org.kde.kdeconnect,org.kde.plasma.clipboard,org.kde.plasma.notifications,org.kde.plasma.brightness,org.kde.kscreen"
+    }
+    
+    if gen_hdr in content:
+        lines = content.splitlines(True)
+        out_lines = []
+        in_gen = False
+        seen_keys = set()
+        for line in lines:
+            stripped = line.strip()
+            if stripped == gen_hdr:
+                in_gen = True
+                out_lines.append(line)
+                continue
+            elif stripped.startswith("[") and stripped.endswith("]"):
+                if in_gen:
+                    for k, v in gen_prefs.items():
+                        if k not in seen_keys:
+                            out_lines.append(f"{k}={v}\n")
+                    in_gen = False
+                out_lines.append(line)
+                continue
+            
+            if in_gen:
+                matched = False
+                for k, v in gen_prefs.items():
+                    if stripped.startswith(f"{k}="):
+                        out_lines.append(f"{k}={v}\n")
+                        seen_keys.add(k)
+                        matched = True
+                        break
+                if not matched:
+                    out_lines.append(line)
+                continue
+            out_lines.append(line)
+        if in_gen:
+            for k, v in gen_prefs.items():
+                if k not in seen_keys:
+                    out_lines.append(f"{k}={v}\n")
+        content = "".join(out_lines)
+    else:
+        gen_block = f"\n{gen_hdr}\n" + "\n".join(f"{k}={v}" for k, v in gen_prefs.items()) + "\n"
+        content += gen_block
+
+with open(path, "w") as f:
+    f.write(content)
+PY
+    fi
+
+    if [[ "$WAS_PLASMASHELL_ACTIVE" == true ]]; then
+        systemctl --user start plasma-plasmashell >/dev/null 2>&1 || true
+        for _ in {1..25}; do
+            if qdbus-qt6 org.kde.plasmashell &>/dev/null || qdbus6 org.kde.plasmashell &>/dev/null || qdbus org.kde.plasmashell &>/dev/null; then
+                break
+            fi
+            sleep 0.2
+        done
+    fi
+
+    local PANEL_SCRIPT='
+var d = desktops();
+for (var i = 0; i < d.length; i++) {
+    d[i].writeConfig("plugin", "org.kde.desktopcontainment");
+    d[i].currentConfigGroup = ["Wallpaper", "org.kde.image", "General"];
+    d[i].writeConfig("Image", "/usr/share/wallpapers/DarkestHour");
+    d[i].reloadConfig();
+}
+var p = panels();
+for (var i = 0; i < p.length; i++) {
+    p[i].location = "left";
+    p[i].hiding = "dodgewindows";
+    p[i].height = 72;
+    var ws = p[i].widgets();
+    for (var j = 0; j < ws.length; j++) {
+        if (ws[j].type === "org.kde.plasma.showdesktop" || ws[j].type === "org.kde.plasma.peekatdesktop") {
+            ws[j].remove();
+        } else if (ws[j].type === "org.kde.plasma.icontasks") {
+            ws[j].currentConfigGroup = ["General"];
+            ws[j].writeConfig("launchers", "applications:org.kde.dolphin.desktop,applications:google-chrome.desktop");
+            ws[j].reloadConfig();
+        }
+    }
+}
+'
+    if command -v qdbus-qt6 &>/dev/null; then
+        qdbus-qt6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$PANEL_SCRIPT" >/dev/null 2>&1 || true
+    elif command -v qdbus6 &>/dev/null; then
+        qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$PANEL_SCRIPT" >/dev/null 2>&1 || true
+    elif command -v qdbus &>/dev/null; then
+        qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$PANEL_SCRIPT" >/dev/null 2>&1 || true
+    fi
+
+    success "Desktops (DarkestHour), panel layout & task manager configured"
+
+    success "Directories, input, panel, and defaults configured"
 }
 
 
@@ -396,31 +795,54 @@ wire_core() {
         cp "$BASHRC" "$BASHRC.bak.$(date +%s)"
 
         python3 - "$BASHRC" "$DOTFILES_DIR" << 'PY'
-import sys, re, shlex
+import sys, re
 path, repo_dir = sys.argv[1], sys.argv[2]
 with open(path) as f:
     content = f.read()
 
+# Filter broken Fedora gnupg2 profile.d tty warning during /etc/bashrc sourcing in flatpak/subshells
+content = re.sub(
+    r"if \[ -f /etc/bashrc \]; then\n\s*\. /etc/bashrc(?:\s*2>.*)?\nfi",
+    "if [ -f /etc/bashrc ]; then\n    . /etc/bashrc 2> >(grep -v 'tty: ttyname error' >&2)\nfi",
+    content,
+)
+
 content = re.sub(r".*/Documents/1-Personal/Linux/bashrc.*\n*", "", content)
 content = re.sub(
-    r"# Source personal dotfiles configuration\nif \[ -f \"[^\"]+/(?:config/)?bashrc\" \]; then\n    \. \"[^\"]+/(?:config/)?bashrc\"\nfi\n*",
+    r"# Source personal dotfiles configuration\nif \[ -f [\"']?[^\"'\n]+/(?:config/)?bashrc[\"']? \]; then\n    \. [\"']?[^\"'\n]+/(?:config/)?bashrc[\"']?\nfi\n*",
     "",
     content,
 )
 content = re.sub(r"# Source personal dotfiles configuration\nfi\n*", "", content)
 
-quoted_target = shlex.quote(f"{repo_dir}/config/bashrc")
+target = f"{repo_dir}/config/bashrc"
 loader = (
     f"\n\n# Source personal dotfiles configuration\n"
-    f"if [ -f {quoted_target} ]; then\n"
-    f"    . {quoted_target}\n"
+    f'if [ -f "{target}" ]; then\n'
+    f'    . "{target}"\n'
     f"fi\n"
 )
 with open(path, "w") as f:
     f.write(content.rstrip() + loader)
 PY
         success "bashrc sourcing updated"
+    fi
 
+    # Ensure ~/.bash_profile forwards to ~/.bashrc for login shells
+    local BASH_PROFILE="$HOME/.bash_profile"
+    if [[ -f "$BASH_PROFILE" ]]; then
+        # shellcheck disable=SC2016
+        if ! grep -q '\. ~/.bashrc' "$BASH_PROFILE" && \
+           ! grep -q 'source ~/.bashrc' "$BASH_PROFILE" && \
+           ! grep -Fq '. "$HOME/.bashrc"' "$BASH_PROFILE" && \
+           ! grep -Fq 'source "$HOME/.bashrc"' "$BASH_PROFILE" && \
+           ! grep -Fq '. "${HOME}/.bashrc"' "$BASH_PROFILE" && \
+           ! grep -Fq 'source "${HOME}/.bashrc"' "$BASH_PROFILE"; then
+            info "Wiring ~/.bash_profile to source ~/.bashrc..."
+            # shellcheck disable=SC2016
+            printf '\nif [ -f "$HOME/.bashrc" ]; then\n    . "$HOME/.bashrc"\nfi\n' >> "$BASH_PROFILE"
+            success "bash_profile sourcing wired"
+        fi
     fi
 
     # 2. Git global include
@@ -544,6 +966,22 @@ install_native_tools() {
         rm -rf "$tmp_dir"
     fi
 
+    # gitleaks
+    if ! command -v gitleaks &>/dev/null; then
+        info "Downloading gitleaks..."
+        local tmp_dir; tmp_dir="$(mktemp -d)"
+        local gitleaks_version="8.24.0"
+        local gitleaks_url="https://github.com/gitleaks/gitleaks/releases/download/v${gitleaks_version}/gitleaks_${gitleaks_version}_linux_x64.tar.gz"
+        if curl -fsSL "$gitleaks_url" -o "$tmp_dir/gitleaks.tar.gz"; then
+            tar -xzf "$tmp_dir/gitleaks.tar.gz" -C "$tmp_dir" gitleaks
+            mv "$tmp_dir/gitleaks" "$BIN_DIR/gitleaks"
+            chmod +x "$BIN_DIR/gitleaks"
+        else
+            warn "Failed to download gitleaks v${gitleaks_version}"
+        fi
+        rm -rf "$tmp_dir"
+    fi
+
     # podman-compose
     if ! command -v podman-compose &>/dev/null; then
         info "Downloading podman-compose..."
@@ -571,12 +1009,14 @@ install_native_tools() {
 
 preset_desktop() {
     install_chrome
+    install_vlc
     install_insync
 }
 
 preset_dev() {
     install_native_tools
     install_chrome
+    install_vlc
     install_yakuake
     install_insync
     install_antigravity
@@ -598,9 +1038,9 @@ Usage:
 Default (no flags): full dev stack, same as --dev.
 
 Options:
-  --dev       Full developer stack: Node LTS, CLI tools, Chrome, Yakuake, Insync,
+  --dev       Full developer stack: Node LTS, CLI tools, Chrome, VLC, Yakuake, Insync,
               Antigravity hub, agy CLI, Cursor, oc, Ponytail, and repositories
-  --desktop   Minimal desktop essentials: Chrome and Insync
+  --desktop   Minimal desktop essentials: Chrome, VLC, and Insync
   --help, -h  Show this help
 
 Environment variables:
