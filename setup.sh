@@ -157,7 +157,7 @@ export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
 export XDG_DATA_DIRS="$HOME/.local/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 
 if command -v bwrap &>/dev/null && [[ -d "$HOME/.local/share/icons/hicolor" ]]; then
-    exec bwrap --dev-bind / / --bind "$HOME/.local/share/icons/hicolor" /usr/share/icons/hicolor "$HOME/.local/lib/insync/insync" "$@"
+    exec bwrap --dev-bind / / --bind "$HOME/.local/share/icons/hicolor" /usr/share/icons/hicolor "$HOME/.local/lib/insync/insync" "$@" || exec "$HOME/.local/lib/insync/insync" "$@"
 else
     exec "$HOME/.local/lib/insync/insync" "$@"
 fi
@@ -165,8 +165,9 @@ EOF
         chmod +x "$INSYNC_BIN"
         success "Insync already installed (wrapper updated)"
         local AUTOSTART_DIR="$HOME/.config/autostart"
-        mkdir -p "$AUTOSTART_DIR"
+        mkdir -p "$AUTOSTART_DIR" "$APPS_DIR"
         if [[ -f "$APPS_DIR/insync.desktop" ]]; then
+            grep -q "X-KDE-autostart-after=panel" "$APPS_DIR/insync.desktop" || printf '\nX-KDE-autostart-after=panel\nX-KDE-autostart-phase=2\n' >> "$APPS_DIR/insync.desktop"
             rm -f "$AUTOSTART_DIR/insync.desktop"
             cp -f "$APPS_DIR/insync.desktop" "$AUTOSTART_DIR/insync.desktop"
             success "Insync added to autostart"
@@ -602,6 +603,12 @@ PY
     # Configure KDE Plasma Desktops (Layout=Desktop, DarkestHour wallpaper), Panel layout & System Tray visibility
     info "Configuring KDE Plasma desktops (DarkestHour wallpaper), panel & task manager (Dolphin, Chrome)..."
     local PLASMA_CONFIG="$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
+    local WAS_PLASMASHELL_ACTIVE=false
+    if command -v systemctl &>/dev/null && systemctl --user is-active plasma-plasmashell &>/dev/null; then
+        WAS_PLASMASHELL_ACTIVE=true
+        systemctl --user stop plasma-plasmashell >/dev/null 2>&1 || true
+    fi
+
     if [[ -f "$PLASMA_CONFIG" ]]; then
         python3 - "$PLASMA_CONFIG" << 'PY'
 import sys, os, re
@@ -724,6 +731,16 @@ with open(path, "w") as f:
 PY
     fi
 
+    if [[ "$WAS_PLASMASHELL_ACTIVE" == true ]]; then
+        systemctl --user start plasma-plasmashell >/dev/null 2>&1 || true
+        for _ in {1..25}; do
+            if qdbus-qt6 org.kde.plasmashell &>/dev/null || qdbus6 org.kde.plasmashell &>/dev/null || qdbus org.kde.plasmashell &>/dev/null; then
+                break
+            fi
+            sleep 0.2
+        done
+    fi
+
     local PANEL_SCRIPT='
 var d = desktops();
 for (var i = 0; i < d.length; i++) {
@@ -757,10 +774,6 @@ for (var i = 0; i < p.length; i++) {
         qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$PANEL_SCRIPT" >/dev/null 2>&1 || true
     fi
 
-    # Restart plasmashell service if active so all restored sub-applets and containment changes render cleanly
-    if command -v systemctl &>/dev/null && systemctl --user is-active plasma-plasmashell &>/dev/null; then
-        systemctl --user restart plasma-plasmashell >/dev/null 2>&1 || true
-    fi
     success "Desktops (DarkestHour), panel layout & task manager configured"
 
     success "Directories, input, panel, and defaults configured"
@@ -946,11 +959,15 @@ install_native_tools() {
     if ! command -v gitleaks &>/dev/null; then
         info "Downloading gitleaks..."
         local tmp_dir; tmp_dir="$(mktemp -d)"
-        local gitleaks_latest; gitleaks_latest=$(curl -sI https://github.com/gitleaks/gitleaks/releases/latest | grep -i "^location:" | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+" || echo "v8.24.0")
-        gitleaks_latest=${gitleaks_latest#v}
-        curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${gitleaks_latest}/gitleaks_${gitleaks_latest}_linux_x64.tar.gz" | tar -xz -C "$tmp_dir" gitleaks
-        mv "$tmp_dir/gitleaks" "$BIN_DIR/gitleaks"
-        chmod +x "$BIN_DIR/gitleaks"
+        local gitleaks_version="8.24.0"
+        local gitleaks_url="https://github.com/gitleaks/gitleaks/releases/download/v${gitleaks_version}/gitleaks_${gitleaks_version}_linux_x64.tar.gz"
+        if curl -fsSL "$gitleaks_url" -o "$tmp_dir/gitleaks.tar.gz"; then
+            tar -xzf "$tmp_dir/gitleaks.tar.gz" -C "$tmp_dir" gitleaks
+            mv "$tmp_dir/gitleaks" "$BIN_DIR/gitleaks"
+            chmod +x "$BIN_DIR/gitleaks"
+        else
+            warn "Failed to download gitleaks v${gitleaks_version}"
+        fi
         rm -rf "$tmp_dir"
     fi
 

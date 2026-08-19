@@ -158,7 +158,11 @@ if [[ -x "$INSYNC_BIN" ]] || [[ "$INSTALL_INSYNC" -eq 1 ]]; then
                             [[ -f "/usr/share/icons/hicolor/index.theme" ]] && cp -f "/usr/share/icons/hicolor/index.theme" "${HOME}/.local/share/icons/hicolor/index.theme"
                             python3 - << 'PY'
 import os
-from PIL import Image
+try:
+    from PIL import Image
+except ImportError:
+    import sys
+    sys.exit(0)
 
 src_dir = os.path.expanduser("~/.local/share/icons/hicolor/48x48/status")
 sizes = [16, 22, 24, 32, 48, 64, 128, 256]
@@ -192,7 +196,7 @@ export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
 export XDG_DATA_DIRS="$HOME/.local/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 
 if command -v bwrap &>/dev/null && [[ -d "$HOME/.local/share/icons/hicolor" ]]; then
-    exec bwrap --dev-bind / / --bind "$HOME/.local/share/icons/hicolor" /usr/share/icons/hicolor "$HOME/.local/lib/insync/insync" "$@"
+    exec bwrap --dev-bind / / --bind "$HOME/.local/share/icons/hicolor" /usr/share/icons/hicolor "$HOME/.local/lib/insync/insync" "$@" || exec "$HOME/.local/lib/insync/insync" "$@"
 else
     exec "$HOME/.local/lib/insync/insync" "$@"
 fi
