@@ -433,7 +433,87 @@ PY
         success "Natural scrolling enabled globally"
     fi
 
-    success "Directories and input configured"
+    info "Configuring default application associations..."
+    local MIMEAPPS="$HOME/.config/mimeapps.list"
+    python3 - "$MIMEAPPS" << 'PY'
+import sys, os, configparser
+
+path = sys.argv[1]
+os.makedirs(os.path.dirname(path), exist_ok=True)
+
+defaults = {
+    # Internet
+    "x-scheme-handler/http": "com.google.Chrome.desktop",
+    "x-scheme-handler/https": "com.google.Chrome.desktop",
+    "text/html": "com.google.Chrome.desktop",
+    "application/xhtml+xml": "com.google.Chrome.desktop",
+    "x-scheme-handler/mailto": "com.google.Chrome.desktop",
+    "text/calendar": "com.google.Chrome.desktop",
+    "x-scheme-handler/tel": "org.kde.kdeconnect.handler.desktop",
+    # Multimedia
+    "image/jpeg": "org.kde.gwenview.desktop",
+    "image/png": "org.kde.gwenview.desktop",
+    "image/gif": "org.kde.gwenview.desktop",
+    "image/webp": "org.kde.gwenview.desktop",
+    "image/bmp": "org.kde.gwenview.desktop",
+    "image/svg+xml": "org.kde.gwenview.desktop",
+    "image/tiff": "org.kde.gwenview.desktop",
+    "image/avif": "org.kde.gwenview.desktop",
+    "audio/mpeg": "org.videolan.VLC.desktop",
+    "audio/mp3": "org.videolan.VLC.desktop",
+    "audio/mp4": "org.videolan.VLC.desktop",
+    "audio/flac": "org.videolan.VLC.desktop",
+    "audio/ogg": "org.videolan.VLC.desktop",
+    "audio/x-wav": "org.videolan.VLC.desktop",
+    "audio/wav": "org.videolan.VLC.desktop",
+    "audio/aac": "org.videolan.VLC.desktop",
+    "audio/x-vorbis+ogg": "org.videolan.VLC.desktop",
+    "audio/x-opus+ogg": "org.videolan.VLC.desktop",
+    "video/mp4": "org.videolan.VLC.desktop",
+    "video/x-matroska": "org.videolan.VLC.desktop",
+    "video/webm": "org.videolan.VLC.desktop",
+    "video/quicktime": "org.videolan.VLC.desktop",
+    "video/x-msvideo": "org.videolan.VLC.desktop",
+    "video/mpeg": "org.videolan.VLC.desktop",
+    "video/ogg": "org.videolan.VLC.desktop",
+    "video/x-flv": "org.videolan.VLC.desktop",
+    # Documents
+    "text/plain": "org.kde.kwrite.desktop",
+    "application/pdf": "com.google.Chrome.desktop",
+    # Utilities
+    "inode/directory": "org.kde.dolphin.desktop",
+    "application/zip": "org.kde.ark.desktop",
+    "application/x-tar": "org.kde.ark.desktop",
+    "application/x-7z-compressed": "org.kde.ark.desktop",
+    "application/x-compressed-tar": "org.kde.ark.desktop",
+    "application/x-bzip-compressed-tar": "org.kde.ark.desktop",
+    "application/x-xz-compressed-tar": "org.kde.ark.desktop",
+    "application/x-rar": "org.kde.ark.desktop",
+    "x-scheme-handler/geo": "openstreetmap-geo-handler.desktop",
+    "x-scheme-handler/antigravity": "antigravity.desktop",
+}
+
+config = configparser.RawConfigParser()
+if os.path.exists(path):
+    config.read(path)
+
+for section in ("Default Applications", "Added Associations"):
+    if not config.has_section(section):
+        config.add_section(section)
+    for mime, desktop in defaults.items():
+        val = desktop if section == "Default Applications" else f"{desktop};"
+        config.set(section, mime, val)
+
+with open(path, "w") as f:
+    config.write(f, space_around_delimiters=False)
+PY
+    if command -v kwriteconfig6 &>/dev/null; then
+        kwriteconfig6 --file kdeglobals --group General --key TerminalApplication org.kde.konsole.desktop
+        kwriteconfig6 --file kdeglobals --group General --key TerminalService org.kde.konsole.desktop
+    fi
+    success "Default applications configured"
+
+    success "Directories, input, and defaults configured"
 }
 
 
