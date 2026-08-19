@@ -615,18 +615,38 @@ with open(path, "r") as f:
 
 new_lines = []
 in_desktop_containment = False
+in_tray_general = False
 
 for line in lines:
     stripped = line.strip()
-    if stripped.startswith("[Containments][") and stripped.endswith("]"):
-        parts = stripped[1:-1].split("][")
-        in_desktop_containment = len(parts) == 2
+    if stripped.startswith("[") and stripped.endswith("]"):
+        if stripped.startswith("[Containments]["):
+            parts = stripped[1:-1].split("][")
+            in_desktop_containment = len(parts) == 2
+        else:
+            in_desktop_containment = False
+        
+        in_tray_general = stripped.endswith("[General]") and "Applets" in stripped
         new_lines.append(line)
         continue
     
     if in_desktop_containment and stripped == "plugin=org.kde.plasma.folder":
         new_lines.append("plugin=org.kde.desktopcontainment\n")
         continue
+
+    if in_tray_general:
+        if stripped.startswith("shownItems="):
+            new_lines.append("shownItems=Insync\n")
+            continue
+        if stripped.startswith("hiddenItems="):
+            new_lines.append("hiddenItems=Antigravity_status_icon_1,Xwayland Video Bridge,org.kde.plasma.cameraindicator,org.kde.kdeconnect,org.kde.plasma.clipboard,org.kde.plasma.notifications,chrome_status_icon_1@cursor,org.kde.plasma.bluetooth\n")
+            continue
+        if stripped.startswith("disabledStatusNotifiers="):
+            new_lines.append("disabledStatusNotifiers=org.kde.yakuake\n")
+            continue
+        if stripped.startswith("extraItems="):
+            new_lines.append("extraItems=org.kde.plasma.vault,org.kde.plasma.battery,org.kde.plasma.devicenotifier,org.kde.plasma.keyboardindicator,org.kde.plasma.networkmanagement,org.kde.plasma.printmanager,org.kde.plasma.volume,org.kde.plasma.bluetooth,org.kde.plasma.cameraindicator,org.kde.kdeconnect,org.kde.plasma.clipboard,org.kde.plasma.notifications\n")
+            continue
 
     new_lines.append(line)
 
@@ -655,13 +675,6 @@ for (var i = 0; i < p.length; i++) {
         } else if (ws[j].type === "org.kde.plasma.icontasks") {
             ws[j].currentConfigGroup = ["General"];
             ws[j].writeConfig("launchers", "applications:org.kde.dolphin.desktop,applications:google-chrome.desktop");
-            ws[j].reloadConfig();
-        } else if (ws[j].type === "org.kde.plasma.systemtray") {
-            ws[j].currentConfigGroup = ["General"];
-            ws[j].writeConfig("shownItems", "Insync");
-            ws[j].writeConfig("hiddenItems", "Antigravity_status_icon_1,Xwayland Video Bridge,org.kde.plasma.cameraindicator,org.kde.kdeconnect,org.kde.plasma.clipboard,org.kde.plasma.notifications,chrome_status_icon_1@cursor,org.kde.plasma.bluetooth");
-            ws[j].writeConfig("disabledStatusNotifiers", "org.kde.yakuake");
-            ws[j].writeConfig("extraItems", "org.kde.plasma.vault,org.kde.plasma.battery,org.kde.plasma.devicenotifier,org.kde.plasma.keyboardindicator,org.kde.plasma.networkmanagement,org.kde.plasma.printmanager,org.kde.plasma.volume,org.kde.plasma.bluetooth,org.kde.plasma.cameraindicator,org.kde.kdeconnect,org.kde.plasma.clipboard,org.kde.plasma.notifications");
             ws[j].reloadConfig();
         }
     }
