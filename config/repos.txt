@@ -2,8 +2,19 @@
 # clone-repos.sh expands each to: git clone git@github.com:ORG/REPO ~/Repos/REPO
 # Add more repos below and re-run: scripts/clone-repos.sh
 
-bcgov/quickstart-openshift
+bcgov/action-gh-project-automator
+bcgov/action-repo-reporter
 bcgov/actions
 bcgov/actions-openshift
+bcgov/agent-skills
+bcgov/nr-fom
+bcgov/nr-results-exam
+bcgov/nr-seedtransfer-map
+bcgov/pubcode
+bcgov/quickstart-openshift
+bcgov-c/nr-mof-db
+derekroberts/brain
+derekroberts/derekroberts
 derekroberts/dotfiles
+miniontech/image-cull
 miniontech/vexilon
