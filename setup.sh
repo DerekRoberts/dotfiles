@@ -528,14 +528,20 @@ PY
     fi
     success "Default applications configured"
 
-    # Configure KDE Plasma Panel layout (Left edge, Dodge Windows visibility, 72px thickness)
-    info "Configuring KDE Plasma panel (Left edge, Dodge Windows, 72px thickness)..."
+    # Configure KDE Plasma Panel layout (Left edge, Dodge Windows visibility, 72px thickness, remove Peek at Desktop)
+    info "Configuring KDE Plasma panel (Left edge, Dodge Windows, 72px thickness, no desktop peek)..."
     local PANEL_SCRIPT='
 var p = panels();
 for (var i = 0; i < p.length; i++) {
     p[i].location = "left";
     p[i].hiding = "dodgewindows";
     p[i].height = 72;
+    var ws = p[i].widgets();
+    for (var j = 0; j < ws.length; j++) {
+        if (ws[j].type === "org.kde.plasma.showdesktop" || ws[j].type === "org.kde.plasma.peekatdesktop") {
+            ws[j].remove();
+        }
+    }
 }
 '
     if command -v qdbus-qt6 &>/dev/null; then
