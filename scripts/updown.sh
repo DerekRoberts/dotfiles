@@ -150,9 +150,22 @@ if [[ -x "$INSYNC_BIN" ]] || [[ "$INSTALL_INSYNC" -eq 1 ]]; then
                         rm -rf "${INSYNC_LIB_DIR}.old"
                         chmod +x "$INSYNC_LIB_DIR/insync"
                         
+                        # Extract application and status icons from RPM
+                        local extracted_icons
+                        extracted_icons="$(find "$tmp_dir" -type d -path "*/usr/share/icons" | head -n 1 || true)"
+                        if [[ -n "$extracted_icons" && -d "$extracted_icons" ]]; then
+                            mkdir -p "${HOME}/.local/share/icons"
+                            cp -rf "$extracted_icons/"* "${HOME}/.local/share/icons/"
+                            if command -v gtk-update-icon-cache &>/dev/null; then
+                                gtk-update-icon-cache -f -q "${HOME}/.local/share/icons/hicolor" 2>/dev/null || true
+                            fi
+                        fi
+
                         cat > "$INSYNC_BIN" << 'EOF'
 #!/bin/bash
-LC_TIME=C exec "$HOME/.local/lib/insync/insync" "$@"
+export LC_TIME=C
+export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
+exec "$HOME/.local/lib/insync/insync" "$@"
 EOF
                         chmod +x "$INSYNC_BIN"
                         mkdir -p "$(dirname "$STAMP_FILE")"

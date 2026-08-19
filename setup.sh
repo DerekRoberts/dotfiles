@@ -150,7 +150,14 @@ install_insync() {
     local APPS_DIR="$HOME/.local/share/applications"
 
     if [[ -x "$INSYNC_BIN" ]]; then
-        success "Insync already installed"
+        cat > "$INSYNC_BIN" << 'EOF'
+#!/bin/bash
+export LC_TIME=C
+export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
+exec "$HOME/.local/lib/insync/insync" "$@"
+EOF
+        chmod +x "$INSYNC_BIN"
+        success "Insync already installed (wrapper updated)"
         local AUTOSTART_DIR="$HOME/.config/autostart"
         mkdir -p "$AUTOSTART_DIR"
         if [[ -f "$APPS_DIR/insync.desktop" ]]; then
