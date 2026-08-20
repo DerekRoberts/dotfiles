@@ -86,7 +86,6 @@ alias pu='podman compose up'
 alias prm='podman rm -afv'
 alias pprune='podman rm -fv $(podman ps -aq) || echo "Nothing to remove"; podman system prune -f'
 alias docker='podman'
-alias docker-compose='podman-compose'
 
 # Functions
 ga() {
