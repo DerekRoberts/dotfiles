@@ -386,7 +386,7 @@ EOF
             local non_meta_files
             non_meta_files="$(find "$HOME/$dir" -mindepth 1 -maxdepth 1 ! -name ".directory" 2>/dev/null)"
             if [[ -z "$non_meta_files" ]]; then
-                rm -rf "$HOME/$dir"
+                rm -rf "${HOME:?}/${dir:?}"
             fi
         fi
     done
