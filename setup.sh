@@ -643,8 +643,9 @@ PY
     if command -v kwriteconfig6 &>/dev/null; then
         kwriteconfig6 --file kdeglobals --group General --key TerminalApplication org.kde.konsole.desktop
         kwriteconfig6 --file kdeglobals --group General --key TerminalService org.kde.konsole.desktop
+        kwriteconfig6 --file kdeglobals --group KDE --key DndBehavior MoveIfSameDevice
     fi
-    success "Default applications configured"
+    success "Default applications and drag-and-drop behavior configured"
 
     # Configure KDE Plasma Desktops (Layout=Desktop, DarkestHour wallpaper), Panel layout & System Tray visibility
     info "Configuring KDE Plasma desktops (DarkestHour wallpaper), panel & task manager (Dolphin, Chrome)..."
