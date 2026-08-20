@@ -812,7 +812,7 @@ for (var i = 0; i < p.length; i++) {
             ws[j].remove();
         } else if (ws[j].type === "org.kde.plasma.icontasks") {
             ws[j].currentConfigGroup = ["General"];
-            ws[j].writeConfig("launchers", "applications:org.kde.dolphin.desktop,applications:google-chrome.desktop");
+            ws[j].writeConfig("launchers", "applications:org.kde.dolphin.desktop,applications:com.google.Chrome.desktop");
             ws[j].reloadConfig();
         }
     }
