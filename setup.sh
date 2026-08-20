@@ -391,12 +391,13 @@ EOF
         fi
     done
 
-    # Remove stale desktop icon metadata from Downloads if present
-    if [[ -f "$HOME/Downloads/.directory" ]]; then
-        if grep -q "Icon=user-desktop" "$HOME/Downloads/.directory"; then
-            rm -f "$HOME/Downloads/.directory"
-            info "Removed stale desktop icon override from Downloads"
-        fi
+    # Ensure Downloads explicitly defines the folder-downloads icon metadata
+    if [[ -d "$HOME/Downloads" ]]; then
+        cat > "$HOME/Downloads/.directory" << 'EOF'
+[Desktop Entry]
+Icon=folder-downloads
+Type=Directory
+EOF
     fi
     
     info "Overwriting Dolphin sidebar places with clean template..."
