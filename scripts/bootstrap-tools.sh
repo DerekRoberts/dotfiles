@@ -43,46 +43,6 @@ esac
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
-# Resolve latest GitHub release tag via API (with redirect fallback)
-resolve_latest_tag() {
-    local repo="$1"
-    local tag=""
-
-    tag="$(curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" 2>/dev/null \
-        | grep -o '"tag_name": *"[^"]*"' | head -n 1 | cut -d'"' -f4 || true)"
-
-    if [[ -z "${tag}" ]]; then
-        tag="$(curl -fsSI "https://github.com/${repo}/releases/latest" 2>/dev/null \
-            | grep -i "^location:" | head -n 1 \
-            | sed -E 's/.*\/tag\/([^ \r\n]+).*/\1/' | tr -d '\r' || true)"
-    fi
-
-    if [[ -z "${tag}" ]]; then
-        echo "❌ Unable to resolve latest release tag for ${repo}" >&2
-        return 1
-    fi
-
-    echo "${tag}"
-}
-
-# Atomic binary download via mktemp staging
-download_binary() {
-    local url="$1"
-    local dest="$2"
-    local tmp_file
-    tmp_file="$(mktemp "${BIN_DIR}/.tmp.XXXXXX")"
-    trap 'rm -f "${tmp_file}"' RETURN EXIT
-
-    if ! curl -fsSL "${url}" -o "${tmp_file}"; then
-        echo "❌ Download failed for ${url}" >&2
-        return 1
-    fi
-
-    chmod +x "${tmp_file}"
-    mv "${tmp_file}" "${dest}"
-    trap - RETURN EXIT
-}
-
 # Download and extract tarball, atomically placing a single binary
 download_tarball_binary() {
     local url="$1"
@@ -109,49 +69,6 @@ download_tarball_binary() {
     trap - RETURN EXIT
 }
 
-# Safely query version string from a managed binary
-get_tool_version() {
-    local cmd="$1"
-    local bin_path="${BIN_DIR}/${cmd}"
-
-    if [[ ! -x "${bin_path}" ]]; then
-        echo "none"
-        return
-    fi
-
-    case "${cmd}" in
-        oc) "${bin_path}" version --client 2>&1 | head -n 1 ;;
-        *)  echo "unknown" ;;
-    esac
-}
-
-# Check if tool needs install or update
-should_install_tool() {
-    local cmd="$1"
-    local target_ver="$2"
-
-    if [[ "${UPDATE}" == "1" ]]; then
-        return 0  # force update
-    fi
-
-    local bin_path="${BIN_DIR}/${cmd}"
-    if [[ ! -x "${bin_path}" ]]; then
-        return 0  # binary missing
-    fi
-
-    local current_ver target_clean current_clean
-    current_ver="$(get_tool_version "${cmd}")"
-    target_clean="${target_ver#v}"
-    current_clean="${current_ver#v}"
-
-    if [[ "${current_clean}" != *"${target_clean}"* ]]; then
-        echo " -> Version mismatch for ${cmd}: installed (${current_ver:-unknown}) != target (${target_ver})"
-        return 0
-    fi
-
-    return 1  # up to date
-}
-
 # ── Tool installers ──────────────────────────────────────────────────────────
 
 # oc (OpenShift CLI)
@@ -160,7 +77,6 @@ install_oc() {
 
     if [[ "${TARGET_OC_VER}" == "latest" ]]; then
         TARGET_OC_VER=$(curl -fsSL "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/release.txt" | grep "Version:" | awk '{print $2}')
-        # Prepend v to match expected get_tool_version output if necessary, wait, get_tool_version oc returns "4.14..." without v usually.
     fi
 
     # oc version --client returns e.g. "Client Version: 4.14.0"

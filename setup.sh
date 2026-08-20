@@ -38,9 +38,6 @@ success() { echo "  ✓ $*"; }
 warn()    { echo "  ⚠ $*" >&2; }
 section() { echo ""; echo "=== $* ==="; }
 
-# ── Pure-Bash TUI checkbox menu ───────────────────────────────────────────────
-# Arrow keys navigate, Space toggles, Enter confirms.
-# Reads from /dev/tty so it works when stdin is piped.
 # ── Installer functions ───────────────────────────────────────────────────────
 # Each function is idempotent: checks for presence before acting.
 
