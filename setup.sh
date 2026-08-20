@@ -366,15 +366,15 @@ configure_user_dirs() {
     
     mkdir -p "$HOME/.config"
     cat > "$CONFIG_FILE" << EOF
-XDG_DESKTOP_DIR="$HOME/Downloads/"
-XDG_DOCUMENTS_DIR="$HOME/Documents/"
-XDG_DOWNLOAD_DIR="$HOME/Downloads/"
-XDG_MUSIC_DIR="$HOME/Documents/"
-XDG_PICTURES_DIR="$HOME/Documents/"
-XDG_PROJECTS_DIR="$HOME/Documents/"
-XDG_PUBLICSHARE_DIR="$HOME/Documents/"
-XDG_TEMPLATES_DIR="$HOME/Documents/"
-XDG_VIDEOS_DIR="$HOME/Documents/"
+XDG_DESKTOP_DIR="\$HOME"
+XDG_DOCUMENTS_DIR="\$HOME/Documents"
+XDG_DOWNLOAD_DIR="\$HOME/Downloads"
+XDG_MUSIC_DIR="\$HOME/Documents"
+XDG_PICTURES_DIR="\$HOME/Documents"
+XDG_PROJECTS_DIR="\$HOME/Documents"
+XDG_PUBLICSHARE_DIR="\$HOME/Documents"
+XDG_TEMPLATES_DIR="\$HOME/Documents"
+XDG_VIDEOS_DIR="\$HOME/Documents"
 EOF
 
     # Prevent xdg-user-dirs-update from recreating the default folders
