@@ -3,7 +3,7 @@
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/DerekRoberts/dotfiles/main/setup.sh | bash
 #   setup.sh --dev      # Full dev stack, non-interactive
-#   setup.sh --desktop  # Desktop essentials (Chrome + VLC + Insync + Actual Budget minimal)
+#   setup.sh --desktop  # Desktop essentials (Chrome + VLC + Insync minimal)
 
 set -euo pipefail
 
@@ -207,52 +207,6 @@ DESKTOP
 
     success "Insync installed to $INSYNC_BIN and added to autostart"
     info "Run: insync start"
-}
-
-install_actualbudget() {
-    section "Actual Budget"
-    if flatpak list --user 2>/dev/null | grep -q "com.actualbudget.actual"; then
-        success "Actual Budget already installed (Flatpak)"
-    else
-        ensure_flathub
-        info "Installing Actual Budget via Flatpak..."
-        flatpak install --user -y flathub com.actualbudget.actual
-        success "Actual Budget installed"
-    fi
-
-    info "Configuring Actual Budget permissions and document directory..."
-    flatpak override --user --filesystem=xdg-documents com.actualbudget.actual
-    flatpak override --user --unset-env=XDG_DATA_HOME com.actualbudget.actual 2>/dev/null || true
-
-    # Pre-configure Actual Budget to point to our synced Documents folder
-    local ACTUAL_CONFIG_DIR="$HOME/.var/app/com.actualbudget.actual/config/Actual"
-    local GLOBAL_STORE="$ACTUAL_CONFIG_DIR/global-store.json"
-    local BUDGET_DOCS_DIR="$HOME/Documents/2-Fiancial/Archived/ActualBudget"
-
-    mkdir -p "$ACTUAL_CONFIG_DIR"
-    if [[ -f "$GLOBAL_STORE" ]]; then
-        python3 - "$GLOBAL_STORE" "$BUDGET_DOCS_DIR" << 'PY'
-import sys, json
-
-store_path, doc_dir = sys.argv[1], sys.argv[2]
-try:
-    with open(store_path, "r") as f:
-        data = json.load(f)
-except Exception:
-    data = {}
-
-data["document-dir"] = doc_dir
-data["lastBudget"] = "Primary-Budget-1ab3012"
-
-with open(store_path, "w") as f:
-    json.dump(data, f)
-PY
-    else
-        cat > "$GLOBAL_STORE" << EOF
-{"document-dir":"$BUDGET_DOCS_DIR","lastBudget":"Primary-Budget-1ab3012"}
-EOF
-    fi
-    success "Actual Budget configured → $BUDGET_DOCS_DIR"
 }
 
 install_cursor() {
@@ -1058,7 +1012,6 @@ preset_desktop() {
     install_chrome
     install_vlc
     install_insync
-    install_actualbudget
 }
 
 preset_dev() {
@@ -1067,7 +1020,6 @@ preset_dev() {
     install_vlc
     install_yakuake
     install_insync
-    install_actualbudget
     install_antigravity
     install_agy
     install_cursor
@@ -1088,8 +1040,8 @@ Default (no flags): full dev stack, same as --dev.
 
 Options:
   --dev       Full developer stack: Node LTS, CLI tools, Chrome, VLC, Yakuake, Insync,
-              Actual Budget, Antigravity hub, agy CLI, Cursor, oc, Ponytail, and repositories
-  --desktop   Minimal desktop essentials: Chrome, VLC, Insync, and Actual Budget
+              Antigravity hub, agy CLI, Cursor, oc, Ponytail, and repositories
+  --desktop   Minimal desktop essentials: Chrome, VLC, and Insync
   --help, -h  Show this help
 
 Environment variables:
