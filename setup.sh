@@ -366,7 +366,7 @@ configure_user_dirs() {
     
     mkdir -p "$HOME/.config"
     cat > "$CONFIG_FILE" << EOF
-XDG_DESKTOP_DIR="\$HOME"
+XDG_DESKTOP_DIR="\$HOME/Downloads"
 XDG_DOCUMENTS_DIR="\$HOME/Documents"
 XDG_DOWNLOAD_DIR="\$HOME/Downloads"
 XDG_MUSIC_DIR="\$HOME/Documents"
