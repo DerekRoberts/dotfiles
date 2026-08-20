@@ -1127,6 +1127,45 @@ install_native_tools() {
         fi
         rm -rf "$tmp_dir"
     fi
+
+    # actionlint (GitHub Actions workflow linter)
+    if ! command -v actionlint &>/dev/null; then
+        info "Downloading actionlint..."
+        local tmp_dir; tmp_dir="$(mktemp -d)"
+        local al_latest; al_latest=$(curl -sI https://github.com/rhysd/actionlint/releases/latest | grep -i "^location:" | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+" || echo "v1.7.12")
+        local al_ver="${al_latest#v}"
+        local al_url="https://github.com/rhysd/actionlint/releases/download/${al_latest}/actionlint_${al_ver}_linux_amd64.tar.gz"
+        if curl -fsSL "$al_url" | tar -xz -C "$tmp_dir"; then
+            mv "$tmp_dir/actionlint" "$BIN_DIR/actionlint"
+            chmod +x "$BIN_DIR/actionlint"
+            if command -v restorecon &>/dev/null; then
+                restorecon "$BIN_DIR/actionlint" 2>/dev/null || true
+            fi
+            success "actionlint installed"
+        else
+            warn "Failed to download actionlint ${al_latest}"
+        fi
+        rm -rf "$tmp_dir"
+    fi
+
+    # uv (Fast Python toolchain & package manager)
+    if ! command -v uv &>/dev/null; then
+        info "Downloading uv..."
+        local tmp_dir; tmp_dir="$(mktemp -d)"
+        local uv_url="https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-unknown-linux-gnu.tar.gz"
+        if curl -fsSL "$uv_url" | tar -xz -C "$tmp_dir"; then
+            mv "$tmp_dir/uv-x86_64-unknown-linux-gnu/uv" "$BIN_DIR/uv"
+            mv "$tmp_dir/uv-x86_64-unknown-linux-gnu/uvx" "$BIN_DIR/uvx"
+            chmod +x "$BIN_DIR/uv" "$BIN_DIR/uvx"
+            if command -v restorecon &>/dev/null; then
+                restorecon "$BIN_DIR/uv" "$BIN_DIR/uvx" 2>/dev/null || true
+            fi
+            success "uv and uvx installed"
+        else
+            warn "Failed to download uv"
+        fi
+        rm -rf "$tmp_dir"
+    fi
     if [[ ! -s "$HOME/.nvm/nvm.sh" ]]; then
         info "Installing nvm..."
         curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | PROFILE=/dev/null bash
