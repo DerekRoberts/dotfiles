@@ -605,12 +605,14 @@ PY
     local WAS_KACTIVITY_ACTIVE=false
     if command -v systemctl &>/dev/null; then
         if systemctl --user is-active plasma-plasmashell &>/dev/null; then
-            WAS_PLASMASHELL_ACTIVE=true
-            systemctl --user stop plasma-plasmashell >/dev/null 2>&1 || true
+            if systemctl --user stop plasma-plasmashell >/dev/null 2>&1; then
+                WAS_PLASMASHELL_ACTIVE=true
+            fi
         fi
         if systemctl --user is-active plasma-kactivitymanagerd &>/dev/null; then
-            WAS_KACTIVITY_ACTIVE=true
-            systemctl --user stop plasma-kactivitymanagerd >/dev/null 2>&1 || true
+            if systemctl --user stop plasma-kactivitymanagerd >/dev/null 2>&1; then
+                WAS_KACTIVITY_ACTIVE=true
+            fi
         fi
     fi
 
@@ -757,6 +759,7 @@ for m in re.finditer(r"^\[Containments\]\[\d+\]\s*$", content, re.M):
 fav_ordering = "antigravity.desktop,cursor.desktop,org.kde.discover.desktop,org.kde.dolphin.desktop,google-chrome.desktop,systemsettings.desktop"
 statsrc_path = os.path.expanduser("~/.config/kactivitymanagerd-statsrc")
 stats_config = configparser.RawConfigParser()
+stats_config.optionxform = str
 if os.path.exists(statsrc_path):
     stats_config.read(statsrc_path)
 
@@ -776,11 +779,15 @@ for applet_id in kickoff_applet_ids:
         stats_config.set(sec_act, "ordering", fav_ordering)
 
 os.makedirs(os.path.dirname(statsrc_path), exist_ok=True)
-with open(statsrc_path, "w") as f:
+tmp_statsrc = statsrc_path + ".tmp"
+with open(tmp_statsrc, "w") as f:
     stats_config.write(f, space_around_delimiters=False)
+os.replace(tmp_statsrc, statsrc_path)
 
-with open(path, "w") as f:
+tmp_path = path + ".tmp"
+with open(tmp_path, "w") as f:
     f.write(content)
+os.replace(tmp_path, path)
 PY
     fi
 
