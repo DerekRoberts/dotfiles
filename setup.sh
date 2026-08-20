@@ -598,18 +598,25 @@ PY
     fi
     success "Default applications and drag-and-drop behavior configured"
 
-    # Configure KDE Plasma Desktops (Layout=Desktop, DarkestHour wallpaper), Panel layout & System Tray visibility
-    info "Configuring KDE Plasma desktops (DarkestHour wallpaper), panel & task manager (Dolphin, Chrome)..."
+    # Configure KDE Plasma Desktops (Layout=Desktop, DarkestHour wallpaper), Panel layout, System Tray & Kickoff favorites
+    info "Configuring KDE Plasma desktops (DarkestHour wallpaper), panel, system tray & menu favorites..."
     local PLASMA_CONFIG="$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
     local WAS_PLASMASHELL_ACTIVE=false
-    if command -v systemctl &>/dev/null && systemctl --user is-active plasma-plasmashell &>/dev/null; then
-        WAS_PLASMASHELL_ACTIVE=true
-        systemctl --user stop plasma-plasmashell >/dev/null 2>&1 || true
+    local WAS_KACTIVITY_ACTIVE=false
+    if command -v systemctl &>/dev/null; then
+        if systemctl --user is-active plasma-plasmashell &>/dev/null; then
+            WAS_PLASMASHELL_ACTIVE=true
+            systemctl --user stop plasma-plasmashell >/dev/null 2>&1 || true
+        fi
+        if systemctl --user is-active plasma-kactivitymanagerd &>/dev/null; then
+            WAS_KACTIVITY_ACTIVE=true
+            systemctl --user stop plasma-kactivitymanagerd >/dev/null 2>&1 || true
+        fi
     fi
 
     if [[ -f "$PLASMA_CONFIG" ]]; then
         python3 - "$PLASMA_CONFIG" << 'PY'
-import sys, os, re
+import sys, os, re, configparser
 
 path = sys.argv[1]
 if not os.path.exists(path):
@@ -730,9 +737,55 @@ if tray_hdr:
         gen_block = f"\n{gen_hdr}\n" + "\n".join(f"{k}={v}" for k, v in gen_prefs.items()) + "\n"
         content += gen_block
 
+# 3. Kickoff Application Menu favorites
+kickoff_applet_ids = []
+for m in re.finditer(r"^(\[Containments\]\[\d+\]\[Applets\]\[(\d+)\])\s*$", content, re.M):
+    applet_id = m.group(2)
+    body_end = content.find("\n[", m.end())
+    body = content[m.end():body_end if body_end != -1 else len(content)]
+    if "plugin=org.kde.plasma.kickoff" in body:
+        kickoff_applet_ids.append(applet_id)
+
+activity_ids = []
+for m in re.finditer(r"^\[Containments\]\[\d+\]\s*$", content, re.M):
+    body_end = content.find("\n[", m.end())
+    body = content[m.end():body_end if body_end != -1 else len(content)]
+    act_m = re.search(r"^activityId=([a-f0-9\-]+)", body, re.M)
+    if act_m and act_m.group(1) not in activity_ids:
+        activity_ids.append(act_m.group(1))
+
+fav_ordering = "antigravity.desktop,cursor.desktop,org.kde.discover.desktop,org.kde.dolphin.desktop,google-chrome.desktop,systemsettings.desktop"
+statsrc_path = os.path.expanduser("~/.config/kactivitymanagerd-statsrc")
+stats_config = configparser.RawConfigParser()
+if os.path.exists(statsrc_path):
+    stats_config.read(statsrc_path)
+
+if not kickoff_applet_ids:
+    kickoff_applet_ids = ["3"]
+
+for applet_id in kickoff_applet_ids:
+    sec_global = f"Favorites-org.kde.plasma.kickoff.favorites.instance-{applet_id}-global"
+    if not stats_config.has_section(sec_global):
+        stats_config.add_section(sec_global)
+    stats_config.set(sec_global, "ordering", fav_ordering)
+
+    for act_id in activity_ids:
+        sec_act = f"Favorites-org.kde.plasma.kickoff.favorites.instance-{applet_id}-{act_id}"
+        if not stats_config.has_section(sec_act):
+            stats_config.add_section(sec_act)
+        stats_config.set(sec_act, "ordering", fav_ordering)
+
+os.makedirs(os.path.dirname(statsrc_path), exist_ok=True)
+with open(statsrc_path, "w") as f:
+    stats_config.write(f, space_around_delimiters=False)
+
 with open(path, "w") as f:
     f.write(content)
 PY
+    fi
+
+    if [[ "$WAS_KACTIVITY_ACTIVE" == true ]]; then
+        systemctl --user start plasma-kactivitymanagerd >/dev/null 2>&1 || true
     fi
 
     if [[ "$WAS_PLASMASHELL_ACTIVE" == true ]]; then
