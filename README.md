@@ -7,7 +7,7 @@ Declarative, single-command workstation setup and configuration for **Fedora Kin
 - **Zero OS Layering**: Keeps the base OSTree image pristine; all userland tools run in userspace (`~/.local/bin`, `~/.nvm`, `~/.local/share/flatpak`).
 - **Profiles**:
   - `--dev` (default): Full developer workstation (Node LTS via NVM, `gh`, `jq`, `podman-compose`, `oc`, Cursor, Antigravity, Ponytail, repositories).
-  - `--desktop`: Minimal desktop essentials (Google Chrome, VLC, Insync, and Actual Budget).
+  - `--desktop`: Minimal desktop essentials (Google Chrome, VLC, and Insync).
 - **Automated Updates**: Systemd user service (`dotfiles-update.service`) running `updown` at login with a 23-hour idempotency guard.
 - **Unified AI Instructions**: Self-contained guardrails and instructions in `config/instructions.md` deployed to Cursor and Antigravity.
 
@@ -32,7 +32,7 @@ source ~/.bashrc
 ```bash
 ./setup.sh              # Full developer workstation (default)
 ./setup.sh --dev        # Explicit dev stack preset
-./setup.sh --desktop    # Minimal desktop essentials (Chrome + VLC + Insync + Actual Budget)
+./setup.sh --desktop    # Minimal desktop essentials (Chrome + VLC + Insync)
 ./setup.sh --help       # Show usage and available environment variables
 ```
 
@@ -41,7 +41,6 @@ source ~/.bashrc
 | Chrome (Flatpak) | ✅ | ✅ |
 | VLC Media Player (Flatpak) | ✅ | ✅ |
 | Insync (rpm2cpio extraction) | ✅ | ✅ |
-| Actual Budget (Flatpak + config) | ✅ | ✅ |
 | Yakuake (Flatpak + config) | ❌ | ✅ |
 | Node.js LTS (via NVM) | ❌ | ✅ |
 | CLI Tools (`gh`, `jq`, `podman-compose`, `oc`) | ❌ | ✅ |
