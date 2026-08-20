@@ -391,13 +391,56 @@ EOF
         fi
     done
 
-    # Ensure Downloads explicitly defines the folder-downloads icon metadata
+    # Ensure Downloads explicitly defines the folder-downloads icon metadata without discarding existing view settings
     if [[ -d "$HOME/Downloads" ]]; then
-        cat > "$HOME/Downloads/.directory" << 'EOF'
-[Desktop Entry]
-Icon=folder-downloads
-Type=Directory
-EOF
+        python3 - "$HOME/Downloads/.directory" << 'PY'
+import sys, os, tempfile
+
+path = sys.argv[1]
+dir_path = os.path.dirname(path)
+
+lines = []
+if os.path.exists(path):
+    with open(path, "r", encoding="utf-8", errors="ignore") as f:
+        lines = f.readlines()
+
+new_lines = []
+in_desktop_entry = False
+has_desktop_entry = False
+icon_set = False
+
+for line in lines:
+    stripped = line.strip()
+    if stripped.startswith("[") and stripped.endswith("]"):
+        if in_desktop_entry and not icon_set:
+            new_lines.append("Icon=folder-downloads\n")
+            icon_set = True
+        in_desktop_entry = (stripped == "[Desktop Entry]")
+        if in_desktop_entry:
+            has_desktop_entry = True
+        new_lines.append(line)
+        continue
+    
+    if in_desktop_entry:
+        if stripped.startswith("Icon="):
+            new_lines.append("Icon=folder-downloads\n")
+            icon_set = True
+            continue
+    new_lines.append(line)
+
+if not has_desktop_entry:
+    if new_lines and not new_lines[-1].endswith("\n"):
+        new_lines[-1] += "\n"
+    new_lines.append("[Desktop Entry]\nIcon=folder-downloads\nType=Directory\n")
+elif in_desktop_entry and not icon_set:
+    new_lines.append("Icon=folder-downloads\n")
+
+tmp_fd, tmp_path = tempfile.mkstemp(prefix=".directory.tmp.", dir=dir_path)
+with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+    f.writelines(new_lines)
+os.chmod(tmp_path, 0o644)
+os.replace(tmp_path, path)
+PY
     fi
     
     info "Overwriting Dolphin sidebar places with clean template..."
