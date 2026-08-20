@@ -78,7 +78,7 @@ if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
         info "System Flatpak update skipped or completed"
     fi
 
-    # ── 4. Antigravity Hub ───────────────────────────────────────────────────────
+    # ── 3. Antigravity Hub ───────────────────────────────────────────────────────
 
     ANTI_UPDATER=""
     if command -v update-antigravity &>/dev/null; then
@@ -96,7 +96,7 @@ if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
     fi
 
 
-    # ── 5. agy CLI ───────────────────────────────────────────────────────────────
+    # ── 4. agy CLI ───────────────────────────────────────────────────────────────
     # agy has its own update mechanism: agy update (or re-running the install script)
 
     AGY_BIN="${HOME}/.local/bin/agy"
@@ -120,7 +120,7 @@ if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
     fi
 fi
 
-# ── 6. Insync ────────────────────────────────────────────────────────────────
+# ── 5. Insync ────────────────────────────────────────────────────────────────
 
 INSYNC_BIN="${HOME}/.local/bin/insync"
 INSYNC_LIB_DIR="${HOME}/.local/lib/insync"
@@ -226,7 +226,7 @@ else
 fi
 
 if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
-    # ── 7. Cursor ────────────────────────────────────────────────────────────────
+    # ── 6. Cursor ────────────────────────────────────────────────────────────────
 
     CURSOR_BIN="${HOME}/.local/bin/cursor.AppImage"
     if [[ -x "$CURSOR_BIN" ]]; then
@@ -259,7 +259,7 @@ if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
 fi
 
 
-# ── 8. SELinux context fix ───────────────────────────────────────────────────
+# ── 7. SELinux context fix ───────────────────────────────────────────────────
 # restorecon is always present on Kinoite (part of the base image).
 # Fixes SELinux labels on any extracted binaries in ~/.local/bin.
 
@@ -271,7 +271,7 @@ else
     info "restorecon not available — skipping (not on SELinux system?)"
 fi
 
-# ── 9. Shutdown ──────────────────────────────────────────────────────────────
+# ── 8. Shutdown ──────────────────────────────────────────────────────────────
 
 echo ""
 echo "✅ Maintenance complete."

@@ -61,15 +61,13 @@ export EDITOR=nano
 export PODMAN_COMPOSE_WARNING_LOGS=false
 
 # Aliases - Navigation & General
-alias ..="cd .."
-alias ...="cd ../.."
 alias repos='cd ~/Repos'
 alias ls='ls --color=auto'
 alias ll="ls -alF"
-alias la="ls -A"
-alias l="ls -CF"
 alias grep='grep --color=auto'
-alias c='code'
+
+# Disable unused system aliases
+unalias egrep fgrep l. xzegrep xzfgrep xzgrep zegrep zfgrep zgrep 2>/dev/null || true
 
 # Aliases - Git
 alias gs='git status'
@@ -89,13 +87,6 @@ alias prm='podman rm -afv'
 alias pprune='podman rm -fv $(podman ps -aq) || echo "Nothing to remove"; podman system prune -f'
 alias docker='podman'
 alias docker-compose='podman-compose'
-
-# Aliases - Kubernetes / OpenShift
-alias ocpc='oc delete po --field-selector=status.phase==Succeeded'
-
-# Aliases - Antigravity / AI
-alias a='~/.local/bin/antigravity/antigravity'
-
 
 # Functions
 ga() {
