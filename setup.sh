@@ -406,6 +406,12 @@ EOF
         success "Dolphin sidebar cleaned"
     fi
 
+    # Invalidate and rebuild KDE system configuration cache for XDG user directories
+    if command -v kbuildsycoca6 &>/dev/null; then
+        kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
+        info "KDE sycoca cache rebuilt"
+    fi
+
     # Configure natural/inverted scrolling globally for all current and connected mice/touchpads
     if command -v kwriteconfig6 &>/dev/null || [[ -f "$HOME/.config/kcminputrc" ]]; then
         info "Configuring natural scrolling globally for all devices in KDE..."
