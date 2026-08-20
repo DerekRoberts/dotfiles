@@ -383,9 +383,21 @@ EOF
     info "Cleaning up unused default directories (if empty)..."
     for dir in Desktop Music Pictures Public Templates Videos; do
         if [[ -d "$HOME/$dir" ]]; then
-            rmdir "$HOME/$dir" 2>/dev/null || true
+            local non_meta_files
+            non_meta_files="$(find "$HOME/$dir" -mindepth 1 -maxdepth 1 ! -name ".directory" 2>/dev/null)"
+            if [[ -z "$non_meta_files" ]]; then
+                rm -rf "$HOME/$dir"
+            fi
         fi
     done
+
+    # Remove stale desktop icon metadata from Downloads if present
+    if [[ -f "$HOME/Downloads/.directory" ]]; then
+        if grep -q "Icon=user-desktop" "$HOME/Downloads/.directory"; then
+            rm -f "$HOME/Downloads/.directory"
+            info "Removed stale desktop icon override from Downloads"
+        fi
+    fi
     
     info "Overwriting Dolphin sidebar places with clean template..."
     if [[ -f "$DOTFILES_DIR/config/kde/user-places.xbel" ]]; then
