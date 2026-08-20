@@ -733,7 +733,7 @@ if tray_hdr:
     gen_prefs = {
         "disabledStatusNotifiers": "org.kde.yakuake",
         "shownItems": "Insync,org.kde.plasma.volume,org.kde.plasma.networkmanagement",
-        "hiddenItems": "Antigravity_status_icon_1,Xwayland Video Bridge,org.kde.plasma.cameraindicator,org.kde.kdeconnect,org.kde.plasma.clipboard,org.kde.plasma.notifications,chrome_status_icon_1@cursor,org.kde.plasma.bluetooth,org.kde.plasma.devicenotifier",
+        "hiddenItems": "Antigravity_status_icon_1,Xwayland Video Bridge,org.kde.plasma.cameraindicator,org.kde.kdeconnect,org.kde.plasma.clipboard,org.kde.plasma.notifications,chrome_status_icon_1@cursor,org.kde.plasma.bluetooth,org.kde.plasma.devicenotifier,org.kde.plasma.brightness",
         "extraItems": "org.kde.plasma.battery,org.kde.plasma.devicenotifier,org.kde.plasma.networkmanagement,org.kde.plasma.printmanager,org.kde.plasma.volume,org.kde.plasma.bluetooth,org.kde.plasma.cameraindicator,org.kde.kdeconnect,org.kde.plasma.clipboard,org.kde.plasma.notifications,org.kde.plasma.brightness,org.kde.kscreen"
     }
     
