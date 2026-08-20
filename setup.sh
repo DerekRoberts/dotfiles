@@ -1108,6 +1108,25 @@ install_native_tools() {
         curl -fsSL "https://raw.githubusercontent.com/containers/podman-compose/main/podman_compose.py" -o "$BIN_DIR/podman-compose"
         chmod +x "$BIN_DIR/podman-compose"
     fi
+
+    # ShellCheck CLI
+    if ! command -v shellcheck &>/dev/null; then
+        info "Downloading shellcheck..."
+        local tmp_dir; tmp_dir="$(mktemp -d)"
+        local sc_latest; sc_latest=$(curl -sI https://github.com/koalaman/shellcheck/releases/latest | grep -i "^location:" | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+" || echo "v0.11.0")
+        local sc_url="https://github.com/koalaman/shellcheck/releases/download/${sc_latest}/shellcheck-${sc_latest}.linux.x86_64.tar.gz"
+        if curl -fsSL "$sc_url" | tar -xz -C "$tmp_dir"; then
+            mv "$tmp_dir/shellcheck-${sc_latest}/shellcheck" "$BIN_DIR/shellcheck"
+            chmod +x "$BIN_DIR/shellcheck"
+            if command -v restorecon &>/dev/null; then
+                restorecon "$BIN_DIR/shellcheck" 2>/dev/null || true
+            fi
+            success "shellcheck installed"
+        else
+            warn "Failed to download shellcheck ${sc_latest}"
+        fi
+        rm -rf "$tmp_dir"
+    fi
     if [[ ! -s "$HOME/.nvm/nvm.sh" ]]; then
         info "Installing nvm..."
         curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | PROFILE=/dev/null bash
