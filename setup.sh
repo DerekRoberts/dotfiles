@@ -381,7 +381,7 @@ EOF
     echo "enabled=False" > "$HOME/.config/user-dirs.conf"
 
     info "Cleaning up unused default directories (if empty)..."
-    for dir in Desktop Music Pictures Public Templates Videos; do
+    for dir in Desktop Music Pictures Public Templates Videos "Documents/Screenshots" "Documents/Screencasts"; do
         if [[ -d "$HOME/$dir" ]]; then
             local non_meta_files
             non_meta_files="$(find "$HOME/$dir" -mindepth 1 -maxdepth 1 ! -name ".directory" 2>/dev/null)"
@@ -659,6 +659,43 @@ PY
         kwriteconfig6 --file kdeglobals --group KDE --key DndBehavior MoveIfSameDevice
     fi
     success "Default applications and drag-and-drop behavior configured"
+
+    info "Configuring Spectacle save locations to ~/Downloads..."
+    local SPECTACLE_CONFIG="$HOME/.config/spectaclerc"
+    mkdir -p "$(dirname "$SPECTACLE_CONFIG")"
+    if command -v kwriteconfig6 &>/dev/null; then
+        kwriteconfig6 --file spectaclerc --group ImageSave --key imageSaveLocation "file://$HOME/Downloads"
+        kwriteconfig6 --file spectaclerc --group ImageSave --key lastImageSaveLocation "file://$HOME/Downloads"
+        kwriteconfig6 --file spectaclerc --group ImageSave --key lastImageSaveAsLocation "file://$HOME/Downloads"
+        kwriteconfig6 --file spectaclerc --group VideoSave --key videoSaveLocation "file://$HOME/Downloads"
+        kwriteconfig6 --file spectaclerc --group VideoSave --key lastVideoSaveLocation "file://$HOME/Downloads"
+        kwriteconfig6 --file spectaclerc --group VideoSave --key lastVideoSaveAsLocation "file://$HOME/Downloads"
+    else
+        python3 - "$SPECTACLE_CONFIG" "$HOME/Downloads" << 'PY'
+import sys, os, configparser
+
+path, dl_path = sys.argv[1], sys.argv[2]
+dl_url = f"file://{dl_path}"
+config = configparser.RawConfigParser()
+config.optionxform = str
+if os.path.exists(path):
+    config.read(path)
+
+for sec, keys in [
+    ("ImageSave", ["imageSaveLocation", "lastImageSaveLocation", "lastImageSaveAsLocation"]),
+    ("VideoSave", ["videoSaveLocation", "lastVideoSaveLocation", "lastVideoSaveAsLocation"]),
+]:
+    if not config.has_section(sec):
+        config.add_section(sec)
+    for k in keys:
+        config.set(sec, k, dl_url)
+
+os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+with open(path, "w") as f:
+    config.write(f, space_around_delimiters=False)
+PY
+    fi
+    success "Spectacle configured to save screenshots and recordings to ~/Downloads"
 
     # Configure KDE Plasma Desktops (Layout=Desktop, DarkestHour wallpaper), Panel layout, System Tray & Kickoff favorites
     info "Configuring KDE Plasma desktops (DarkestHour wallpaper), panel, system tray & menu favorites..."
