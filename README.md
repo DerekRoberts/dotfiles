@@ -156,6 +156,7 @@ This repository establishes a client-side safety net and policy framework that e
 │   ├── gitconfig                      # Global git configuration include
 │   ├── instructions.md                # Unified AI agent instructions & guardrails
 │   ├── skills/
+│   │   ├── podman-runner/             # Containerized execution & resource limits
 │   │   └── typescript-standards/      # Modular agent skills
 │   ├── kde/
 │   │   └── user-places.xbel           # Dolphin sidebar bookmarks

@@ -44,6 +44,8 @@
 - NEVER execute vague or high-risk prompts without explicit user approval.
 
 ### Operational Guardrails
+- Containerized Execution Invariant: NEVER run test runners (`jest`, `vitest`, `npm test`, `npm run test-unit`), compilers (`ng build`, `nest build`, `tsc`), or database migrations directly on the host machine/bare metal when a container runtime exists. ALWAYS dispatch tests, builds, and migrations inside Podman containers (e.g., `podman compose exec <service> ...` or bounded `podman run`).
+- Mandate test concurrency limits (`--maxWorkers=2` or `--runInBand`) when invoking test runners inside containers or workspaces to prevent CPU/memory starvation and host freezes.
 - ALWAYS stop on the first error; chain related commands with `&&`.
 - ALWAYS block SQL injection, XSS, and unsanitized inputs in code and docs.
 - For temporary storage, ALWAYS use `./.tmp/` if git-ignored, otherwise `/tmp`.
