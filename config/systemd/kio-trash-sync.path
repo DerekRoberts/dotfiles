@@ -1,0 +1,9 @@
+[Unit]
+Description=Watch Trash directory for Flatpak/external deletions
+
+[Path]
+PathModified=%h/.local/share/Trash/files
+MakeDirectory=true
+
+[Install]
+WantedBy=paths.target
