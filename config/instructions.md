@@ -21,7 +21,7 @@
 - DIFF-AS-RECEIPT: Every edit turn MUST include a git diff in a collapsible `<details>` block.
 
 ### Definition of Done
-- NEVER mark work complete until you have defined success criteria and verified in the target runtime (when applicable).
+- NEVER mark work complete until you have defined success criteria and executed active verification checks in the target runtime (e.g., test suite execution, build compilation, or API/CLI response inspection). Pure text responses and non-executable documentation edits are the sole exceptions.
 
 ### Dependencies & Solutions
 - ALWAYS avoid dependencies for logic <20 lines. Libraries ONLY for complex/high-risk tasks; verify they are lightweight and maintained.
@@ -44,7 +44,7 @@
 - NEVER execute vague or high-risk prompts without explicit user approval.
 
 ### Operational Guardrails
-- Containerized Execution Invariant: NEVER run test runners (`jest`, `vitest`, `npm test`, `npm run test-unit`), compilers (`ng build`, `nest build`, `tsc`), or database migrations directly on the host machine/bare metal whenever container configurations (`compose.yaml`, `docker-compose.yml`, `Containerfile`, `Dockerfile`) exist or containerization is feasible. If services are stopped, start them (`podman compose up -d`) or dispatch via bounded `podman run` — never fall back to bare metal because containers are not currently running. ALWAYS dispatch tests, builds, and migrations inside Podman containers (e.g., `podman compose exec <service> ...` or bounded `podman run`).
+- Containerized Execution Invariant: NEVER run test runners (`jest`, `vitest`, `npm test`, `npm run test-unit`), compilers (`ng build`, `nest build`, `tsc`), or database migrations directly on the host machine/bare metal whenever container configurations (`compose.yaml`, `docker-compose.yml`, `Containerfile`, `Dockerfile`, `.devcontainer/`) exist anywhere in the repository tree or container runtime binaries (`podman`) are present on the host. If services are stopped, start them (`podman compose up -d`) or dispatch via bounded `podman run` (mounting `$PWD`) — never fall back to bare metal execution because containers are stopped or unconfigured. ALWAYS dispatch tests, builds, and migrations inside Podman containers (e.g., `podman compose exec <service> ...` or bounded `podman run`).
 - Mandate test concurrency limits (`--maxWorkers=2` or `--runInBand`) when invoking test runners inside containers or workspaces to prevent CPU/memory starvation and host freezes.
 - ALWAYS stop on the first error; chain related commands with `&&`.
 - ALWAYS block SQL injection, XSS, and unsanitized inputs in code and docs.
