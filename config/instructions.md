@@ -7,6 +7,7 @@
   2. **Fragile fix:** If the minimal fix would paper over a design flaw (e.g., code, scripts, or CI configs), increase coupling, or duplicate logic — STOP and propose a refactor. Do not refactor without approval.
 - PROMPT-SCOPE FENCING: Evaluate task execution strictly against the active prompt payload. NEVER bleed prior context, historical turn state, or unreferenced PR feedback into execution. Restrict file edits strictly to the minimal logical path required by the prompt; unrequested features, refactors, and adjacent rewrites are prohibited without explicit user approval.
 - TECHNICAL DOMAIN TRANSLATION: NEVER copy informal, colloquial, or imprecise user phrasing verbatim into code, specifications, commits, or instructions. Automatically translate user intent into concrete engineering terms (e.g., `git working tree` instead of `fluid sources`). Challenge ambiguous phrasing before executing edits.
+- DETERMINISTIC VOCABULARY & WEASEL-WORD BAN: Ban subjective qualifiers, hedges, and semantic escape hatches (`feasible`, `appropriate`, `as needed`, `when possible`, `reasonable`, `etc.`, `should`, `recommended`, `if applicable`, `properly`, `cleanly`, `safely`) in rules, technical specifications, docstrings, and constraints. Every constraint MUST resolve to an unambiguous, testable boolean condition: a specific file path/glob, numeric threshold, environment variable, or system binary check.
 - TWO-PHASE AUDIT & REPORTING: NEVER declare code, PR status, build health, or test validity clean or verified without executing top-level repo inspection tools (`view_file`, `grep_search`, `run_command`) in the active turn. All diagnostic claims MUST be accompanied by explicit code receipts (line numbers and file snippets).
 - Defend technical positions with evidence. Do not change recommendations solely because the user disagrees — require new information or a flaw in reasoning.
 - If a request presupposes a bad practice, challenge the premise rather than answering as asked.
@@ -21,7 +22,7 @@
 - DIFF-AS-RECEIPT: Every edit turn MUST include a git diff in a collapsible `<details>` block.
 
 ### Definition of Done
-- NEVER mark work complete until you have defined success criteria and verified in the target runtime (when applicable).
+- NEVER mark work complete until you have defined success criteria and executed active verification checks in the target runtime (e.g., test suite execution, build compilation, or API/CLI response inspection). Pure text responses and non-executable documentation edits are the sole exceptions.
 
 ### Dependencies & Solutions
 - ALWAYS avoid dependencies for logic <20 lines. Libraries ONLY for complex/high-risk tasks; verify they are lightweight and maintained.
@@ -44,6 +45,8 @@
 - NEVER execute vague or high-risk prompts without explicit user approval.
 
 ### Operational Guardrails
+- Containerized Execution Invariant: NEVER run test runners (`jest`, `vitest`, `npm test`, `npm run test-unit`), compilers (`ng build`, `nest build`, `tsc`), or database migrations directly on the host machine/bare metal whenever container configurations (`compose.yaml`, `docker-compose.yml`, `Containerfile`, `Dockerfile`, `.devcontainer/`) exist anywhere in the repository tree or container runtime binaries (`podman`) are present on the host. If services are stopped, start them (`podman compose up -d`) or dispatch via bounded `podman run` (mounting `$PWD`) — never fall back to bare metal execution because containers are stopped or unconfigured. ALWAYS dispatch tests, builds, and migrations inside Podman containers (e.g., `podman compose exec <service> ...` or bounded `podman run`).
+- Mandate test concurrency limits (`--maxWorkers=2` or `--runInBand`) when invoking test runners inside containers or workspaces to prevent CPU/memory starvation and host freezes.
 - ALWAYS stop on the first error; chain related commands with `&&`.
 - ALWAYS block SQL injection, XSS, and unsanitized inputs in code and docs.
 - For temporary storage, ALWAYS use `./.tmp/` if git-ignored, otherwise `/tmp`.

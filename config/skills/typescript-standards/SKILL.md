@@ -14,5 +14,5 @@ description: Enforce TypeScript strict mode, definite assignment, explicit typin
 
 - **Strict Checks:** Enforce `"strict": true` and `"noImplicitAny": true` in `api/` and `libs/` workspaces. Never downgrade strict flags or use `// @ts-ignore` / `// @ts-nocheck`.
 - **Definite Assignment:** NestJS/TypeORM decorator-initialized properties use `!`, not optional `?`.
-- **Explicit Typing:** No implicit `any` where inference isn't safe.
-- **Null & Relations:** Use `?.` or early returns unless loaded/validated.
+- **Explicit Typing:** Explicitly declare types on all function parameters, return signatures, and exported interfaces. Ban implicit `any`; never bypass strict typing.
+- **Null & Relations:** Use `?.` or explicit early return guards before dereferencing unvalidated relations or nullable objects.
