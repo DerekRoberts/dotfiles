@@ -256,10 +256,16 @@ if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
     else
         info "Cursor not installed — skipping"
     fi
+
+    # ── 7. Standalone Dev CLI Tools ──────────────────────────────────────────────
+    if [[ -f "$DOTFILES_DIR/scripts/setup/dev.sh" ]]; then
+        info "Checking standalone CLI tools for updates..."
+        UPDATE=1 bash "$DOTFILES_DIR/scripts/setup/dev.sh" --tools || warn "CLI tools update encountered warnings"
+    fi
 fi
 
 
-# ── 7. SELinux context fix ───────────────────────────────────────────────────
+# ── 8. SELinux context fix ───────────────────────────────────────────────────
 # restorecon is always present on Kinoite (part of the base image).
 # Fixes SELinux labels on any extracted binaries in ~/.local/bin.
 
@@ -271,7 +277,7 @@ else
     info "restorecon not available — skipping (not on SELinux system?)"
 fi
 
-# ── 8. Shutdown ──────────────────────────────────────────────────────────────
+# ── 9. Shutdown ──────────────────────────────────────────────────────────────
 
 echo ""
 echo "✅ Maintenance complete."

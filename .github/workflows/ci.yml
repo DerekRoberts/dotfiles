@@ -16,11 +16,22 @@ jobs:
       - name: Run ShellCheck
         run: shellcheck setup.sh scripts/*.sh scripts/setup/*.sh
 
+  actionlint:
+    name: Actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run actionlint
+        run: |
+          bash -c "$(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)"
+          ./actionlint
+
   test-ubuntu:
     name: Ubuntu Validation Test
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    needs: shellcheck
+    needs: [shellcheck, actionlint]
     steps:
       - uses: actions/checkout@v7
       
