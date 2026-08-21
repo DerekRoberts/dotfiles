@@ -14,7 +14,7 @@ description: Enforce containerized execution for test runners, builds, and migra
 
 ## Core Invariants
 
-1. **Zero Bare-Metal Workloads**: NEVER execute intensive build, compilation, test, or migration commands directly on the host machine when a containerized environment (Podman / Docker Compose) is present.
+1. **Zero Bare-Metal Workloads**: NEVER execute intensive build, compilation, test, or migration commands directly on the host machine whenever container configurations (`compose.yaml`, `docker-compose.yml`, `Containerfile`, `Dockerfile`) exist or containerization is feasible. If containers or services are stopped, start them (`podman compose up -d`) or execute via bounded `podman run` rather than falling back to host/bare-metal execution.
 2. **Worker & Concurrency Limits**: ALWAYS restrict test concurrency to avoid host starvation (e.g., `--maxWorkers=2` or `--runInBand` for Jest; `--threads=false` or `--maxConcurrency=2` for Vitest).
 3. **Resource-Bounded Execution**: When launching one-off containers via `podman run`, ALWAYS enforce memory and CPU limits (e.g., `--cpus="2"` `--memory="2g"`).
 4. **Non-Blocking Output & Log Bounds**: NEVER run infinite log tail commands (`podman compose logs -f` without timeout or bound). ALWAYS use bounded tail options (e.g., `--tail=100`) or specific timestamps.
