@@ -381,7 +381,7 @@ EOF
     echo "enabled=False" > "$HOME/.config/user-dirs.conf"
 
     info "Cleaning up unused default directories (if empty)..."
-    for dir in Desktop Music Pictures Public Templates Videos "Documents/Screenshots" "Documents/Screencasts"; do
+    for dir in Desktop Music Pictures Public Templates Videos; do
         if [[ -d "$HOME/$dir" ]]; then
             local non_meta_files
             non_meta_files="$(find "$HOME/$dir" -mindepth 1 -maxdepth 1 ! -name ".directory" 2>/dev/null)"
