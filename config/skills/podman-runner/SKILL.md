@@ -27,27 +27,17 @@ description: Enforce containerized execution for test runners, builds, and migra
 Before executing commands against a running container or service, verify state:
 
 ```bash
-# Check status of compose services
+# Check status and health of compose services
 podman compose ps
 
 # Inspect container health status directly
 podman inspect --format='{{.State.Health.Status}}' <container_name_or_id> 2>/dev/null || podman inspect --format='{{.State.Status}}' <container_name_or_id>
-
-# Await service readiness with a bounded retry loop (fail-fast, max 30s)
-for i in {1..15}; do
-  status=$(podman inspect --format='{{.State.Health.Status}}' <container_name> 2>/dev/null || true)
-  [[ "$status" == "healthy" ]] && break
-  sleep 2
-done
 ```
 
 ### 2. Bounded Test Suite Execution
 Always execute within the target service container and clamp concurrency:
 
 ```bash
-# Jest with memory/worker constraints
-podman compose exec <service> npm test -- --runInBand --colors=false
-
 # Jest with explicit worker cap
 podman compose exec <service> npx jest --maxWorkers=2 --ci
 
@@ -79,11 +69,8 @@ Run migrations and builds inside the dedicated runtime container:
 # NestJS / TypeScript build
 podman compose exec <service> npm run build
 
-# TypeORM migrations
-podman compose exec <service> npm run typeorm:migration:run
-
-# Prisma migrations
-podman compose exec <service> npx prisma migrate deploy
+# Database migration execution
+podman compose exec <service> npm run migration:run
 ```
 
 ### 5. Safe Container Log Inspection
