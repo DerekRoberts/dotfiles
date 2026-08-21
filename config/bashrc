@@ -58,7 +58,6 @@ shopt -s histappend
 
 # Environment
 export EDITOR=nano
-export PODMAN_COMPOSE_WARNING_LOGS=false
 
 # Aliases - Navigation & General
 alias repos='cd ~/Repos'
@@ -86,6 +85,7 @@ alias pu='podman compose up'
 alias prm='podman rm -afv'
 alias pprune='podman rm -fv $(podman ps -aq) || echo "Nothing to remove"; podman system prune -f'
 alias docker='podman'
+alias docker-compose='podman compose'
 
 # Functions
 ga() {
