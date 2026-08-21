@@ -689,11 +689,14 @@ PY
         kwriteconfig6 --file spectaclerc --group VideoSave --key lastVideoSaveAsLocation "file://$HOME/Downloads"
     else
         python3 - "$SPECTACLE_CONFIG" "$HOME/Downloads" << 'PY'
-import sys, os, configparser
+import sys, os, configparser, tempfile
 
 path, dl_path = sys.argv[1], sys.argv[2]
+dir_path = os.path.dirname(os.path.abspath(path))
+os.makedirs(dir_path, exist_ok=True)
+
 dl_url = f"file://{dl_path}"
-config = configparser.RawConfigParser()
+config = configparser.RawConfigParser(delimiters=('=',), strict=False)
 config.optionxform = str
 if os.path.exists(path):
     config.read(path)
@@ -707,9 +710,16 @@ for sec, keys in [
     for k in keys:
         config.set(sec, k, dl_url)
 
-os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
-with open(path, "w") as f:
-    config.write(f, space_around_delimiters=False)
+tmp_fd, tmp_path = tempfile.mkstemp(prefix=".spectaclerc.tmp.", dir=dir_path)
+try:
+    with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+        config.write(f, space_around_delimiters=False)
+    os.chmod(tmp_path, 0o600)
+    os.replace(tmp_path, path)
+except Exception:
+    if os.path.exists(tmp_path):
+        os.remove(tmp_path)
+    raise
 PY
     fi
     success "Spectacle configured to save screenshots and recordings to ~/Downloads"
