@@ -1113,20 +1113,117 @@ wire_dev() {
     fi
     [[ -L "$HOME/.agents/skills/skills" ]] && rm -f "$HOME/.agents/skills/skills"
 
-    # 4. Cursor instructions
+    # 4. Cursor instructions and settings
     local CURSOR_USER_DIR="$HOME/.config/Cursor/User"
     if [[ -f "$INSTRUCTIONS_FILE" ]]; then
-        info "Configuring Cursor..."
+        info "Configuring Cursor instructions..."
         mkdir -p "$CURSOR_USER_DIR/prompts"
         rm -f "$CURSOR_USER_DIR/prompts/global.instructions.md"
         cp -f "$INSTRUCTIONS_FILE" "$CURSOR_USER_DIR/prompts/global.instructions.md"
         success "Cursor instructions installed"
     fi
 
-    # 5. Remove legacy Kilo symlink
+    info "Configuring Cursor default workspace paths..."
+    local CURSOR_SETTINGS="$CURSOR_USER_DIR/settings.json"
+    mkdir -p "$CURSOR_USER_DIR"
+    python3 - "$CURSOR_SETTINGS" << 'PY'
+import sys, os, json, re, tempfile
+
+path = sys.argv[1]
+dir_path = os.path.dirname(os.path.abspath(path))
+os.makedirs(dir_path, exist_ok=True)
+
+data = {}
+if os.path.exists(path):
+    with open(path, "r", encoding="utf-8") as f:
+        raw = f.read()
+
+    # Strip single-line and multi-line comments from JSONC without altering string literals
+    def strip_jsonc(text):
+        pattern = r'(//[^\n]*)|(/\*[\s\S]*?\*/)|("(?:\\.|[^"\\])*")'
+        def replacer(match):
+            if match.group(3) is not None:
+                return match.group(3)
+            return ""
+        stripped = re.sub(pattern, replacer, text)
+        return re.sub(r',\s*([}\]])', r'\1', stripped)
+
+    cleaned = strip_jsonc(raw).strip()
+    if cleaned:
+        try:
+            data = json.loads(cleaned)
+        except Exception as e:
+            sys.stderr.write(f"Warning: Failed to parse {path} as JSONC: {e}. Preserving original file.\n")
+            sys.exit(0)
+
+data["git.defaultCloneDirectory"] = "~/Repos"
+data["files.dialog.defaultPath"] = "~/Repos"
+
+tmp_fd, tmp_path = tempfile.mkstemp(prefix=".settings.tmp.", dir=dir_path)
+with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=4)
+    f.write("\n")
+os.chmod(tmp_path, 0o644)
+os.replace(tmp_path, path)
+PY
+    success "Cursor default project paths configured"
+
+    # 5. KDE notification rules (silence Antigravity & Cursor)
+    info "Configuring KDE notification rules (silencing Antigravity and Cursor)..."
+    local NOTIFY_CONFIG="$HOME/.config/plasmanotifyrc"
+    if command -v kwriteconfig6 &>/dev/null; then
+        local NOTIFY_DIR; NOTIFY_DIR="$(dirname "$NOTIFY_CONFIG")"
+        mkdir -p "$NOTIFY_DIR"
+        local TMP_NOTIFY; TMP_NOTIFY="$(mktemp -p "$NOTIFY_DIR" .plasmanotifyrc.tmp.XXXXXX)"
+        [[ -f "$NOTIFY_CONFIG" ]] && cp -f "$NOTIFY_CONFIG" "$TMP_NOTIFY"
+        for app in antigravity cursor; do
+            kwriteconfig6 --file "$TMP_NOTIFY" --group Applications --group "$app" --key Seen true
+            kwriteconfig6 --file "$TMP_NOTIFY" --group Applications --group "$app" --key ShowPopups false
+            kwriteconfig6 --file "$TMP_NOTIFY" --group Applications --group "$app" --key ShowInHistory false
+            kwriteconfig6 --file "$TMP_NOTIFY" --group Applications --group "$app" --key ShowBadges false
+        done
+        chmod 600 "$TMP_NOTIFY"
+        mv -f "$TMP_NOTIFY" "$NOTIFY_CONFIG"
+    else
+        python3 - "$NOTIFY_CONFIG" << 'PY'
+import sys, os, configparser, tempfile
+
+path = sys.argv[1]
+dir_path = os.path.dirname(os.path.abspath(path))
+os.makedirs(dir_path, exist_ok=True)
+
+config = configparser.RawConfigParser(delimiters=('=',), strict=False)
+config.optionxform = str
+if os.path.exists(path):
+    config.read(path)
+
+for app in ("antigravity", "cursor"):
+    sec = f"Applications][{app}"
+    if not config.has_section(sec):
+        config.add_section(sec)
+    config.set(sec, "Seen", "true")
+    config.set(sec, "ShowPopups", "false")
+    config.set(sec, "ShowInHistory", "false")
+    config.set(sec, "ShowBadges", "false")
+
+tmp_fd, tmp_path = tempfile.mkstemp(prefix=".plasmanotifyrc.tmp.", dir=dir_path)
+try:
+    with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+        config.write(f, space_around_delimiters=False)
+    os.chmod(tmp_path, 0o600)
+    os.replace(tmp_path, path)
+except Exception:
+    if os.path.exists(tmp_path):
+        os.remove(tmp_path)
+    raise
+PY
+    fi
+    success "KDE notifications silenced for Antigravity and Cursor"
+
+    # 6. Remove legacy Kilo symlink
     [[ -L "$HOME/.copilot.md" ]] && rm -f "$HOME/.copilot.md" && info "Removed legacy ~/.copilot.md"
 
-    # 6. Global git hooks
+    # 7. Global git hooks
     local HOOKS_SRC_DIR="$DOTFILES_DIR/config/hooks"
     local HOOKS_DEST_DIR="$HOME/.githooks"
     if [[ -d "$HOOKS_SRC_DIR" ]]; then
