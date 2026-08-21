@@ -5,11 +5,14 @@ Declarative, single-command workstation setup and configuration for **Fedora Kin
 ## Features
 
 - **Zero OS Layering**: Keeps the base OSTree image pristine; all userland tools run in userspace (`~/.local/bin`, `~/.nvm`, `~/.local/share/flatpak`).
-- **Profiles**:
-  - `--dev` (default): Full developer workstation (Node LTS via NVM, `gh`, `jq`, `gitleaks`, `shellcheck`, `actionlint`, `uv`, `docker-compose`, `oc`, Cursor, Antigravity, Ponytail, repositories).
-  - `--desktop`: Minimal desktop essentials (Google Chrome, VLC, and Insync).
-- **Automated Updates**: Systemd user service (`dotfiles-update.service`) running `updown` at login with a 23-hour idempotency guard.
-- **Unified AI Instructions & Guardrails**: Self-contained guardrails and instructions in `config/instructions.md` deployed to Cursor and Antigravity, backed by global pre-commit hooks (Gitleaks, regression guardian).
+- **Two Distinct Profiles**:
+  - `setup.sh` (or `--dev`, default): Full developer workstation with CLI toolchain, AI agent environments, Git config & signing, and cloned repositories.
+  - `setup.sh --desktop`: Zero-maintenance daily driver for family and friends with no dev tooling or interactive Git prompts.
+- **Opinionated Core Desktop (Both Profiles)**:
+  - Strict 2-bucket directory layout (`~/Documents` for long-term storage, `~/Downloads` for temporary/scratch files).
+  - Spectacle screenshots and video screen recordings route automatically into `~/Downloads`.
+  - Left auto-hiding panel (`dodgewindows`, 72px), `DarkestHour` wallpaper, and natural scrolling.
+- **Automated Updates**: Systemd user service (`dotfiles-update.service`) running `updown --background` at login with a 23-hour idempotency guard.
 
 ## Quick Start
 
@@ -31,24 +34,23 @@ source ~/.bashrc
 
 ```bash
 ./setup.sh              # Full developer workstation (default)
+./setup.sh --desktop    # Minimal desktop essentials for family/friends
 ./setup.sh --dev        # Explicit dev stack preset
-./setup.sh --desktop    # Minimal desktop essentials (Chrome + VLC + Insync)
-./setup.sh --help       # Show usage and available environment variables
+./setup.sh --help       # Show usage and options
 ```
 
-| Component | `--desktop` | `--dev` (default) |
-|---|---|---|
-| Chrome (Flatpak) | ✅ | ✅ |
-| VLC Media Player (Flatpak) | ✅ | ✅ |
-| Insync (rpm2cpio extraction) | ✅ | ✅ |
-| Yakuake (Flatpak + config) | ❌ | ✅ |
-| Node.js LTS (via NVM) | ❌ | ✅ |
-| CLI Tools (`gh`, `jq`, `gitleaks`, `shellcheck`, `actionlint`, `uv`, `docker-compose`, `oc`) | ❌ | ✅ |
-| Antigravity Hub & `agy` CLI | ❌ | ✅ |
-| Cursor (AppImage) | ❌ | ✅ |
-| Ponytail (Cursor + AGY rules) | ❌ | ✅ |
-| Repositories & SSH Key | ❌ | ✅ |
-| Login Auto-Updater | ✅ | ✅ |
+| Component / Feature | `--desktop` (Family & Friends) | `--dev` / Default (Derek) |
+|---|:---:|:---:|
+| **Desktop Environment** (Spectacle $\to$ Downloads, Left Panel, Natural Scroll) | ✅ | ✅ |
+| **Silent OS & App Updates** (`updown` via systemd) | ✅ | ✅ |
+| **Essential Desktop Apps** (Chrome, VLC, Insync) | ✅ | ✅ |
+| **Git Setup & SSH Commit Signing** (`git-setup.sh`) | ❌ *(Untouched)* | ✅ |
+| **Global Git Hooks & Regression Guardian** | ❌ | ✅ |
+| **Developer CLI Suite** (`gh`, `jq`, `gitleaks`, `shellcheck`, `actionlint`, `uv`, `docker-compose`, `oc`) | ❌ | ✅ |
+| **Node.js LTS** (via NVM) | ❌ | ✅ |
+| **AI Assistants & Prompt Rules** (Cursor, Antigravity Hub, `agy`, Ponytail) | ❌ | ✅ |
+| **Drop-Down Terminal** (Yakuake) | ❌ | ✅ |
+| **GitHub Work Repositories** (`~/Repos`) | ❌ | ✅ |
 
 
 ## Environment Variables
