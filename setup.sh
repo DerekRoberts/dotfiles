@@ -1127,7 +1127,7 @@ wire_dev() {
     local CURSOR_SETTINGS="$CURSOR_USER_DIR/settings.json"
     mkdir -p "$CURSOR_USER_DIR"
     python3 - "$CURSOR_SETTINGS" << 'PY'
-import sys, os, json, tempfile
+import sys, os, json, re, tempfile
 
 path = sys.argv[1]
 dir_path = os.path.dirname(os.path.abspath(path))
@@ -1135,11 +1135,26 @@ os.makedirs(dir_path, exist_ok=True)
 
 data = {}
 if os.path.exists(path):
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except Exception:
-        data = {}
+    with open(path, "r", encoding="utf-8") as f:
+        raw = f.read()
+
+    # Strip single-line and multi-line comments from JSONC without altering string literals
+    def strip_jsonc(text):
+        pattern = r'(//[^\n]*)|(/\*[\s\S]*?\*/)|("(?:\\.|[^"\\])*")'
+        def replacer(match):
+            if match.group(3) is not None:
+                return match.group(3)
+            return ""
+        stripped = re.sub(pattern, replacer, text)
+        return re.sub(r',\s*([}\]])', r'\1', stripped)
+
+    cleaned = strip_jsonc(raw).strip()
+    if cleaned:
+        try:
+            data = json.loads(cleaned)
+        except Exception as e:
+            sys.stderr.write(f"Warning: Failed to parse {path} as JSONC: {e}. Preserving original file.\n")
+            sys.exit(0)
 
 data["git.defaultCloneDirectory"] = "~/Repos"
 data["files.dialog.defaultPath"] = "~/Repos"
@@ -1157,12 +1172,18 @@ PY
     info "Configuring KDE notification rules (silencing Antigravity and Cursor)..."
     local NOTIFY_CONFIG="$HOME/.config/plasmanotifyrc"
     if command -v kwriteconfig6 &>/dev/null; then
+        local NOTIFY_DIR; NOTIFY_DIR="$(dirname "$NOTIFY_CONFIG")"
+        mkdir -p "$NOTIFY_DIR"
+        local TMP_NOTIFY; TMP_NOTIFY="$(mktemp -p "$NOTIFY_DIR" .plasmanotifyrc.tmp.XXXXXX)"
+        [[ -f "$NOTIFY_CONFIG" ]] && cp -f "$NOTIFY_CONFIG" "$TMP_NOTIFY"
         for app in antigravity cursor; do
-            kwriteconfig6 --file plasmanotifyrc --group Applications --group "$app" --key Seen true
-            kwriteconfig6 --file plasmanotifyrc --group Applications --group "$app" --key ShowPopups false
-            kwriteconfig6 --file plasmanotifyrc --group Applications --group "$app" --key ShowInHistory false
-            kwriteconfig6 --file plasmanotifyrc --group Applications --group "$app" --key ShowBadges false
+            kwriteconfig6 --file "$TMP_NOTIFY" --group Applications --group "$app" --key Seen true
+            kwriteconfig6 --file "$TMP_NOTIFY" --group Applications --group "$app" --key ShowPopups false
+            kwriteconfig6 --file "$TMP_NOTIFY" --group Applications --group "$app" --key ShowInHistory false
+            kwriteconfig6 --file "$TMP_NOTIFY" --group Applications --group "$app" --key ShowBadges false
         done
+        chmod 600 "$TMP_NOTIFY"
+        mv -f "$TMP_NOTIFY" "$NOTIFY_CONFIG"
     else
         python3 - "$NOTIFY_CONFIG" << 'PY'
 import sys, os, configparser, tempfile
