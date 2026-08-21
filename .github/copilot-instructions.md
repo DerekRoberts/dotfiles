@@ -34,8 +34,8 @@ This repository configures **Fedora Kinoite** (an immutable, rpm-ostree-based KD
 ## 2. Kinoite Immutability & Testing Hygiene
 
 - **Userspace Isolation:** All configuration, data, and binaries must reside strictly under `$HOME` (`~/.local`, `~/.config`, `~/.var`).
-- **ShellCheck Compliance:** All modified or newly authored Bash scripts must pass ShellCheck without warnings or silenced errors (`shellcheck setup.sh scripts/*.sh`).
-- **Syntax Verification:** Ensure `bash -n setup.sh` and `bash -n scripts/*.sh` validate cleanly.
+- **ShellCheck Compliance:** All modified or newly authored Bash scripts must pass ShellCheck without warnings or silenced errors (`shellcheck setup.sh scripts/*.sh scripts/setup/*.sh`).
+- **Syntax Verification:** Ensure `bash -n setup.sh` and `bash -n scripts/*.sh scripts/setup/*.sh` validate cleanly.
 - **Idempotency & Fail-Safe Execution:** Every script must be safe to execute multiple times (`set -euo pipefail`, presence checks before actions, atomic staging via `mktemp`).
 
 ---
