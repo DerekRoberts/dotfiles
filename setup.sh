@@ -1110,11 +1110,38 @@ install_native_tools() {
         rm -rf "$tmp_dir"
     fi
 
-    # podman-compose
-    if ! command -v podman-compose &>/dev/null; then
-        info "Downloading podman-compose..."
-        curl -fsSL "https://raw.githubusercontent.com/containers/podman-compose/main/podman_compose.py" -o "$BIN_DIR/podman-compose"
-        chmod +x "$BIN_DIR/podman-compose"
+    # Podman socket & docker-compose
+    if command -v systemctl &>/dev/null; then
+        if systemctl --user is-active podman.socket &>/dev/null; then
+            info "podman.socket is already active"
+        else
+            info "Enabling & starting podman.socket..."
+            systemctl --user enable --now podman.socket 2>/dev/null || warn "Failed to enable podman.socket"
+        fi
+    fi
+
+    if [[ -x "$BIN_DIR/docker-compose" ]]; then
+        success "docker-compose already installed"
+    else
+        info "Downloading docker-compose..."
+        local compose_url="https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64"
+        local tmp_compose="$BIN_DIR/docker-compose.tmp.$$"
+        if curl -fsSL "$compose_url" -o "$tmp_compose"; then
+            chmod +x "$tmp_compose"
+            mv "$tmp_compose" "$BIN_DIR/docker-compose"
+            if command -v restorecon &>/dev/null; then
+                restorecon "$BIN_DIR/docker-compose" 2>/dev/null || true
+            fi
+            success "docker-compose installed"
+        else
+            rm -f "$tmp_compose"
+            warn "Failed to download docker-compose"
+        fi
+    fi
+
+    # Clean up legacy podman-compose python wrapper script
+    if [[ -x "$BIN_DIR/docker-compose" && -f "$BIN_DIR/podman-compose" ]]; then
+        rm -f "$BIN_DIR/podman-compose"
     fi
 
     # ShellCheck CLI
