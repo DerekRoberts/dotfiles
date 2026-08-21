@@ -58,6 +58,12 @@ shopt -s histappend
 
 # Environment
 export EDITOR=nano
+if [ -d "$HOME/.local/bin" ]; then
+    case ":$PATH:" in
+        *":$HOME/.local/bin:"*) ;;
+        *) PATH="$HOME/.local/bin:$PATH" ;;
+    esac
+fi
 
 # Aliases - Navigation & General
 alias repos='cd ~/Repos'

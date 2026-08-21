@@ -58,7 +58,7 @@ download_tarball_binary() {
     fi
 
     local bin_path
-    bin_path="$(find "${tmp_dir}" -type f -name "${binary_name}" | head -n 1)"
+    bin_path="$(find "${tmp_dir}" -type f -name "${binary_name}" -print -quit)"
     if [[ -z "${bin_path}" ]]; then
         echo "❌ Binary '${binary_name}' not found in archive" >&2
         return 1
@@ -83,7 +83,7 @@ install_oc() {
     local CURRENT_VER
     CURRENT_VER="$(oc version --client 2>/dev/null | grep "Client Version:" | awk '{print $3}' || echo "none")"
 
-    if [[ "${CURRENT_VER}" != "${TARGET_OC_VER}" ]]; then
+    if [[ "${UPDATE}" -eq 1 ]] || [[ "${CURRENT_VER}" != "${TARGET_OC_VER}" ]]; then
         echo " -> Installing/Updating oc (${TARGET_OC_VER})..."
         local OC_URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${TARGET_OC_VER}/openshift-client-linux.tar.gz"
         download_tarball_binary "${OC_URL}" "oc" "${BIN_DIR}/oc"

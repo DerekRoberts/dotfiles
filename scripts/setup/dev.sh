@@ -148,108 +148,178 @@ PY
 
 # ── Native Standalone Tools & Toolchains ─────────────────────────────────────
 
+# curl flags for tag lookups and binary downloads (timeouts keep updown from hanging)
+GH_CURL_META=(--fail --silent --show-error --location --connect-timeout 10 --max-time 20 --retry 2)
+GH_CURL_FILE=(--fail --silent --show-error --location --connect-timeout 10 --max-time 120 --retry 2)
+
+asset_name_from_pattern() {
+    local pattern="$1" tag="$2"
+    local ver="${tag#v}"
+    local asset="${pattern//\{tag\}/$tag}"
+    printf '%s\n' "${asset//\{ver\}/$ver}"
+}
+
+is_tarball_asset() {
+    [[ "$1" =~ \.(tar\.gz|tgz)$ ]]
+}
+
+# Final URL after /releases/latest redirect, e.g. .../releases/tag/v2.98.0
+tag_from_release_url() {
+    local url="$1"
+    local tag="${url##*/tag/}"
+    tag="${tag%%[?#]*}"
+    tag="${tag//$'\r'/}"
+    printf '%s\n' "$tag"
+}
+
+gh_latest_tag() {
+    local repo="$1" url tag
+    url="$(curl "${GH_CURL_META[@]}" -I -o /dev/null -w '%{url_effective}' \
+        "https://github.com/${repo}/releases/latest")" || return 1
+    tag="$(tag_from_release_url "$url")"
+    [[ -n "$tag" && "$tag" != "$url" ]] || return 1
+    printf '%s\n' "$tag"
+}
+
+install_bins_from_dir() {
+    local src_dir="$1"
+    shift
+    local b found
+    for b in "$@"; do
+        found="$(find "$src_dir" -type f -name "$b" -print -quit)"
+        if [[ -z "$found" ]]; then
+            warn "Binary '$b' not found in archive"
+            return 1
+        fi
+        chmod +x "$found"
+        mv -f "$found" "$BIN_DIR/$b"
+        if command -v restorecon &>/dev/null; then
+            restorecon "$BIN_DIR/$b" 2>/dev/null || true
+        fi
+    done
+}
+
+bins_ready() {
+    local b
+    for b in "$@"; do
+        [[ -x "$BIN_DIR/$b" ]] || return 1
+    done
+    return 0
+}
+
 fetch_gh_release() {
     local name="$1"
     local repo="$2"
     local asset_pattern="$3"
     local bin_names="${4:-$name}"
-    local bin_dest="$BIN_DIR/$name"
     local stamp_file="$HOME/.local/share/dotfiles/${name}.tag"
     local update="${UPDATE:-0}"
+    local -a bins
+    read -ra bins <<< "$bin_names"
 
-    if [[ -x "$bin_dest" && -f "$stamp_file" && "$update" -eq 0 ]]; then
+    BIN_DIR="${BIN_DIR:-$HOME/.local/bin}"
+    mkdir -p "$BIN_DIR"
+
+    if bins_ready "${bins[@]}" && [[ -f "$stamp_file" && "$update" -eq 0 ]]; then
         return 0
     fi
 
     local tag
-    tag=$(curl -sI "https://github.com/$repo/releases/latest" | grep -i "^location:" | sed -E 's|.*/tag/([^[:space:]]+)|\1|' | tr -d '\r\n')
-    if [[ -z "$tag" ]]; then
+    if ! tag="$(gh_latest_tag "$repo")"; then
         warn "Could not resolve latest release tag for $repo"
         return 1
     fi
 
-    if [[ -x "$bin_dest" && -f "$stamp_file" && "$(cat "$stamp_file")" == "$tag" ]]; then
+    if bins_ready "${bins[@]}" && [[ -f "$stamp_file" && "$(cat "$stamp_file")" == "$tag" ]]; then
         success "$name is up to date ($tag)"
         return 0
     fi
 
     info "Downloading $name ($tag)..."
-    local ver="${tag#v}"
-    local asset_name="${asset_pattern//\{tag\}/$tag}"
-    asset_name="${asset_name//\{ver\}/$ver}"
-    local url="https://github.com/$repo/releases/download/${tag}/${asset_name}"
-    local tmp_dir; tmp_dir="$(mktemp -d)"
+    local asset_name url tmp_dir rc=0
+    asset_name="$(asset_name_from_pattern "$asset_pattern" "$tag")"
+    url="https://github.com/$repo/releases/download/${tag}/${asset_name}"
+    tmp_dir="$(mktemp -d "${BIN_DIR}/.tmpdir.XXXXXX")"
 
-    if [[ "$asset_name" =~ \.tar\.gz$|\.tgz$ ]]; then
-        if ! curl -fsSL "$url" | tar -xz -C "$tmp_dir"; then
+    if is_tarball_asset "$asset_name"; then
+        if ! curl "${GH_CURL_FILE[@]}" "$url" | tar -xz -C "$tmp_dir"; then
             warn "Failed to download/extract $url"
-            rm -rf "$tmp_dir"
-            return 1
+            rc=1
+        elif ! install_bins_from_dir "$tmp_dir" "${bins[@]}"; then
+            rc=1
         fi
-        for b in $bin_names; do
-            local found; found="$(find "$tmp_dir" -type f -name "$b" | head -n 1)"
-            if [[ -n "$found" ]]; then
-                chmod +x "$found"
-                mv "$found" "$BIN_DIR/$b"
-                if command -v restorecon &>/dev/null; then
-                    restorecon "$BIN_DIR/$b" 2>/dev/null || true
-                fi
-            fi
-        done
-    elif [[ "$asset_name" =~ \.zip$ ]]; then
-        if ! curl -fsSL "$url" -o "$tmp_dir/archive.zip" || ! unzip -q -d "$tmp_dir" "$tmp_dir/archive.zip"; then
-            warn "Failed to download/extract $url"
-            rm -rf "$tmp_dir"
-            return 1
-        fi
-        for b in $bin_names; do
-            local found; found="$(find "$tmp_dir" -type f -name "$b" | head -n 1)"
-            if [[ -n "$found" ]]; then
-                chmod +x "$found"
-                mv "$found" "$BIN_DIR/$b"
-                if command -v restorecon &>/dev/null; then
-                    restorecon "$BIN_DIR/$b" 2>/dev/null || true
-                fi
-            fi
-        done
     else
         local tmp_file="$tmp_dir/$name"
-        if ! curl -fsSL "$url" -o "$tmp_file"; then
+        if ! curl "${GH_CURL_FILE[@]}" "$url" -o "$tmp_file"; then
             warn "Failed to download $url"
-            rm -rf "$tmp_dir"
-            return 1
-        fi
-        chmod +x "$tmp_file"
-        mv "$tmp_file" "$bin_dest"
-        if command -v restorecon &>/dev/null; then
-            restorecon "$bin_dest" 2>/dev/null || true
+            rc=1
+        else
+            chmod +x "$tmp_file"
+            mv -f "$tmp_file" "$BIN_DIR/$name"
+            if command -v restorecon &>/dev/null; then
+                restorecon "$BIN_DIR/$name" 2>/dev/null || true
+            fi
         fi
     fi
 
-    mkdir -p "$(dirname "$stamp_file")"
-    echo "$tag" > "$stamp_file"
+    if [[ "$rc" -eq 0 ]]; then
+        mkdir -p "$(dirname "$stamp_file")"
+        echo "$tag" > "$stamp_file"
+        success "$name installed ($tag)"
+    fi
     rm -rf "$tmp_dir"
-    success "$name installed ($tag)"
+    return "$rc"
 }
 
-install_native_tools() {
-    section "Native Dev Tools & Toolchains"
+install_cli_tools() {
     info "Installing standalone binaries..."
-    local BIN_DIR="$HOME/.local/bin"
+    BIN_DIR="${BIN_DIR:-$HOME/.local/bin}"
     mkdir -p "$BIN_DIR"
+    if [[ ":$PATH:" != *":${BIN_DIR}:"* ]]; then
+        export PATH="${BIN_DIR}:${PATH}"
+    fi
 
-    fetch_gh_release "jq"             "jqlang/jq"           "jq-linux-amd64"
-    fetch_gh_release "gh"             "cli/cli"             "gh_{ver}_linux_amd64.tar.gz"
-    fetch_gh_release "gitleaks"       "gitleaks/gitleaks"   "gitleaks_{ver}_linux_x64.tar.gz"
-    fetch_gh_release "docker-compose" "docker/compose"      "docker-compose-linux-x86_64"
-    fetch_gh_release "shellcheck"     "koalaman/shellcheck" "shellcheck-{tag}.linux.x86_64.tar.gz"
-    fetch_gh_release "actionlint"     "rhysd/actionlint"    "actionlint_{ver}_linux_amd64.tar.gz"
-    fetch_gh_release "uv"             "astral-sh/uv"        "uv-x86_64-unknown-linux-gnu.tar.gz" "uv uvx"
+    local failed=0
+    fetch_gh_release "jq"             "jqlang/jq"           "jq-linux-amd64"                          || failed=1
+    fetch_gh_release "gh"             "cli/cli"             "gh_{ver}_linux_amd64.tar.gz"             || failed=1
+    fetch_gh_release "gitleaks"       "gitleaks/gitleaks"   "gitleaks_{ver}_linux_x64.tar.gz"         || failed=1
+    fetch_gh_release "docker-compose" "docker/compose"      "docker-compose-linux-x86_64"             || failed=1
+    fetch_gh_release "shellcheck"     "koalaman/shellcheck" "shellcheck-{tag}.linux.x86_64.tar.gz"    || failed=1
+    fetch_gh_release "actionlint"     "rhysd/actionlint"    "actionlint_{ver}_linux_amd64.tar.gz"     || failed=1
+    fetch_gh_release "uv"             "astral-sh/uv"        "uv-x86_64-unknown-linux-gnu.tar.gz" "uv uvx" || failed=1
 
     # Clean up legacy podman-compose python wrapper script
     if [[ -x "$BIN_DIR/docker-compose" && -f "$BIN_DIR/podman-compose" ]]; then
         rm -f "$BIN_DIR/podman-compose"
     fi
+    return "$failed"
+}
+
+self_test_fetch_gh_release() {
+    local got
+    got="$(asset_name_from_pattern "gh_{ver}_linux_amd64.tar.gz" "v2.54.0")"
+    [[ "$got" == "gh_2.54.0_linux_amd64.tar.gz" ]] || { echo "FAIL gh pattern: $got" >&2; return 1; }
+    got="$(asset_name_from_pattern "shellcheck-{tag}.linux.x86_64.tar.gz" "v0.11.0")"
+    [[ "$got" == "shellcheck-v0.11.0.linux.x86_64.tar.gz" ]] || { echo "FAIL shellcheck pattern: $got" >&2; return 1; }
+    got="$(asset_name_from_pattern "jq-linux-amd64" "jq-1.8.2")"
+    [[ "$got" == "jq-linux-amd64" ]] || { echo "FAIL jq pattern: $got" >&2; return 1; }
+    got="$(tag_from_release_url "https://github.com/cli/cli/releases/tag/v2.98.0")"
+    [[ "$got" == "v2.98.0" ]] || { echo "FAIL gh tag: $got" >&2; return 1; }
+    got="$(tag_from_release_url "https://github.com/jqlang/jq/releases/tag/jq-1.8.2")"
+    [[ "$got" == "jq-1.8.2" ]] || { echo "FAIL jq tag: $got" >&2; return 1; }
+    got="$(tag_from_release_url "https://github.com/astral-sh/uv/releases/tag/0.12.5")"
+    [[ "$got" == "0.12.5" ]] || { echo "FAIL uv tag: $got" >&2; return 1; }
+    is_tarball_asset "gh_2.54.0_linux_amd64.tar.gz" || { echo "FAIL tar regex" >&2; return 1; }
+    if is_tarball_asset "jq-linux-amd64"; then
+        echo "FAIL raw regex" >&2
+        return 1
+    fi
+    echo "fetch_gh_release self-test passed"
+}
+
+install_native_tools() {
+    section "Native Dev Tools & Toolchains"
+    install_cli_tools || true
 
     # Podman socket
     if command -v systemctl &>/dev/null; then
@@ -265,9 +335,10 @@ install_native_tools() {
     if [[ ! -s "$HOME/.nvm/nvm.sh" ]]; then
         info "Installing nvm..."
         local nvm_tag
-        nvm_tag=$(curl -sI "https://github.com/nvm-sh/nvm/releases/latest" | grep -i "^location:" | sed -E 's|.*/tag/([^[:space:]]+)|\1|' | tr -d '\r\n')
+        nvm_tag="$(gh_latest_tag "nvm-sh/nvm" || true)"
         nvm_tag="${nvm_tag:-v0.40.1}"
-        curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/${nvm_tag}/install.sh" | PROFILE=/dev/null bash
+        curl -fsSL --connect-timeout 10 --max-time 60 --retry 2 \
+            -o- "https://raw.githubusercontent.com/nvm-sh/nvm/${nvm_tag}/install.sh" | PROFILE=/dev/null bash
         success "nvm installed ($nvm_tag)"
     fi
 
@@ -440,8 +511,12 @@ Usage:
   scripts/setup/dev.sh [OPTIONS]
 
 Options:
-  --tools, -t  Install/update native CLI tools only
+  --tools, -t  Install/update standalone CLI tools only (jq, gh, gitleaks,
+               docker-compose, shellcheck, actionlint, uv). Skips nvm/podman.
   --help, -h   Show this help
+
+Environment:
+  UPDATE=1     Re-check GitHub for newer CLI tool tags even if binaries exist
 EOF
 }
 
@@ -451,9 +526,14 @@ main() {
             usage
             exit 0
             ;;
-        --tools|-t|--tools-only)
-            install_native_tools
-            exit 0
+        --self-test)
+            self_test_fetch_gh_release
+            exit $?
+            ;;
+        --tools|-t)
+            section "Standalone CLI Tools"
+            install_cli_tools
+            exit $?
             ;;
         "")
             ;;

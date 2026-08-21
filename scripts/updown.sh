@@ -47,6 +47,11 @@ fi
 DOTFILES_PROFILE="${DOTFILES_PROFILE:-dev}"
 LOG_PREFIX="[updown]"
 
+# systemd user units often omit ~/.local/bin (where jq, gh, oc live)
+if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+
 info()    { echo "$LOG_PREFIX $*"; }
 success() { echo "$LOG_PREFIX ✓ $*"; }
 warn()    { echo "$LOG_PREFIX ⚠ $*" >&2; }
@@ -261,6 +266,10 @@ if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
     if [[ -f "$DOTFILES_DIR/scripts/setup/dev.sh" ]]; then
         info "Checking standalone CLI tools for updates..."
         UPDATE=1 bash "$DOTFILES_DIR/scripts/setup/dev.sh" --tools || warn "CLI tools update encountered warnings"
+    fi
+    if [[ -f "$DOTFILES_DIR/scripts/bootstrap-tools.sh" ]]; then
+        info "Checking OpenShift CLI (oc) for updates..."
+        bash "$DOTFILES_DIR/scripts/bootstrap-tools.sh" || warn "oc update encountered warnings"
     fi
 fi
 

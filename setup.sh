@@ -47,7 +47,7 @@ Options:
   --help, -h  Show this help
 
 Environment variables:
-  UPDATE              Set UPDATE=1 to force re-download of oc binary
+  UPDATE              Set UPDATE=1 to re-check GitHub CLI tools and oc
   OC_VERSION          Override oc version tag (default: latest)
 EOF
 }
