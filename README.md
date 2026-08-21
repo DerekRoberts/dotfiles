@@ -9,7 +9,7 @@ Declarative, single-command workstation setup and configuration for **Fedora Kin
   - `--dev` (default): Full developer workstation (Node LTS via NVM, `gh`, `jq`, `gitleaks`, `shellcheck`, `actionlint`, `uv`, `docker-compose`, `oc`, Cursor, Antigravity, Ponytail, repositories).
   - `--desktop`: Minimal desktop essentials (Google Chrome, VLC, and Insync).
 - **Automated Updates**: Systemd user service (`dotfiles-update.service`) running `updown` at login with a 23-hour idempotency guard.
-- **Unified AI Instructions**: Self-contained guardrails and instructions in `config/instructions.md` deployed to Cursor and Antigravity.
+- **Unified AI Instructions & Guardrails**: Self-contained guardrails and instructions in `config/instructions.md` deployed to Cursor and Antigravity, backed by global pre-commit hooks (Gitleaks, regression guardian) and documented in [`docs/guardrails.md`](docs/guardrails.md).
 
 ## Quick Start
 
@@ -58,11 +58,21 @@ source ~/.bashrc
 | `UPDATE` | `0` | Set `UPDATE=1` to force re-downloading CLI binaries |
 | `OC_VERSION` | `latest` | Override version tag for `oc` |
 
+## AI Agent Guardrails & Safety
+
+Autonomous coding agents (Cursor, Antigravity, and CLI runners) operate under strict client-side guardrails enforcing a **human-in-the-loop** workflow:
+
+- **Prompt-Scope Fencing & Behavioral Guidelines**: Defined in [`config/instructions.md`](config/instructions.md) and deployed to `~/.gemini/GEMINI.md` and Cursor global instructions.
+- **Global Pre-Commit Hooks**: Configured in `~/.githooks` via [`config/hooks/pre-commit`](config/hooks/pre-commit) to execute Gitleaks secret scanning and block version regressions.
+- **Allowed vs. Blocked Policies**: Detailed allowed operations and hard stop prohibitions (blocking `oc`/`kubectl`, tag creation, PR merges/comments under human credentials, force pushes) are documented in [`docs/guardrails.md`](docs/guardrails.md).
+
 ## Repository Structure
 
 ```
 ├── setup.sh                           # Main idempotent workstation setup
 ├── .github/workflows/ci.yml           # ShellCheck & integration tests
+├── docs/
+│   └── guardrails.md                  # Comprehensive AI agent guardrails documentation
 ├── config/
 │   ├── bashrc                         # Shell configuration and aliases
 │   ├── gitconfig                      # Global git configuration include
