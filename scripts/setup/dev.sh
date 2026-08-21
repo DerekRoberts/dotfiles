@@ -191,7 +191,9 @@ fetch_gh_release() {
             if [[ -n "$found" ]]; then
                 chmod +x "$found"
                 mv "$found" "$BIN_DIR/$b"
-                command -v restorecon &>/dev/null && restorecon "$BIN_DIR/$b" 2>/dev/null || true
+                if command -v restorecon &>/dev/null; then
+                    restorecon "$BIN_DIR/$b" 2>/dev/null || true
+                fi
             fi
         done
     elif [[ "$asset_name" =~ \.zip$ ]]; then
@@ -205,7 +207,9 @@ fetch_gh_release() {
             if [[ -n "$found" ]]; then
                 chmod +x "$found"
                 mv "$found" "$BIN_DIR/$b"
-                command -v restorecon &>/dev/null && restorecon "$BIN_DIR/$b" 2>/dev/null || true
+                if command -v restorecon &>/dev/null; then
+                    restorecon "$BIN_DIR/$b" 2>/dev/null || true
+                fi
             fi
         done
     else
@@ -217,7 +221,9 @@ fetch_gh_release() {
         fi
         chmod +x "$tmp_file"
         mv "$tmp_file" "$bin_dest"
-        command -v restorecon &>/dev/null && restorecon "$bin_dest" 2>/dev/null || true
+        if command -v restorecon &>/dev/null; then
+            restorecon "$bin_dest" 2>/dev/null || true
+        fi
     fi
 
     mkdir -p "$(dirname "$stamp_file")"
