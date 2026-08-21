@@ -1,0 +1,6 @@
+[Unit]
+Description=Sync KDE trashrc with filesystem trash
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'if [ -n "$(ls -A %h/.local/share/Trash/files 2>/dev/null)" ]; then sed -i "/\\[Status\\]/,/^\\[/{s/Empty=.*/Empty=false/}" %h/.config/trashrc; else sed -i "/\\[Status\\]/,/^\\[/{s/Empty=.*/Empty=true/}" %h/.config/trashrc; fi'
