@@ -164,6 +164,11 @@ This repository establishes a client-side safety net and policy framework that e
 │   │   └── dotfiles-update.service    # User systemd service for updates
 │   └── repos.txt                      # Repositories cloned during dev setup
 ├── scripts/
+│   ├── setup/                         # Modular setup subsystem scripts
+│   │   ├── core.sh                    # Shell profiles, XDG dirs, systemd, Dolphin places & MIME defaults
+│   │   ├── desktop.sh                 # KDE Plasma layout, panel, system tray, notifications & natural scrolling
+│   │   ├── apps.sh                    # Application installers (Chrome, VLC, Yakuake, Insync)
+│   │   └── dev.sh                     # Toolchains (jq, gh, uv, nvm), AI assistants (Antigravity/Cursor), oc & repos
 │   ├── updown.sh                      # Workstation updater script (installed to ~/.local/bin/updown)
 │   ├── bootstrap-tools.sh             # CLI binary installer (`oc`)
 │   ├── clone-repos.sh                 # Idempotent repository cloner

@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Run ShellCheck
-        run: shellcheck setup.sh scripts/*.sh
+        run: shellcheck setup.sh scripts/*.sh scripts/setup/*.sh
 
   test-ubuntu:
     name: Ubuntu Validation Test
@@ -33,6 +33,6 @@ jobs:
       - name: Test Core Config Wiring
         run: |
           bash -n setup.sh
-          bash -n scripts/*.sh
+          bash -n scripts/*.sh scripts/setup/*.sh
           ./setup.sh --help
 
