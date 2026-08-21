@@ -986,16 +986,24 @@ PY
         success "Installed update-antigravity → $HOME/.local/bin/update-antigravity"
     fi
 
-    if [[ -f "$DOTFILES_DIR/config/systemd/dotfiles-update.service" ]]; then
-        info "Configuring update service..."
+    if [[ -d "$DOTFILES_DIR/config/systemd" ]]; then
+        info "Configuring systemd user services..."
         local SYSTEMD_USER_DIR="$HOME/.config/systemd/user"
         mkdir -p "$SYSTEMD_USER_DIR"
-        cp -f "$DOTFILES_DIR/config/systemd/dotfiles-update.service" "$SYSTEMD_USER_DIR/dotfiles-update.service"
+        for unit in "$DOTFILES_DIR/config/systemd"/*; do
+            [[ -f "$unit" ]] || continue
+            cp -f "$unit" "$SYSTEMD_USER_DIR/$(basename "$unit")"
+        done
         if command -v systemctl &>/dev/null; then
             systemctl --user daemon-reload >/dev/null 2>&1 || true
-            systemctl --user enable dotfiles-update.service >/dev/null 2>&1 || true
+            if [[ -f "$DOTFILES_DIR/config/systemd/dotfiles-update.service" ]]; then
+                systemctl --user enable dotfiles-update.service >/dev/null 2>&1 || true
+            fi
+            if [[ -f "$DOTFILES_DIR/config/systemd/kio-trash-sync.path" ]]; then
+                systemctl --user enable --now kio-trash-sync.path >/dev/null 2>&1 || true
+            fi
         fi
-        success "dotfiles-update.service installed & enabled"
+        success "systemd user units installed & enabled"
     fi
 
     # 4. Antigravity global instructions + skills
