@@ -359,6 +359,7 @@ install_repos() {
 # ── Core wiring (always runs regardless of profile) ──────────────────────────
 
 configure_user_dirs() {
+    local PROFILE="${1:-dev}"
     section "XDG User Directories"
     
     local CONFIG_FILE="$HOME/.config/user-dirs.dirs"
@@ -446,7 +447,23 @@ PY
     info "Overwriting Dolphin sidebar places with clean template..."
     if [[ -f "$DOTFILES_DIR/config/kde/user-places.xbel" ]]; then
         mkdir -p "$HOME/.local/share"
-        sed "s|/var/home/derek|$HOME|g" "$DOTFILES_DIR/config/kde/user-places.xbel" > "$HOME/.local/share/user-places.xbel"
+        if [[ "$PROFILE" == "desktop" && ! -d "$HOME/Repos" ]]; then
+            python3 - "$DOTFILES_DIR/config/kde/user-places.xbel" "$HOME/.local/share/user-places.xbel" "$HOME" << 'PY'
+import sys, re
+
+src, dst, home = sys.argv[1], sys.argv[2], sys.argv[3]
+with open(src, "r", encoding="utf-8") as f:
+    content = f.read()
+
+content = content.replace("/var/home/derek", home)
+content = re.sub(r"\s*<bookmark href=\"file://[^\"]+/Repos\">\s*<title>Repos</title>[\s\S]*?</bookmark>\s*", "\n", content)
+
+with open(dst, "w", encoding="utf-8") as f:
+    f.write(content)
+PY
+        else
+            sed "s|/var/home/derek|$HOME|g" "$DOTFILES_DIR/config/kde/user-places.xbel" > "$HOME/.local/share/user-places.xbel"
+        fi
         success "Dolphin sidebar cleaned"
     fi
 
@@ -716,10 +733,11 @@ PY
     fi
 
     if [[ -f "$PLASMA_CONFIG" ]]; then
-        python3 - "$PLASMA_CONFIG" << 'PY'
+        python3 - "$PLASMA_CONFIG" "$PROFILE" << 'PY'
 import sys, os, re, configparser
 
 path = sys.argv[1]
+profile = sys.argv[2] if len(sys.argv) > 2 else "dev"
 if not os.path.exists(path):
     sys.exit(0)
 
@@ -855,7 +873,10 @@ for m in re.finditer(r"^\[Containments\]\[\d+\]\s*$", content, re.M):
     if act_m and act_m.group(1) not in activity_ids:
         activity_ids.append(act_m.group(1))
 
-fav_ordering = "antigravity.desktop,cursor.desktop,org.kde.discover.desktop,org.kde.dolphin.desktop,google-chrome.desktop,systemsettings.desktop"
+if profile == "desktop":
+    fav_ordering = "google-chrome.desktop,org.kde.dolphin.desktop,org.kde.discover.desktop,systemsettings.desktop"
+else:
+    fav_ordering = "antigravity.desktop,cursor.desktop,org.kde.discover.desktop,org.kde.dolphin.desktop,google-chrome.desktop,systemsettings.desktop"
 statsrc_path = os.path.expanduser("~/.config/kactivitymanagerd-statsrc")
 stats_config = configparser.RawConfigParser()
 stats_config.optionxform = str
@@ -944,6 +965,7 @@ for (var i = 0; i < p.length; i++) {
 
 
 wire_core() {
+    local PROFILE="${1:-dev}"
     section "Core Wiring"
 
     # 1. bashrc sourcing
@@ -1002,25 +1024,12 @@ PY
         fi
     fi
 
-    # 2. Git global include
-    info "Configuring Git global settings..."
-    command git config --global include.path "$DOTFILES_DIR/config/gitconfig"
-    success "Git include path set"
-
-    if [[ -f "$DOTFILES_DIR/scripts/git-setup.sh" ]]; then
-        bash "$DOTFILES_DIR/scripts/git-setup.sh"
-    fi
-
-    # 3. User CLI tools & update service
+    # 2. User CLI maintenance tools & systemd update service
     info "Installing maintenance scripts to ~/.local/bin..."
     mkdir -p "$HOME/.local/bin"
     if [[ -f "$DOTFILES_DIR/scripts/updown.sh" ]]; then
         install -m 755 "$DOTFILES_DIR/scripts/updown.sh" "$HOME/.local/bin/updown"
         success "Installed updown → $HOME/.local/bin/updown"
-    fi
-    if [[ -f "$DOTFILES_DIR/scripts/update-antigravity.sh" ]]; then
-        install -m 755 "$DOTFILES_DIR/scripts/update-antigravity.sh" "$HOME/.local/bin/update-antigravity"
-        success "Installed update-antigravity → $HOME/.local/bin/update-antigravity"
     fi
 
     if [[ -d "$DOTFILES_DIR/config/systemd" ]]; then
@@ -1043,7 +1052,30 @@ PY
         success "systemd user units installed & enabled"
     fi
 
-    # 4. Antigravity global instructions + skills
+    configure_user_dirs "$PROFILE"
+
+    success "Core wiring complete"
+}
+
+wire_dev() {
+    section "Developer Wiring"
+
+    # 1. Git global include
+    info "Configuring Git global settings..."
+    command git config --global include.path "$DOTFILES_DIR/config/gitconfig"
+    success "Git include path set"
+
+    if [[ -f "$DOTFILES_DIR/scripts/git-setup.sh" ]]; then
+        bash "$DOTFILES_DIR/scripts/git-setup.sh"
+    fi
+
+    # 2. Update helper
+    if [[ -f "$DOTFILES_DIR/scripts/update-antigravity.sh" ]]; then
+        install -m 755 "$DOTFILES_DIR/scripts/update-antigravity.sh" "$HOME/.local/bin/update-antigravity"
+        success "Installed update-antigravity → $HOME/.local/bin/update-antigravity"
+    fi
+
+    # 3. Antigravity global instructions + skills
     local INSTRUCTIONS_FILE="$DOTFILES_DIR/config/instructions.md"
     info "Configuring Antigravity global instructions and skills..."
     mkdir -p "$HOME/.gemini/config" "$HOME/.gemini/antigravity" "$HOME/.agents/skills"
@@ -1071,7 +1103,7 @@ PY
     fi
     [[ -L "$HOME/.agents/skills/skills" ]] && rm -f "$HOME/.agents/skills/skills"
 
-    # 5. Cursor instructions
+    # 4. Cursor instructions
     local CURSOR_USER_DIR="$HOME/.config/Cursor/User"
     if [[ -f "$INSTRUCTIONS_FILE" ]]; then
         info "Configuring Cursor..."
@@ -1081,10 +1113,10 @@ PY
         success "Cursor instructions installed"
     fi
 
-    # 6. Remove legacy Kilo symlink
+    # 5. Remove legacy Kilo symlink
     [[ -L "$HOME/.copilot.md" ]] && rm -f "$HOME/.copilot.md" && info "Removed legacy ~/.copilot.md"
 
-    # 7. Global git hooks
+    # 6. Global git hooks
     local HOOKS_SRC_DIR="$DOTFILES_DIR/config/hooks"
     local HOOKS_DEST_DIR="$HOME/.githooks"
     if [[ -d "$HOOKS_SRC_DIR" ]]; then
@@ -1099,9 +1131,7 @@ PY
         success "Global git hooks installed → $HOOKS_DEST_DIR"
     fi
 
-    configure_user_dirs
-
-    success "Core wiring complete"
+    success "Developer wiring complete"
 }
 
 # ── Profile presets ───────────────────────────────────────────────────────────
@@ -1264,6 +1294,7 @@ preset_desktop() {
 }
 
 preset_dev() {
+    wire_dev
     install_native_tools
     install_chrome
     install_vlc
@@ -1301,12 +1332,17 @@ EOF
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
+PROFILE="dev"
 case "${1:-}" in
     --help|-h)
         usage
         exit 0
         ;;
-    --dev|--desktop|"")
+    --desktop)
+        PROFILE="desktop"
+        ;;
+    --dev|"")
+        PROFILE="dev"
         ;;
     *)
         echo "Unknown option: $1" >&2
@@ -1317,15 +1353,15 @@ esac
 
 echo "=== Bootstrapping Dotfiles (Fedora Kinoite) ==="
 
-# Always wire core configs (bashrc, git, symlinks)
-wire_core
+# Always wire core configs (bashrc, maintenance scripts, desktop environment)
+wire_core "$PROFILE"
 
-case "${1:-}" in
-    --dev|"")
+case "$PROFILE" in
+    dev)
         echo "Profile: dev (full stack)"
         preset_dev
         ;;
-    --desktop)
+    desktop)
         echo "Profile: desktop (essentials)"
         preset_desktop
         ;;
