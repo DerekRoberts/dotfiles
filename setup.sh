@@ -996,8 +996,12 @@ PY
         done
         if command -v systemctl &>/dev/null; then
             systemctl --user daemon-reload >/dev/null 2>&1 || true
-            [[ -f "$DOTFILES_DIR/config/systemd/dotfiles-update.service" ]] && systemctl --user enable dotfiles-update.service >/dev/null 2>&1 || true
-            [[ -f "$DOTFILES_DIR/config/systemd/kio-trash-sync.path" ]] && systemctl --user enable --now kio-trash-sync.path >/dev/null 2>&1 || true
+            if [[ -f "$DOTFILES_DIR/config/systemd/dotfiles-update.service" ]]; then
+                systemctl --user enable dotfiles-update.service >/dev/null 2>&1 || true
+            fi
+            if [[ -f "$DOTFILES_DIR/config/systemd/kio-trash-sync.path" ]]; then
+                systemctl --user enable --now kio-trash-sync.path >/dev/null 2>&1 || true
+            fi
         fi
         success "systemd user units installed & enabled"
     fi
