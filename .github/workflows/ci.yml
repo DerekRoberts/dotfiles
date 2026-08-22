@@ -23,9 +23,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Run actionlint
+        env:
+          # Pinned: this script is piped into bash, so it must not track a
+          # branch someone else can move.
+          ACTIONLINT_REF: v1.7.7
         run: |
           set -euo pipefail
-          bash -c "$(curl -fsSL --retry 3 --retry-delay 2 https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)"
+          curl -fsSL --retry 3 --retry-delay 2 \
+            "https://raw.githubusercontent.com/rhysd/actionlint/${ACTIONLINT_REF}/scripts/download-actionlint.bash" \
+            -o download-actionlint.bash
+          bash download-actionlint.bash
           ./actionlint
 
   test-ubuntu:
@@ -49,4 +56,5 @@ jobs:
           ./setup.sh --help
           scripts/setup/core.sh --self-test
           scripts/setup/dev.sh --self-test
+          bash -c '. scripts/lib.sh && self_test_lib'
 

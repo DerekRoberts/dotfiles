@@ -47,16 +47,25 @@ fi
 # Locate helper scripts in the clone. Never git-pull this repository from the
 # updater: a remote change would become an execution path at login.
 DOTFILES_PROFILE="${DOTFILES_PROFILE:-dev}"
-LOG_PREFIX="[updown]"
 
 # systemd user units often omit ~/.local/bin (where jq, gh, oc live)
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
     export PATH="$HOME/.local/bin:$PATH"
 fi
 
-info()    { echo "$LOG_PREFIX $*"; }
-success() { echo "$LOG_PREFIX ✓ $*"; }
-warn()    { echo "$LOG_PREFIX ⚠ $*" >&2; }
+# updown is installed to ~/.local/bin, so the clone it came from may be gone.
+if [[ ! -f "$DOTFILES_DIR/scripts/lib.sh" ]]; then
+    echo "[updown] ⚠ Cannot find $DOTFILES_DIR/scripts/lib.sh — set DOTFILES_DIR to the clone." >&2
+    exit 1
+fi
+# shellcheck source=scripts/lib.sh
+. "$DOTFILES_DIR/scripts/lib.sh"
+
+# This runs unattended from a systemd user unit, so prefix every line to make
+# the journal readable.
+info()    { echo "[updown] $*"; }
+success() { echo "[updown] ✓ $*"; }
+warn()    { echo "[updown] ⚠ $*" >&2; }
 
 if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
     # ── 1. rpm-ostree ────────────────────────────────────────────────────────────
@@ -129,6 +138,27 @@ fi
 
 # ── 5. Insync ────────────────────────────────────────────────────────────────
 
+# Insync publishes unsigned RPMs — SIGPGP, SIGGPG, RSAHEADER and DSAHEADER are
+# all empty, so there is no key to check the package against and no published
+# checksum to compare it to. What we can do is refuse a package whose own
+# digests don't hold (truncated or corrupted download) and record what we
+# installed, so an unexpected change is at least visible after the fact.
+# The URL itself is already anchored to Insync's CDN by the regex below.
+insync_rpm_is_trusted() {
+    local rpm="$1"
+    if ! command -v rpmkeys &>/dev/null; then
+        warn "rpmkeys not found — cannot check Insync package integrity"
+        return 1
+    fi
+    if ! rpmkeys --checksig "$rpm" >/dev/null 2>&1; then
+        warn "Insync RPM failed its internal digest check — refusing to install"
+        return 1
+    fi
+    mkdir -p "${HOME}/.local/share/dotfiles"
+    sha256sum "$rpm" | cut -d' ' -f1 > "${HOME}/.local/share/dotfiles/insync.sha256"
+    return 0
+}
+
 INSYNC_BIN="${HOME}/.local/bin/insync"
 INSYNC_LIB_DIR="${HOME}/.local/lib/insync"
 if [[ -x "$INSYNC_BIN" ]] || [[ "$INSTALL_INSYNC" -eq 1 ]]; then
@@ -147,6 +177,7 @@ if [[ -x "$INSYNC_BIN" ]] || [[ "$INSTALL_INSYNC" -eq 1 ]]; then
             info "Updating Insync..."
             tmp_dir="$(mktemp -d)"
             if curl -fsSL "$LATEST_INSYNC_URL" -o "$tmp_dir/insync.rpm" && \
+               insync_rpm_is_trusted "$tmp_dir/insync.rpm" && \
                (cd "$tmp_dir" && rpm2cpio insync.rpm | cpio -idm 2>/dev/null); then
                 extracted_lib="$(find "$tmp_dir" -type d -path "*/usr/lib/insync" | head -n 1 || true)"
                 if [[ -n "$extracted_lib" && -f "$extracted_lib/insync" ]]; then
@@ -160,7 +191,7 @@ if [[ -x "$INSYNC_BIN" ]] || [[ "$INSTALL_INSYNC" -eq 1 ]]; then
                         # Extract application and status icons from RPM
                         extracted_icons="$(find "$tmp_dir" -type d -path "*/usr/share/icons" | head -n 1 || true)"
                         if [[ -n "$extracted_icons" && -d "$extracted_icons" ]]; then
-                            mkdir -p "${HOME}/.local/share/icons" "${HOME}/.icons"
+                            mkdir -p "${HOME}/.local/share/icons"
                             cp -rf "$extracted_icons/"* "${HOME}/.local/share/icons/"
                             [[ -f "/usr/share/icons/hicolor/index.theme" ]] && cp -f "/usr/share/icons/hicolor/index.theme" "${HOME}/.local/share/icons/hicolor/index.theme"
                             python3 - << 'PY'
@@ -171,6 +202,10 @@ except ImportError:
     import sys
     sys.exit(0)
 
+# Insync ships its tray icons at 48x48 only, so fill in the other sizes the
+# tray asks for. hicolor only: it is the fallback every icon theme inherits, and
+# writing into ~/.local/share/icons/breeze* would shadow the system Breeze theme
+# (a theme directory there without an index.theme breaks all Breeze lookups).
 src_dir = os.path.expanduser("~/.local/share/icons/hicolor/48x48/status")
 sizes = [16, 22, 24, 32, 48, 64, 128, 256]
 icons = ["insync-alert", "insync-normal", "insync-offline", "insync-paused", "insync-synced", "insync-syncing"]
@@ -183,32 +218,14 @@ for icon in icons:
     for sz in sizes:
         dest_dir = os.path.expanduser(f"~/.local/share/icons/hicolor/{sz}x{sz}/status")
         os.makedirs(dest_dir, exist_ok=True)
-        dest_file = os.path.join(dest_dir, f"{icon}.png")
-        resized = img.resize((sz, sz), Image.LANCZOS)
-        resized.save(dest_file, "PNG")
-        for theme in ("breeze", "breeze-dark"):
-            bdir = os.path.expanduser(f"~/.local/share/icons/{theme}/status/{sz}")
-            os.makedirs(bdir, exist_ok=True)
-            resized.save(os.path.join(bdir, f"{icon}.png"), "PNG")
+        img.resize((sz, sz), Image.LANCZOS).save(os.path.join(dest_dir, f"{icon}.png"), "PNG")
 PY
                             if command -v gtk-update-icon-cache &>/dev/null; then
                                 gtk-update-icon-cache -f -q "${HOME}/.local/share/icons/hicolor" 2>/dev/null || true
                             fi
                         fi
 
-                        cat > "$INSYNC_BIN" << 'EOF'
-#!/bin/bash
-export LC_TIME=C
-export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
-export XDG_DATA_DIRS="$HOME/.local/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
-
-if command -v bwrap &>/dev/null && [[ -d "$HOME/.local/share/icons/hicolor" ]]; then
-    exec bwrap --dev-bind / / --bind "$HOME/.local/share/icons/hicolor" /usr/share/icons/hicolor "$HOME/.local/lib/insync/insync" "$@" || exec "$HOME/.local/lib/insync/insync" "$@"
-else
-    exec "$HOME/.local/lib/insync/insync" "$@"
-fi
-EOF
-                        chmod +x "$INSYNC_BIN"
+                        write_insync_wrapper "$INSYNC_BIN"
                         mkdir -p "$(dirname "$STAMP_FILE")"
                         echo "$LATEST_INSYNC_URL" > "$STAMP_FILE"
                         success "Insync updated"
@@ -238,8 +255,8 @@ if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
     CURSOR_BIN="${HOME}/.local/bin/cursor.AppImage"
     if [[ -x "$CURSOR_BIN" ]]; then
         info "Checking Cursor for updates..."
-        LATEST_CURSOR_URL="$(curl -fsSL 'https://www.cursor.com/api/download?platform=linux-x64&releaseTrack=stable' | grep -o '"downloadUrl":"[^"]*"' | cut -d'"' -f4 || true)"
-        
+        LATEST_CURSOR_URL="$(cursor_latest_url || true)"
+
         STAMP_FILE="${HOME}/.local/share/dotfiles/cursor.url"
         if [[ -n "$LATEST_CURSOR_URL" ]]; then
             if [[ -f "$STAMP_FILE" ]] && [[ -x "$CURSOR_BIN" ]] && [[ "$(cat "$STAMP_FILE")" == "$LATEST_CURSOR_URL" ]]; then
@@ -258,20 +275,16 @@ if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
                 fi
             fi
         else
-            warn "Could not resolve Cursor URL — skipping update"
+            warn "Cursor URL missing or outside $CURSOR_URL_PREFIX — skipping update"
         fi
     else
         info "Cursor not installed — skipping"
     fi
 
-    # ── 7. Standalone Dev CLI Tools ──────────────────────────────────────────────
+    # ── 7. Standalone Dev CLI Tools (includes oc) ───────────────────────────────
     if [[ -f "$DOTFILES_DIR/scripts/setup/dev.sh" ]]; then
         info "Checking standalone CLI tools for updates..."
         UPDATE=1 bash "$DOTFILES_DIR/scripts/setup/dev.sh" --tools || warn "CLI tools update encountered warnings"
-    fi
-    if [[ -f "$DOTFILES_DIR/scripts/bootstrap-tools.sh" ]]; then
-        info "Checking OpenShift CLI (oc) for updates..."
-        bash "$DOTFILES_DIR/scripts/bootstrap-tools.sh" || warn "oc update encountered warnings"
     fi
 fi
 

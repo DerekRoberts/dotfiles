@@ -43,15 +43,40 @@ if [[ -z "$LUKS_DEV" ]]; then
     fi
 fi
 
+# PCR 7 alone measures Secure Boot state, not the kernel or initrd that get
+# booted. Anything Secure Boot already trusts can therefore ask the TPM to
+# release the key — including a different signed kernel with your disk attached.
+# Adding PCR 11 covers the booted kernel, but then every kernel update
+# invalidates the token and you re-run this script, so it stays opt-in.
+TPM2_PCRS="${TPM2_PCRS:-7}"
+TPM2_PIN="${TPM2_PIN:-no}"
+
 echo "Detected LUKS device: $LUKS_DEV"
-echo "Enrolling TPM 2.0 bound to PCR 7 (Secure Boot State)..."
+echo "Enrolling TPM 2.0 bound to PCR(s): $TPM2_PCRS"
+if [[ "$TPM2_PCRS" == "7" && "$TPM2_PIN" != "yes" ]]; then
+    echo ""
+    echo "  NOTE: PCR 7 measures Secure Boot state only. Unlocking needs no"
+    echo "  secret from you, so someone with the machine and a signed kernel of"
+    echo "  their choosing can have the TPM hand over the key. To harden:"
+    echo "    TPM2_PIN=yes  $0     # require a PIN at boot (recommended)"
+    echo "    TPM2_PCRS=7+11 $0    # also bind the booted kernel"
+    echo "                         # (re-run after every kernel update)"
+fi
+echo ""
 echo "You will be prompted for your current LUKS disk decryption password."
 echo "----------------------------------------------------------------------"
 
-# Append the TPM token. If one exists, this adds another or overwrites depending on systemd version.
-# To be safe and clean, we replace any existing TPM2 tokens and add a fresh one.
-systemd-cryptenroll --wipe-slot=tpm2 --tpm2-device=auto --tpm2-pcrs=7 "$LUKS_DEV"
+# Replace any existing TPM2 token rather than stacking a second one.
+ENROLL_ARGS=(--wipe-slot=tpm2 --tpm2-device=auto --tpm2-pcrs="$TPM2_PCRS")
+if [[ "$TPM2_PIN" == "yes" ]]; then
+    ENROLL_ARGS+=(--tpm2-with-pin=yes)
+fi
+
+systemd-cryptenroll "${ENROLL_ARGS[@]}" "$LUKS_DEV"
 
 echo "----------------------------------------------------------------------"
-echo "Success! TPM 2.0 token added."
+echo "Success! TPM 2.0 token added (PCRs: $TPM2_PCRS, PIN: $TPM2_PIN)."
 echo "On your next boot, systemd will attempt to automatically unlock the drive using the TPM chip."
+if [[ "$TPM2_PCRS" == *11* ]]; then
+    echo "Re-run this script after each kernel update to refresh the PCR 11 policy."
+fi
