@@ -18,45 +18,62 @@ success() { echo "  ✓ $*"; }
 warn()    { echo "  ⚠ $*" >&2; }
 section() { echo ""; echo "=== $* ==="; }
 
-# Point dest at src. A real directory at dest must be removed first:
-# ln -sfn would otherwise create dest/$(basename src) inside it.
-link_into() {
-    local src="$1" dest="$2"
-    if [[ ! -e "$src" && ! -L "$src" ]]; then
-        warn "link source missing: $src"
-        return 1
-    fi
+# Copy src to dest. If dest is a symlink, replace the link — never write through
+# it, dest may point at the git work tree.
+install_copy() {
+    local src="$1" dest="$2" mode="${3:-755}"
     mkdir -p "$(dirname "$dest")"
-    if [[ -d "$dest" && ! -L "$dest" ]]; then
-        rm -rf "$dest"
+    if [[ -L "$dest" ]]; then
+        rm -f "$dest"
     fi
-    ln -sfn "$src" "$dest"
+    install -m "$mode" "$src" "$dest"
 }
 
-self_test_link_into() {
-    local tmp src dest
+self_test_install_copy() {
+    local tmp
     tmp="$(mktemp -d)"
-    src="$tmp/src"
-    dest="$tmp/dest"
-    mkdir -p "$src" "$dest"
-    echo live > "$src/updown.sh"
-    echo stale > "$dest/updown.sh"
-    link_into "$src/updown.sh" "$dest/updown.sh"
-    [[ -L "$dest/updown.sh" ]] || { echo "FAIL: file was not replaced with a symlink" >&2; rm -rf "$tmp"; return 1; }
-    [[ "$(cat "$dest/updown.sh")" == "live" ]] || { echo "FAIL: symlink did not follow source file" >&2; rm -rf "$tmp"; return 1; }
+    echo payload > "$tmp/src"
+    echo original > "$tmp/repo"
+    ln -s "$tmp/repo" "$tmp/dest"
+    install_copy "$tmp/src" "$tmp/dest" 644
+    if [[ -L "$tmp/dest" ]]; then
+        echo "FAIL: dest is still a symlink" >&2
+        rm -rf "$tmp"
+        return 1
+    fi
+    if [[ "$(cat "$tmp/dest")" != "payload" ]]; then
+        echo "FAIL: dest content" >&2
+        rm -rf "$tmp"
+        return 1
+    fi
+    if [[ "$(cat "$tmp/repo")" != "original" ]]; then
+        echo "FAIL: wrote through symlink into target" >&2
+        rm -rf "$tmp"
+        return 1
+    fi
 
-    mkdir -p "$src/hooks" "$dest/hooks"
-    echo hook > "$src/hooks/pre-commit"
-    echo copy > "$dest/hooks/pre-commit"
-    link_into "$src/hooks" "$dest/hooks"
-    [[ -L "$dest/hooks" ]] || { echo "FAIL: directory was not replaced with a symlink" >&2; rm -rf "$tmp"; return 1; }
-    [[ "$(cat "$dest/hooks/pre-commit")" == "hook" ]] || { echo "FAIL: dir symlink did not follow source" >&2; rm -rf "$tmp"; return 1; }
-
-    link_into "$src/hooks" "$dest/hooks"
-    [[ -L "$dest/hooks" && "$(cat "$dest/hooks/pre-commit")" == "hook" ]] || { echo "FAIL: relink was not idempotent" >&2; rm -rf "$tmp"; return 1; }
+    mkdir -p "$tmp/hooks_src" "$tmp/hooks_repo"
+    echo hook > "$tmp/hooks_src/pre-commit"
+    echo original-hook > "$tmp/hooks_repo/pre-commit"
+    ln -s "$tmp/hooks_repo" "$tmp/githooks"
+    if [[ -L "$tmp/githooks" ]]; then
+        rm -f "$tmp/githooks"
+    fi
+    mkdir -p "$tmp/githooks"
+    install_copy "$tmp/hooks_src/pre-commit" "$tmp/githooks/pre-commit"
+    if [[ "$(cat "$tmp/hooks_repo/pre-commit")" != "original-hook" ]]; then
+        echo "FAIL: wrote through directory symlink into repo" >&2
+        rm -rf "$tmp"
+        return 1
+    fi
+    if [[ -L "$tmp/githooks" || "$(cat "$tmp/githooks/pre-commit")" != "hook" ]]; then
+        echo "FAIL: hook dir was not replaced with a real copy" >&2
+        rm -rf "$tmp"
+        return 1
+    fi
 
     rm -rf "$tmp"
-    echo "link_into self-test passed"
+    echo "install_copy self-test passed"
 }
 
 # ── Shell Wiring ─────────────────────────────────────────────────────────────
@@ -125,20 +142,20 @@ PY
 install_maintenance_tools() {
     section "Maintenance Tools & Services"
 
-    info "Linking maintenance scripts into ~/.local/bin..."
+    info "Installing maintenance scripts to ~/.local/bin..."
     mkdir -p "$HOME/.local/bin"
     if [[ -f "$DOTFILES_DIR/scripts/updown.sh" ]]; then
-        link_into "$DOTFILES_DIR/scripts/updown.sh" "$HOME/.local/bin/updown"
-        success "Linked updown → $HOME/.local/bin/updown"
+        install_copy "$DOTFILES_DIR/scripts/updown.sh" "$HOME/.local/bin/updown"
+        success "Installed updown → $HOME/.local/bin/updown"
     fi
 
     if [[ -d "$DOTFILES_DIR/config/systemd" ]]; then
-        info "Linking systemd user services..."
+        info "Configuring systemd user services..."
         local SYSTEMD_USER_DIR="$HOME/.config/systemd/user"
         mkdir -p "$SYSTEMD_USER_DIR"
         for unit in "$DOTFILES_DIR/config/systemd"/*; do
             [[ -f "$unit" ]] || continue
-            link_into "$unit" "$SYSTEMD_USER_DIR/$(basename "$unit")"
+            install_copy "$unit" "$SYSTEMD_USER_DIR/$(basename "$unit")" 644
         done
         if command -v systemctl &>/dev/null; then
             systemctl --user daemon-reload >/dev/null 2>&1 || true
@@ -149,7 +166,7 @@ install_maintenance_tools() {
                 systemctl --user enable --now kio-trash-sync.path >/dev/null 2>&1 || true
             fi
         fi
-        success "systemd user units linked & enabled"
+        success "systemd user units installed & enabled"
     fi
 }
 
@@ -427,7 +444,7 @@ main() {
             exit 0
             ;;
         --self-test)
-            self_test_link_into
+            self_test_install_copy
             exit $?
             ;;
         --desktop)

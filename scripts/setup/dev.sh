@@ -10,9 +10,23 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-# Shared helpers (link_into, info/success/warn/section). core.sh main is guarded.
-# shellcheck source-path=SCRIPTDIR
-source "$SCRIPT_DIR/core.sh"
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+info()    { echo "  → $*"; }
+success() { echo "  ✓ $*"; }
+warn()    { echo "  ⚠ $*" >&2; }
+section() { echo ""; echo "=== $* ==="; }
+
+# Copy src to dest. If dest is a symlink, replace the link — never write through
+# it, dest may point at the git work tree.
+install_copy() {
+    local src="$1" dest="$2" mode="${3:-755}"
+    mkdir -p "$(dirname "$dest")"
+    if [[ -L "$dest" ]]; then
+        rm -f "$dest"
+    fi
+    install -m "$mode" "$src" "$dest"
+}
 
 # ── Git Configuration & Hooks ────────────────────────────────────────────────
 
@@ -30,9 +44,17 @@ wire_git() {
     local HOOKS_SRC_DIR="$DOTFILES_DIR/config/hooks"
     local HOOKS_DEST_DIR="$HOME/.githooks"
     if [[ -d "$HOOKS_SRC_DIR" ]]; then
-        info "Linking global git hooks..."
-        link_into "$HOOKS_SRC_DIR" "$HOOKS_DEST_DIR"
-        success "Global git hooks linked → $HOOKS_DEST_DIR"
+        info "Installing global git hooks..."
+        if [[ -L "$HOOKS_DEST_DIR" ]]; then
+            rm -f "$HOOKS_DEST_DIR"
+        fi
+        mkdir -p "$HOOKS_DEST_DIR"
+        for hook_file in "$HOOKS_SRC_DIR"/*; do
+            [[ -f "$hook_file" ]] || continue
+            local hook_name; hook_name="$(basename "$hook_file")"
+            install_copy "$hook_file" "$HOOKS_DEST_DIR/$hook_name"
+        done
+        success "Global git hooks installed → $HOOKS_DEST_DIR"
     fi
 }
 
@@ -42,8 +64,8 @@ install_update_helpers() {
     section "Developer Utilities & Maintenance Helpers"
 
     if [[ -f "$DOTFILES_DIR/scripts/update-antigravity.sh" ]]; then
-        link_into "$DOTFILES_DIR/scripts/update-antigravity.sh" "$HOME/.local/bin/update-antigravity"
-        success "Linked update-antigravity → $HOME/.local/bin/update-antigravity"
+        install_copy "$DOTFILES_DIR/scripts/update-antigravity.sh" "$HOME/.local/bin/update-antigravity"
+        success "Installed update-antigravity → $HOME/.local/bin/update-antigravity"
     fi
 
     [[ -L "$HOME/.copilot.md" ]] && rm -f "$HOME/.copilot.md" && info "Removed legacy ~/.copilot.md"
