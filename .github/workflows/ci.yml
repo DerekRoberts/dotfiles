@@ -47,5 +47,6 @@ jobs:
           bash -n setup.sh
           bash -n scripts/*.sh scripts/setup/*.sh
           ./setup.sh --help
+          scripts/setup/core.sh --self-test
           scripts/setup/dev.sh --self-test
 

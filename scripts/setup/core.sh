@@ -10,6 +10,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 BASHRC="$HOME/.bashrc"
+# Installed copies — never source or include the git work tree at runtime.
+DOTFILES_USER_CONFIG="${DOTFILES_USER_CONFIG:-$HOME/.config/dotfiles}"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -18,18 +20,97 @@ success() { echo "  ✓ $*"; }
 warn()    { echo "  ⚠ $*" >&2; }
 section() { echo ""; echo "=== $* ==="; }
 
+# Copy src to dest. If dest is a symlink, replace the link — never write through
+# it, dest may point at the git work tree.
+install_copy() {
+    local src="$1" dest="$2" mode="${3:-755}"
+    mkdir -p "$(dirname "$dest")"
+    if [[ -L "$dest" ]]; then
+        rm -f "$dest"
+    fi
+    install -m "$mode" "$src" "$dest"
+}
+
+self_test_install_copy() {
+    local tmp
+    tmp="$(mktemp -d)"
+    echo payload > "$tmp/src"
+    echo original > "$tmp/repo"
+    ln -s "$tmp/repo" "$tmp/dest"
+    install_copy "$tmp/src" "$tmp/dest" 644
+    if [[ -L "$tmp/dest" ]]; then
+        echo "FAIL: dest is still a symlink" >&2
+        rm -rf "$tmp"
+        return 1
+    fi
+    if [[ "$(cat "$tmp/dest")" != "payload" ]]; then
+        echo "FAIL: dest content" >&2
+        rm -rf "$tmp"
+        return 1
+    fi
+    if [[ "$(cat "$tmp/repo")" != "original" ]]; then
+        echo "FAIL: wrote through symlink into target" >&2
+        rm -rf "$tmp"
+        return 1
+    fi
+
+    mkdir -p "$tmp/hooks_src" "$tmp/hooks_repo"
+    echo hook > "$tmp/hooks_src/pre-commit"
+    echo original-hook > "$tmp/hooks_repo/pre-commit"
+    ln -s "$tmp/hooks_repo" "$tmp/githooks"
+    if [[ -L "$tmp/githooks" ]]; then
+        rm -f "$tmp/githooks"
+    fi
+    mkdir -p "$tmp/githooks"
+    install_copy "$tmp/hooks_src/pre-commit" "$tmp/githooks/pre-commit"
+    if [[ "$(cat "$tmp/hooks_repo/pre-commit")" != "original-hook" ]]; then
+        echo "FAIL: wrote through directory symlink into repo" >&2
+        rm -rf "$tmp"
+        return 1
+    fi
+    if [[ -L "$tmp/githooks" || "$(cat "$tmp/githooks/pre-commit")" != "hook" ]]; then
+        echo "FAIL: hook dir was not replaced with a real copy" >&2
+        rm -rf "$tmp"
+        return 1
+    fi
+
+    rm -rf "$tmp"
+    echo "install_copy self-test passed"
+}
+
+# Git aliases that start with ! run a shell. The installed gitconfig copy is
+# an execution surface; keep aliases as git builtins only.
+self_test_gitconfig_no_shell_aliases() {
+    local gc="$DOTFILES_DIR/config/gitconfig"
+    if [[ ! -f "$gc" ]]; then
+        echo "FAIL: gitconfig missing: $gc" >&2
+        return 1
+    fi
+    if grep -E '^[[:space:]]*[A-Za-z0-9_-]+[[:space:]]*=[[:space:]]*!' "$gc"; then
+        echo "FAIL: git alias must not shell out" >&2
+        return 1
+    fi
+    echo "gitconfig alias self-test passed"
+}
+
 # ── Shell Wiring ─────────────────────────────────────────────────────────────
 
 wire_bashrc() {
     section "Shell Profile Wiring"
 
-    if [[ -f "$BASHRC" ]]; then
+    local installed_bashrc="$DOTFILES_USER_CONFIG/bashrc"
+    if [[ -f "$DOTFILES_DIR/config/bashrc" ]]; then
+        install_copy "$DOTFILES_DIR/config/bashrc" "$installed_bashrc" 644
+        success "Installed $installed_bashrc"
+    fi
+
+    if [[ -f "$BASHRC" && -f "$installed_bashrc" ]]; then
         info "Updating ~/.bashrc sourcing..."
         cp "$BASHRC" "$BASHRC.bak.$(date +%s)"
 
-        python3 - "$BASHRC" "$DOTFILES_DIR" << 'PY'
+        python3 - "$BASHRC" "$installed_bashrc" << 'PY'
 import sys, re
-path, repo_dir = sys.argv[1], sys.argv[2]
+path, installed = sys.argv[1], sys.argv[2]
 with open(path) as f:
     content = f.read()
 
@@ -48,11 +129,10 @@ content = re.sub(
 )
 content = re.sub(r"# Source personal dotfiles configuration\nfi\n*", "", content)
 
-target = f"{repo_dir}/config/bashrc"
 loader = (
     f"\n\n# Source personal dotfiles configuration\n"
-    f'if [ -f "{target}" ]; then\n'
-    f'    . "{target}"\n'
+    f'if [ -f "{installed}" ]; then\n'
+    f'    . "{installed}"\n'
     f"fi\n"
 )
 with open(path, "w") as f:
@@ -87,7 +167,7 @@ install_maintenance_tools() {
     info "Installing maintenance scripts to ~/.local/bin..."
     mkdir -p "$HOME/.local/bin"
     if [[ -f "$DOTFILES_DIR/scripts/updown.sh" ]]; then
-        install -m 755 "$DOTFILES_DIR/scripts/updown.sh" "$HOME/.local/bin/updown"
+        install_copy "$DOTFILES_DIR/scripts/updown.sh" "$HOME/.local/bin/updown"
         success "Installed updown → $HOME/.local/bin/updown"
     fi
 
@@ -97,7 +177,7 @@ install_maintenance_tools() {
         mkdir -p "$SYSTEMD_USER_DIR"
         for unit in "$DOTFILES_DIR/config/systemd"/*; do
             [[ -f "$unit" ]] || continue
-            cp -f "$unit" "$SYSTEMD_USER_DIR/$(basename "$unit")"
+            install_copy "$unit" "$SYSTEMD_USER_DIR/$(basename "$unit")" 644
         done
         if command -v systemctl &>/dev/null; then
             systemctl --user daemon-reload >/dev/null 2>&1 || true
@@ -384,6 +464,11 @@ main() {
         --help|-h)
             usage
             exit 0
+            ;;
+        --self-test)
+            self_test_install_copy
+            self_test_gitconfig_no_shell_aliases
+            exit $?
             ;;
         --desktop)
             PROFILE="desktop"

@@ -6,6 +6,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
+NoNewPrivileges=yes
+PrivateTmp=yes
 # 23-hour guard: stamp file must be older than 82800 seconds
 ExecCondition=/bin/sh -c '\
   stamp="%h/.local/share/dotfiles/last-update"; \

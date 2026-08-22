@@ -133,7 +133,7 @@ This repository establishes a client-side safety net and policy framework that e
 
 1. **Global Git Pre-Commit Hook (`~/.githooks/pre-commit`)**: Configured globally via `git config --global core.hooksPath ~/.githooks`. Executes `gitleaks protect --staged --redact --no-banner` on every commit and inspects staged changes across `package.json`, `Containerfile`, `Dockerfile`, `compose.yml`, `pyproject.toml`, and GitHub Actions workflows to detect and block version regressions.
 2. **Prompt-Scope Fencing & Behavioral Instructions (`config/instructions.md`)**: Injected into `~/.gemini/GEMINI.md` and Cursor global instructions to enforce operational discipline, fail-fast mechanics, diffs-as-receipts, and immutable data safety rules.
-3. **Shell & Agent Environment Isolation (`config/bashrc`)**: Detects AI agent execution (`ANTIGRAVITY_AGENT`) to strip prompt evaluation overhead and unset ambient `GITHUB_TOKEN` / `GH_TOKEN` environment variables so commands use authenticated local credentials.
+3. **Shell & Agent Environment Isolation (`config/bashrc`)**: Copied to `~/.config/dotfiles/bashrc` on setup (not sourced from the git work tree). Detects AI agent execution (`ANTIGRAVITY_AGENT`) to strip prompt evaluation overhead and unset ambient `GITHUB_TOKEN` / `GH_TOKEN` environment variables so commands use authenticated local credentials.
 
 ### Bypassing (Human Developers Only)
 
@@ -152,8 +152,9 @@ This repository establishes a client-side safety net and policy framework that e
 ├── setup.sh                           # Main idempotent workstation setup
 ├── .github/workflows/ci.yml           # ShellCheck & integration tests
 ├── config/
-│   ├── bashrc                         # Shell configuration and aliases
-│   ├── gitconfig                      # Global git configuration include
+│   ├── bashrc                         # Shell configuration (copied to ~/.config/dotfiles/bashrc)
+│   ├── gitconfig                      # Global git include (copied to ~/.config/dotfiles/gitconfig)
+│   ├── hooks/                         # Global git hooks (copied to ~/.githooks)
 │   ├── instructions.md                # Unified AI agent instructions & guardrails
 │   ├── skills/
 │   │   ├── podman-runner/             # Containerized execution & resource limits

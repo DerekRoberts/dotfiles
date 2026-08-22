@@ -17,14 +17,29 @@ success() { echo "  ✓ $*"; }
 warn()    { echo "  ⚠ $*" >&2; }
 section() { echo ""; echo "=== $* ==="; }
 
+# Copy src to dest. If dest is a symlink, replace the link — never write through
+# it, dest may point at the git work tree.
+install_copy() {
+    local src="$1" dest="$2" mode="${3:-755}"
+    mkdir -p "$(dirname "$dest")"
+    if [[ -L "$dest" ]]; then
+        rm -f "$dest"
+    fi
+    install -m "$mode" "$src" "$dest"
+}
+
 # ── Git Configuration & Hooks ────────────────────────────────────────────────
 
 wire_git() {
     section "Git Configuration & Hooks"
 
     info "Configuring Git global settings..."
-    command git config --global include.path "$DOTFILES_DIR/config/gitconfig"
-    success "Git include path set"
+    local installed_gitconfig="${DOTFILES_USER_CONFIG:-$HOME/.config/dotfiles}/gitconfig"
+    if [[ -f "$DOTFILES_DIR/config/gitconfig" ]]; then
+        install_copy "$DOTFILES_DIR/config/gitconfig" "$installed_gitconfig" 644
+        command git config --global include.path "$installed_gitconfig"
+        success "Git include path set → $installed_gitconfig"
+    fi
 
     if [[ -f "$DOTFILES_DIR/scripts/git-setup.sh" ]]; then
         bash "$DOTFILES_DIR/scripts/git-setup.sh"
@@ -34,12 +49,14 @@ wire_git() {
     local HOOKS_DEST_DIR="$HOME/.githooks"
     if [[ -d "$HOOKS_SRC_DIR" ]]; then
         info "Installing global git hooks..."
+        if [[ -L "$HOOKS_DEST_DIR" ]]; then
+            rm -f "$HOOKS_DEST_DIR"
+        fi
         mkdir -p "$HOOKS_DEST_DIR"
         for hook_file in "$HOOKS_SRC_DIR"/*; do
             [[ -f "$hook_file" ]] || continue
             local hook_name; hook_name="$(basename "$hook_file")"
-            cp -f "$hook_file" "$HOOKS_DEST_DIR/$hook_name"
-            chmod +x "$HOOKS_DEST_DIR/$hook_name"
+            install_copy "$hook_file" "$HOOKS_DEST_DIR/$hook_name"
         done
         success "Global git hooks installed → $HOOKS_DEST_DIR"
     fi
@@ -51,7 +68,7 @@ install_update_helpers() {
     section "Developer Utilities & Maintenance Helpers"
 
     if [[ -f "$DOTFILES_DIR/scripts/update-antigravity.sh" ]]; then
-        install -m 755 "$DOTFILES_DIR/scripts/update-antigravity.sh" "$HOME/.local/bin/update-antigravity"
+        install_copy "$DOTFILES_DIR/scripts/update-antigravity.sh" "$HOME/.local/bin/update-antigravity"
         success "Installed update-antigravity → $HOME/.local/bin/update-antigravity"
     fi
 
