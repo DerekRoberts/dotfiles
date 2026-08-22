@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Run ShellCheck
-        run: shellcheck setup.sh scripts/*.sh scripts/setup/*.sh
+        run: shellcheck -x setup.sh scripts/*.sh scripts/setup/*.sh
 
   actionlint:
     name: Actionlint
@@ -47,5 +47,6 @@ jobs:
           bash -n setup.sh
           bash -n scripts/*.sh scripts/setup/*.sh
           ./setup.sh --help
+          scripts/setup/core.sh --self-test
           scripts/setup/dev.sh --self-test
 

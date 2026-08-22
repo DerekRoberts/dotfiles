@@ -12,7 +12,7 @@ Declarative, single-command workstation setup and configuration for **Fedora Kin
   - Strict 2-bucket directory layout (`~/Documents` for long-term storage, `~/Downloads` for temporary/scratch files).
   - Spectacle screenshots and video screen recordings route automatically into `~/Downloads`.
   - Left auto-hiding panel (`dodgewindows`, 72px), `DarkestHour` wallpaper, and natural scrolling.
-- **Automated Updates**: Systemd user service (`dotfiles-update.service`) running `updown --background` at login with a 23-hour idempotency guard.
+- **Automated Updates**: Systemd user service (`dotfiles-update.service`) running `updown --background` at login with a 23-hour idempotency guard. `updown`, git hooks, and user units are symlinks into this repo so a `git pull` is live.
 
 ## Quick Start
 
@@ -154,6 +154,7 @@ This repository establishes a client-side safety net and policy framework that e
 ├── config/
 │   ├── bashrc                         # Shell configuration and aliases
 │   ├── gitconfig                      # Global git configuration include
+│   ├── hooks/                         # Global git hooks (symlinked to ~/.githooks)
 │   ├── instructions.md                # Unified AI agent instructions & guardrails
 │   ├── skills/
 │   │   ├── podman-runner/             # Containerized execution & resource limits
@@ -169,7 +170,7 @@ This repository establishes a client-side safety net and policy framework that e
 │   │   ├── desktop.sh                 # KDE Plasma layout, panel, system tray, notifications & natural scrolling
 │   │   ├── apps.sh                    # Application installers (Chrome, VLC, Yakuake, Insync)
 │   │   └── dev.sh                     # Toolchains (jq, gh, uv, nvm; `--tools` for CLIs only), AI assistants, oc & repos
-│   ├── updown.sh                      # Workstation updater script (installed to ~/.local/bin/updown)
+│   ├── updown.sh                      # Workstation updater (symlinked to ~/.local/bin/updown)
 │   ├── bootstrap-tools.sh             # CLI binary installer (`oc`)
 │   ├── clone-repos.sh                 # Idempotent repository cloner
 │   ├── tpm-enroll.sh                  # Optional TPM2 disk unlock helper

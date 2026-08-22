@@ -18,6 +18,47 @@ success() { echo "  ✓ $*"; }
 warn()    { echo "  ⚠ $*" >&2; }
 section() { echo ""; echo "=== $* ==="; }
 
+# Point dest at src. A real directory at dest must be removed first:
+# ln -sfn would otherwise create dest/$(basename src) inside it.
+link_into() {
+    local src="$1" dest="$2"
+    if [[ ! -e "$src" && ! -L "$src" ]]; then
+        warn "link source missing: $src"
+        return 1
+    fi
+    mkdir -p "$(dirname "$dest")"
+    if [[ -d "$dest" && ! -L "$dest" ]]; then
+        rm -rf "$dest"
+    fi
+    ln -sfn "$src" "$dest"
+}
+
+self_test_link_into() {
+    local tmp src dest
+    tmp="$(mktemp -d)"
+    src="$tmp/src"
+    dest="$tmp/dest"
+    mkdir -p "$src" "$dest"
+    echo live > "$src/updown.sh"
+    echo stale > "$dest/updown.sh"
+    link_into "$src/updown.sh" "$dest/updown.sh"
+    [[ -L "$dest/updown.sh" ]] || { echo "FAIL: file was not replaced with a symlink" >&2; rm -rf "$tmp"; return 1; }
+    [[ "$(cat "$dest/updown.sh")" == "live" ]] || { echo "FAIL: symlink did not follow source file" >&2; rm -rf "$tmp"; return 1; }
+
+    mkdir -p "$src/hooks" "$dest/hooks"
+    echo hook > "$src/hooks/pre-commit"
+    echo copy > "$dest/hooks/pre-commit"
+    link_into "$src/hooks" "$dest/hooks"
+    [[ -L "$dest/hooks" ]] || { echo "FAIL: directory was not replaced with a symlink" >&2; rm -rf "$tmp"; return 1; }
+    [[ "$(cat "$dest/hooks/pre-commit")" == "hook" ]] || { echo "FAIL: dir symlink did not follow source" >&2; rm -rf "$tmp"; return 1; }
+
+    link_into "$src/hooks" "$dest/hooks"
+    [[ -L "$dest/hooks" && "$(cat "$dest/hooks/pre-commit")" == "hook" ]] || { echo "FAIL: relink was not idempotent" >&2; rm -rf "$tmp"; return 1; }
+
+    rm -rf "$tmp"
+    echo "link_into self-test passed"
+}
+
 # ── Shell Wiring ─────────────────────────────────────────────────────────────
 
 wire_bashrc() {
@@ -84,20 +125,20 @@ PY
 install_maintenance_tools() {
     section "Maintenance Tools & Services"
 
-    info "Installing maintenance scripts to ~/.local/bin..."
+    info "Linking maintenance scripts into ~/.local/bin..."
     mkdir -p "$HOME/.local/bin"
     if [[ -f "$DOTFILES_DIR/scripts/updown.sh" ]]; then
-        install -m 755 "$DOTFILES_DIR/scripts/updown.sh" "$HOME/.local/bin/updown"
-        success "Installed updown → $HOME/.local/bin/updown"
+        link_into "$DOTFILES_DIR/scripts/updown.sh" "$HOME/.local/bin/updown"
+        success "Linked updown → $HOME/.local/bin/updown"
     fi
 
     if [[ -d "$DOTFILES_DIR/config/systemd" ]]; then
-        info "Configuring systemd user services..."
+        info "Linking systemd user services..."
         local SYSTEMD_USER_DIR="$HOME/.config/systemd/user"
         mkdir -p "$SYSTEMD_USER_DIR"
         for unit in "$DOTFILES_DIR/config/systemd"/*; do
             [[ -f "$unit" ]] || continue
-            cp -f "$unit" "$SYSTEMD_USER_DIR/$(basename "$unit")"
+            link_into "$unit" "$SYSTEMD_USER_DIR/$(basename "$unit")"
         done
         if command -v systemctl &>/dev/null; then
             systemctl --user daemon-reload >/dev/null 2>&1 || true
@@ -108,7 +149,7 @@ install_maintenance_tools() {
                 systemctl --user enable --now kio-trash-sync.path >/dev/null 2>&1 || true
             fi
         fi
-        success "systemd user units installed & enabled"
+        success "systemd user units linked & enabled"
     fi
 }
 
@@ -384,6 +425,10 @@ main() {
         --help|-h)
             usage
             exit 0
+            ;;
+        --self-test)
+            self_test_link_into
+            exit $?
             ;;
         --desktop)
             PROFILE="desktop"
