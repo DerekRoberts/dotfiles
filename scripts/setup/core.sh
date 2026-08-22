@@ -10,6 +10,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 BASHRC="$HOME/.bashrc"
+# Installed copies — never source or include the git work tree at runtime.
+DOTFILES_USER_CONFIG="${DOTFILES_USER_CONFIG:-$HOME/.config/dotfiles}"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -76,18 +78,39 @@ self_test_install_copy() {
     echo "install_copy self-test passed"
 }
 
+# Git aliases that start with ! run a shell. The installed gitconfig copy is
+# an execution surface; keep aliases as git builtins only.
+self_test_gitconfig_no_shell_aliases() {
+    local gc="$DOTFILES_DIR/config/gitconfig"
+    if [[ ! -f "$gc" ]]; then
+        echo "FAIL: gitconfig missing: $gc" >&2
+        return 1
+    fi
+    if grep -E '^[[:space:]]*[A-Za-z0-9_-]+[[:space:]]*=[[:space:]]*!' "$gc"; then
+        echo "FAIL: git alias must not shell out" >&2
+        return 1
+    fi
+    echo "gitconfig alias self-test passed"
+}
+
 # ── Shell Wiring ─────────────────────────────────────────────────────────────
 
 wire_bashrc() {
     section "Shell Profile Wiring"
 
-    if [[ -f "$BASHRC" ]]; then
+    local installed_bashrc="$DOTFILES_USER_CONFIG/bashrc"
+    if [[ -f "$DOTFILES_DIR/config/bashrc" ]]; then
+        install_copy "$DOTFILES_DIR/config/bashrc" "$installed_bashrc" 644
+        success "Installed $installed_bashrc"
+    fi
+
+    if [[ -f "$BASHRC" && -f "$installed_bashrc" ]]; then
         info "Updating ~/.bashrc sourcing..."
         cp "$BASHRC" "$BASHRC.bak.$(date +%s)"
 
-        python3 - "$BASHRC" "$DOTFILES_DIR" << 'PY'
+        python3 - "$BASHRC" "$installed_bashrc" << 'PY'
 import sys, re
-path, repo_dir = sys.argv[1], sys.argv[2]
+path, installed = sys.argv[1], sys.argv[2]
 with open(path) as f:
     content = f.read()
 
@@ -106,11 +129,10 @@ content = re.sub(
 )
 content = re.sub(r"# Source personal dotfiles configuration\nfi\n*", "", content)
 
-target = f"{repo_dir}/config/bashrc"
 loader = (
     f"\n\n# Source personal dotfiles configuration\n"
-    f'if [ -f "{target}" ]; then\n'
-    f'    . "{target}"\n'
+    f'if [ -f "{installed}" ]; then\n'
+    f'    . "{installed}"\n'
     f"fi\n"
 )
 with open(path, "w") as f:
@@ -445,6 +467,7 @@ main() {
             ;;
         --self-test)
             self_test_install_copy
+            self_test_gitconfig_no_shell_aliases
             exit $?
             ;;
         --desktop)

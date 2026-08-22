@@ -44,6 +44,8 @@ if [[ -n "$SCRIPT_PATH" && -f "$(dirname "$SCRIPT_PATH")/../setup.sh" ]]; then
 else
     DOTFILES_DIR="${DOTFILES_DIR:-$HOME/Repos/dotfiles}"
 fi
+# Locate helper scripts in the clone. Never git-pull this repository from the
+# updater: a remote change would become an execution path at login.
 DOTFILES_PROFILE="${DOTFILES_PROFILE:-dev}"
 LOG_PREFIX="[updown]"
 

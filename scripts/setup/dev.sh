@@ -34,8 +34,12 @@ wire_git() {
     section "Git Configuration & Hooks"
 
     info "Configuring Git global settings..."
-    command git config --global include.path "$DOTFILES_DIR/config/gitconfig"
-    success "Git include path set"
+    local installed_gitconfig="${DOTFILES_USER_CONFIG:-$HOME/.config/dotfiles}/gitconfig"
+    if [[ -f "$DOTFILES_DIR/config/gitconfig" ]]; then
+        install_copy "$DOTFILES_DIR/config/gitconfig" "$installed_gitconfig" 644
+        command git config --global include.path "$installed_gitconfig"
+        success "Git include path set → $installed_gitconfig"
+    fi
 
     if [[ -f "$DOTFILES_DIR/scripts/git-setup.sh" ]]; then
         bash "$DOTFILES_DIR/scripts/git-setup.sh"
