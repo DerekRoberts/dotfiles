@@ -57,7 +57,7 @@ source ~/.bashrc
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `UPDATE` | `0` | Set `UPDATE=1` to force re-downloading CLI binaries |
+| `UPDATE` | `0` | Set `UPDATE=1` to re-check GitHub CLI tools (`scripts/setup/dev.sh --tools`) and `oc` |
 | `OC_VERSION` | `latest` | Override version tag for `oc` |
 
 ## AI Agent Guardrails & Safety
@@ -168,7 +168,7 @@ This repository establishes a client-side safety net and policy framework that e
 │   │   ├── core.sh                    # Shell profiles, XDG dirs, systemd, Dolphin places & MIME defaults
 │   │   ├── desktop.sh                 # KDE Plasma layout, panel, system tray, notifications & natural scrolling
 │   │   ├── apps.sh                    # Application installers (Chrome, VLC, Yakuake, Insync)
-│   │   └── dev.sh                     # Toolchains (jq, gh, uv, nvm), AI assistants (Antigravity/Cursor), oc & repos
+│   │   └── dev.sh                     # Toolchains (jq, gh, uv, nvm; `--tools` for CLIs only), AI assistants, oc & repos
 │   ├── updown.sh                      # Workstation updater script (installed to ~/.local/bin/updown)
 │   ├── bootstrap-tools.sh             # CLI binary installer (`oc`)
 │   ├── clone-repos.sh                 # Idempotent repository cloner
