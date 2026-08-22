@@ -223,6 +223,8 @@ os.replace(tmp_path, path)
 PY
     fi
 
+    repair_icon_theme_pollution
+
     info "Configuring Dolphin sidebar places..."
     if [[ -f "$DOTFILES_DIR/config/kde/user-places.xbel" ]]; then
         mkdir -p "$HOME/.local/share"

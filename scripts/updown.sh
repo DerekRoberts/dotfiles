@@ -191,7 +191,7 @@ if [[ -x "$INSYNC_BIN" ]] || [[ "$INSTALL_INSYNC" -eq 1 ]]; then
                         # Extract application and status icons from RPM
                         extracted_icons="$(find "$tmp_dir" -type d -path "*/usr/share/icons" | head -n 1 || true)"
                         if [[ -n "$extracted_icons" && -d "$extracted_icons" ]]; then
-                            mkdir -p "${HOME}/.local/share/icons" "${HOME}/.icons"
+                            mkdir -p "${HOME}/.local/share/icons"
                             cp -rf "$extracted_icons/"* "${HOME}/.local/share/icons/"
                             [[ -f "/usr/share/icons/hicolor/index.theme" ]] && cp -f "/usr/share/icons/hicolor/index.theme" "${HOME}/.local/share/icons/hicolor/index.theme"
                             python3 - << 'PY'
@@ -202,6 +202,10 @@ except ImportError:
     import sys
     sys.exit(0)
 
+# Insync ships its tray icons at 48x48 only, so fill in the other sizes the
+# tray asks for. hicolor only: it is the fallback every icon theme inherits, and
+# writing into ~/.local/share/icons/breeze* would shadow the system Breeze theme
+# (a theme directory there without an index.theme breaks all Breeze lookups).
 src_dir = os.path.expanduser("~/.local/share/icons/hicolor/48x48/status")
 sizes = [16, 22, 24, 32, 48, 64, 128, 256]
 icons = ["insync-alert", "insync-normal", "insync-offline", "insync-paused", "insync-synced", "insync-syncing"]
@@ -214,13 +218,7 @@ for icon in icons:
     for sz in sizes:
         dest_dir = os.path.expanduser(f"~/.local/share/icons/hicolor/{sz}x{sz}/status")
         os.makedirs(dest_dir, exist_ok=True)
-        dest_file = os.path.join(dest_dir, f"{icon}.png")
-        resized = img.resize((sz, sz), Image.LANCZOS)
-        resized.save(dest_file, "PNG")
-        for theme in ("breeze", "breeze-dark"):
-            bdir = os.path.expanduser(f"~/.local/share/icons/{theme}/status/{sz}")
-            os.makedirs(bdir, exist_ok=True)
-            resized.save(os.path.join(bdir, f"{icon}.png"), "PNG")
+        img.resize((sz, sz), Image.LANCZOS).save(os.path.join(dest_dir, f"{icon}.png"), "PNG")
 PY
                             if command -v gtk-update-icon-cache &>/dev/null; then
                                 gtk-update-icon-cache -f -q "${HOME}/.local/share/icons/hicolor" 2>/dev/null || true

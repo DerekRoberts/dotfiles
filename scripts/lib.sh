@@ -105,6 +105,48 @@ EOF
     chmod +x "$dest"
 }
 
+# ── Icon themes ──────────────────────────────────────────────────────────────
+
+# The Insync installer used to copy its icons into directories that shadow the
+# system icon themes: ~/.local/share/icons/{breeze,breeze-dark} holding only
+# status icons and no index.theme, plus hicolor's size directories dumped into
+# ~/.icons, where each name is read as a theme. A theme directory that ranks
+# ahead of /usr/share/icons but has no index.theme makes every lookup against
+# that theme fail — which is what leaves the Dolphin launcher icon blank.
+# Insync's icons belong in hicolor alone; every theme already falls back to it.
+# Move offenders aside rather than deleting, in case something else landed there.
+repair_icon_theme_pollution() {
+    local stash="$HOME/.local/share/dotfiles/icon-pollution"
+    local stamp dir moved=0
+    stamp="$(date +%s)"
+
+    for dir in "$HOME/.local/share/icons/breeze" "$HOME/.local/share/icons/breeze-dark"; do
+        [[ -d "$dir" && ! -f "$dir/index.theme" ]] || continue
+        mkdir -p "$stash"
+        mv "$dir" "$stash/$(basename "$dir").$stamp"
+        moved=1
+    done
+
+    # A size or "scalable" directory is never a valid theme name.
+    for dir in "$HOME"/.icons/*; do
+        [[ -d "$dir" && ! -f "$dir/index.theme" ]] || continue
+        case "$(basename "$dir")" in
+            [0-9]*x[0-9]*|scalable)
+                mkdir -p "$stash"
+                mv "$dir" "$stash/dot-icons-$(basename "$dir").$stamp"
+                moved=1
+                ;;
+        esac
+    done
+
+    if [[ "$moved" -eq 1 ]]; then
+        if command -v gtk-update-icon-cache &>/dev/null; then
+            gtk-update-icon-cache -f -q "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
+        fi
+        info "Moved shadowing icon theme directories to $stash"
+    fi
+}
+
 # ── KDE ──────────────────────────────────────────────────────────────────────
 
 # Plasma 6 ships qdbus under several names depending on the image.
@@ -187,6 +229,28 @@ self_test_lib() {
 
     if tar_is_safe "$tmp/does-not-exist.tar.gz"; then
         echo "FAIL: accepted a missing archive" >&2; rm -rf "$tmp"; return 1
+    fi
+
+    # repair_icon_theme_pollution reads $HOME; point it at the sandbox.
+    local HOME="$tmp/home"
+    mkdir -p "$HOME/.local/share/icons/breeze/status/22" "$HOME/.icons/48x48/status"
+    mkdir -p "$HOME/.local/share/icons/breeze-dark"
+    printf '[Icon Theme]\nName=Real\n' > "$HOME/.local/share/icons/breeze-dark/index.theme"
+    mkdir -p "$HOME/.icons/MyTheme"
+    printf '[Icon Theme]\nName=Mine\n' > "$HOME/.icons/MyTheme/index.theme"
+    repair_icon_theme_pollution >/dev/null
+
+    if [[ -d "$HOME/.local/share/icons/breeze" ]]; then
+        echo "FAIL: left a themeless breeze dir shadowing the system theme" >&2; rm -rf "$tmp"; return 1
+    fi
+    if [[ -d "$HOME/.icons/48x48" ]]; then
+        echo "FAIL: left a size-named dir in ~/.icons" >&2; rm -rf "$tmp"; return 1
+    fi
+    if [[ ! -f "$HOME/.local/share/icons/breeze-dark/index.theme" ]]; then
+        echo "FAIL: removed a valid theme that has an index.theme" >&2; rm -rf "$tmp"; return 1
+    fi
+    if [[ ! -f "$HOME/.icons/MyTheme/index.theme" ]]; then
+        echo "FAIL: removed a real user theme" >&2; rm -rf "$tmp"; return 1
     fi
 
     rm -rf "$tmp"
