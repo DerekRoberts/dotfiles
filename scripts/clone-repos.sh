@@ -39,10 +39,10 @@ SSH_KEY="${HOME}/.ssh/id_ed25519"
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
-info()    { echo "  → $*"; }
-success() { echo "  ✓ $*"; }
-warn()    { echo "  ⚠ $*" >&2; }
-die()     { echo "❌ $*" >&2; exit 1; }
+# shellcheck source=scripts/lib.sh
+. "$REPO_DIR/scripts/lib.sh"
+
+die() { echo "❌ $*" >&2; exit 1; }
 
 # ── SSH Key ──────────────────────────────────────────────────────────────────
 

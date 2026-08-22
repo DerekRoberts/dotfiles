@@ -15,68 +15,8 @@ DOTFILES_USER_CONFIG="${DOTFILES_USER_CONFIG:-$HOME/.config/dotfiles}"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
-info()    { echo "  → $*"; }
-success() { echo "  ✓ $*"; }
-warn()    { echo "  ⚠ $*" >&2; }
-section() { echo ""; echo "=== $* ==="; }
-
-# Copy src to dest. If dest is a symlink, replace the link — never write through
-# it, dest may point at the git work tree.
-install_copy() {
-    local src="$1" dest="$2" mode="${3:-755}"
-    mkdir -p "$(dirname "$dest")"
-    if [[ -L "$dest" ]]; then
-        rm -f "$dest"
-    fi
-    install -m "$mode" "$src" "$dest"
-}
-
-self_test_install_copy() {
-    local tmp
-    tmp="$(mktemp -d)"
-    echo payload > "$tmp/src"
-    echo original > "$tmp/repo"
-    ln -s "$tmp/repo" "$tmp/dest"
-    install_copy "$tmp/src" "$tmp/dest" 644
-    if [[ -L "$tmp/dest" ]]; then
-        echo "FAIL: dest is still a symlink" >&2
-        rm -rf "$tmp"
-        return 1
-    fi
-    if [[ "$(cat "$tmp/dest")" != "payload" ]]; then
-        echo "FAIL: dest content" >&2
-        rm -rf "$tmp"
-        return 1
-    fi
-    if [[ "$(cat "$tmp/repo")" != "original" ]]; then
-        echo "FAIL: wrote through symlink into target" >&2
-        rm -rf "$tmp"
-        return 1
-    fi
-
-    mkdir -p "$tmp/hooks_src" "$tmp/hooks_repo"
-    echo hook > "$tmp/hooks_src/pre-commit"
-    echo original-hook > "$tmp/hooks_repo/pre-commit"
-    ln -s "$tmp/hooks_repo" "$tmp/githooks"
-    if [[ -L "$tmp/githooks" ]]; then
-        rm -f "$tmp/githooks"
-    fi
-    mkdir -p "$tmp/githooks"
-    install_copy "$tmp/hooks_src/pre-commit" "$tmp/githooks/pre-commit"
-    if [[ "$(cat "$tmp/hooks_repo/pre-commit")" != "original-hook" ]]; then
-        echo "FAIL: wrote through directory symlink into repo" >&2
-        rm -rf "$tmp"
-        return 1
-    fi
-    if [[ -L "$tmp/githooks" || "$(cat "$tmp/githooks/pre-commit")" != "hook" ]]; then
-        echo "FAIL: hook dir was not replaced with a real copy" >&2
-        rm -rf "$tmp"
-        return 1
-    fi
-
-    rm -rf "$tmp"
-    echo "install_copy self-test passed"
-}
+# shellcheck source=scripts/lib.sh
+. "$DOTFILES_DIR/scripts/lib.sh"
 
 # Git aliases that start with ! run a shell. The installed gitconfig copy is
 # an execution surface; keep aliases as git builtins only.
@@ -106,7 +46,11 @@ wire_bashrc() {
 
     if [[ -f "$BASHRC" && -f "$installed_bashrc" ]]; then
         info "Updating ~/.bashrc sourcing..."
-        cp "$BASHRC" "$BASHRC.bak.$(date +%s)"
+        # Keep the pre-dotfiles original only. Re-running must not accumulate
+        # backups of a file this script itself wrote.
+        if [[ ! -f "$BASHRC.orig" ]]; then
+            cp "$BASHRC" "$BASHRC.orig"
+        fi
 
         python3 - "$BASHRC" "$installed_bashrc" << 'PY'
 import sys, re
@@ -121,13 +65,12 @@ content = re.sub(
     content,
 )
 
-content = re.sub(r".*/Documents/1-Personal/Linux/bashrc.*\n*", "", content)
+# Drop our own loader before re-appending it, so re-runs stay idempotent.
 content = re.sub(
     r"# Source personal dotfiles configuration\nif \[ -f [\"']?[^\"'\n]+/(?:config/)?bashrc[\"']? \]; then\n    \. [\"']?[^\"'\n]+/(?:config/)?bashrc[\"']?\nfi\n*",
     "",
     content,
 )
-content = re.sub(r"# Source personal dotfiles configuration\nfi\n*", "", content)
 
 loader = (
     f"\n\n# Source personal dotfiles configuration\n"
@@ -396,52 +339,17 @@ PY
     fi
     success "Default applications and drag-and-drop behavior configured"
 
-    info "Configuring Spectacle save locations to ~/Downloads..."
-    local SPECTACLE_CONFIG="$HOME/.config/spectaclerc"
-    mkdir -p "$(dirname "$SPECTACLE_CONFIG")"
     if command -v kwriteconfig6 &>/dev/null; then
-        kwriteconfig6 --file spectaclerc --group ImageSave --key imageSaveLocation "file://$HOME/Downloads"
-        kwriteconfig6 --file spectaclerc --group ImageSave --key lastImageSaveLocation "file://$HOME/Downloads"
-        kwriteconfig6 --file spectaclerc --group ImageSave --key lastImageSaveAsLocation "file://$HOME/Downloads"
-        kwriteconfig6 --file spectaclerc --group VideoSave --key videoSaveLocation "file://$HOME/Downloads"
-        kwriteconfig6 --file spectaclerc --group VideoSave --key lastVideoSaveLocation "file://$HOME/Downloads"
-        kwriteconfig6 --file spectaclerc --group VideoSave --key lastVideoSaveAsLocation "file://$HOME/Downloads"
-    else
-        python3 - "$SPECTACLE_CONFIG" "$HOME/Downloads" << 'PY'
-import sys, os, configparser, tempfile
-
-path, dl_path = sys.argv[1], sys.argv[2]
-dir_path = os.path.dirname(os.path.abspath(path))
-os.makedirs(dir_path, exist_ok=True)
-
-dl_url = f"file://{dl_path}"
-config = configparser.RawConfigParser(delimiters=('=',), strict=False)
-config.optionxform = str
-if os.path.exists(path):
-    config.read(path)
-
-for sec, keys in [
-    ("ImageSave", ["imageSaveLocation", "lastImageSaveLocation", "lastImageSaveAsLocation"]),
-    ("VideoSave", ["videoSaveLocation", "lastVideoSaveLocation", "lastVideoSaveAsLocation"]),
-]:
-    if not config.has_section(sec):
-        config.add_section(sec)
-    for k in keys:
-        config.set(sec, k, dl_url)
-
-tmp_fd, tmp_path = tempfile.mkstemp(prefix=".spectaclerc.tmp.", dir=dir_path)
-try:
-    with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
-        config.write(f, space_around_delimiters=False)
-    os.chmod(tmp_path, 0o600)
-    os.replace(tmp_path, path)
-except Exception:
-    if os.path.exists(tmp_path):
-        os.remove(tmp_path)
-    raise
-PY
+        info "Configuring Spectacle save locations to ~/Downloads..."
+        local key
+        for key in imageSaveLocation lastImageSaveLocation lastImageSaveAsLocation; do
+            kwriteconfig6 --file spectaclerc --group ImageSave --key "$key" "file://$HOME/Downloads"
+        done
+        for key in videoSaveLocation lastVideoSaveLocation lastVideoSaveAsLocation; do
+            kwriteconfig6 --file spectaclerc --group VideoSave --key "$key" "file://$HOME/Downloads"
+        done
+        success "Spectacle configured to save screenshots and recordings to ~/Downloads"
     fi
-    success "Spectacle configured to save screenshots and recordings to ~/Downloads"
 }
 
 # ── Main ─────────────────────────────────────────────────────────────────────
@@ -466,7 +374,7 @@ main() {
             exit 0
             ;;
         --self-test)
-            self_test_install_copy
+            self_test_lib
             self_test_gitconfig_no_shell_aliases
             exit $?
             ;;

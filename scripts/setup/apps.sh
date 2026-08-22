@@ -12,10 +12,8 @@ DOTFILES_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
-info()    { echo "  → $*"; }
-success() { echo "  ✓ $*"; }
-warn()    { echo "  ⚠ $*" >&2; }
-section() { echo ""; echo "=== $* ==="; }
+# shellcheck source=scripts/lib.sh
+. "$DOTFILES_DIR/scripts/lib.sh"
 
 # ── Flathub Remote ───────────────────────────────────────────────────────────
 
@@ -104,14 +102,7 @@ DESKTOP
         mkdir -p "$(dirname "$YAKUAKE_CONFIG")"
         kwriteconfig6 --file "$YAKUAKE_CONFIG" --group Window --key ShowSystrayIcon false
 
-        # Reload shortcuts / KWin in KDE Plasma 6
-        if command -v qdbus-qt6 &>/dev/null; then
-            qdbus-qt6 org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
-        elif command -v qdbus6 &>/dev/null; then
-            qdbus6 org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
-        elif command -v qdbus &>/dev/null; then
-            qdbus org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
-        fi
+        kwin_reconfigure
     else
         warn "kwriteconfig6 not found — cannot set global shortcut automatically."
     fi
@@ -121,26 +112,14 @@ DESKTOP
 
 install_insync() {
     section "Insync"
-    # Insync has no Flatpak or AppImage. We download the RPM, extract the
-    # binaries with rpm2cpio, and install to ~/.local — zero host mutation.
+    # Insync has no Flatpak or AppImage. We download the RPM, verify its
+    # signature, extract to ~/.local — zero host mutation.
     local BIN_DIR="$HOME/.local/bin"
     local INSYNC_BIN="$BIN_DIR/insync"
     local APPS_DIR="$HOME/.local/share/applications"
 
     if [[ -x "$INSYNC_BIN" ]]; then
-        cat > "$INSYNC_BIN" << 'EOF'
-#!/bin/bash
-export LC_TIME=C
-export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
-export XDG_DATA_DIRS="$HOME/.local/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
-
-if command -v bwrap &>/dev/null && [[ -d "$HOME/.local/share/icons/hicolor" ]]; then
-    exec bwrap --dev-bind / / --bind "$HOME/.local/share/icons/hicolor" /usr/share/icons/hicolor "$HOME/.local/lib/insync/insync" "$@" || exec "$HOME/.local/lib/insync/insync" "$@"
-else
-    exec "$HOME/.local/lib/insync/insync" "$@"
-fi
-EOF
-        chmod +x "$INSYNC_BIN"
+        write_insync_wrapper "$INSYNC_BIN"
         success "Insync already installed (wrapper updated)"
         local AUTOSTART_DIR="$HOME/.config/autostart"
         mkdir -p "$AUTOSTART_DIR" "$APPS_DIR"

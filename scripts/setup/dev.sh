@@ -12,21 +12,8 @@ DOTFILES_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
-info()    { echo "  → $*"; }
-success() { echo "  ✓ $*"; }
-warn()    { echo "  ⚠ $*" >&2; }
-section() { echo ""; echo "=== $* ==="; }
-
-# Copy src to dest. If dest is a symlink, replace the link — never write through
-# it, dest may point at the git work tree.
-install_copy() {
-    local src="$1" dest="$2" mode="${3:-755}"
-    mkdir -p "$(dirname "$dest")"
-    if [[ -L "$dest" ]]; then
-        rm -f "$dest"
-    fi
-    install -m "$mode" "$src" "$dest"
-}
+# shellcheck source=scripts/lib.sh
+. "$DOTFILES_DIR/scripts/lib.sh"
 
 # ── Git Configuration & Hooks ────────────────────────────────────────────────
 
@@ -99,13 +86,16 @@ install_ai_wiring() {
         success "AI skills installed"
     fi
 
-    if [[ -L "$HOME/.gemini/config/skills" || ! -d "$HOME/.gemini/config/skills" ]]; then
-        ln -sfn "$HOME/.agents/skills" "$HOME/.gemini/config/skills"
-    fi
-    if [[ -L "$HOME/.gemini/antigravity/skills" || ! -d "$HOME/.gemini/antigravity/skills" ]]; then
-        ln -sfn "$HOME/.gemini/config/skills" "$HOME/.gemini/antigravity/skills"
-    fi
-    [[ -L "$HOME/.agents/skills/skills" ]] && rm -f "$HOME/.agents/skills/skills"
+    # Both Antigravity lookup paths point at the one real skills directory.
+    # Link directly rather than chaining, so neither can become a cycle.
+    local link
+    for link in "$HOME/.gemini/config/skills" "$HOME/.gemini/antigravity/skills"; do
+        if [[ -d "$link" && ! -L "$link" ]]; then
+            warn "$link is a real directory — leaving it alone"
+            continue
+        fi
+        ln -sfn "$HOME/.agents/skills" "$link"
+    done
 
     # Cursor instructions and settings
     local CURSOR_USER_DIR="$HOME/.config/Cursor/User"
@@ -164,6 +154,9 @@ PY
 }
 
 # ── Native Standalone Tools & Toolchains ─────────────────────────────────────
+#
+# EXPECTED_SHA256, if set by a caller, is checked by fetch_tarball_bins before
+# extraction. Only oc can use it: GitHub releases here publish no checksums.
 
 # curl flags for tag lookups and binary downloads (timeouts keep updown from hanging)
 GH_CURL_META=(--fail --silent --show-error --location --connect-timeout 10 --max-time 20 --retry 2)
@@ -253,30 +246,14 @@ fetch_gh_release() {
     fi
 
     info "Downloading $name ($tag)..."
-    local asset_name url tmp_dir rc=0
+    local asset_name url rc=0
     asset_name="$(asset_name_from_pattern "$asset_pattern" "$tag")"
     url="https://github.com/$repo/releases/download/${tag}/${asset_name}"
-    tmp_dir="$(mktemp -d "${BIN_DIR}/.tmpdir.XXXXXX")"
 
     if is_tarball_asset "$asset_name"; then
-        if ! curl "${GH_CURL_FILE[@]}" "$url" | tar -xz -C "$tmp_dir"; then
-            warn "Failed to download/extract $url"
-            rc=1
-        elif ! install_bins_from_dir "$tmp_dir" "${bins[@]}"; then
-            rc=1
-        fi
+        fetch_tarball_bins "$url" "${bins[@]}" || rc=1
     else
-        local tmp_file="$tmp_dir/$name"
-        if ! curl "${GH_CURL_FILE[@]}" "$url" -o "$tmp_file"; then
-            warn "Failed to download $url"
-            rc=1
-        else
-            chmod +x "$tmp_file"
-            mv -f "$tmp_file" "$BIN_DIR/$name"
-            if command -v restorecon &>/dev/null; then
-                restorecon "$BIN_DIR/$name" 2>/dev/null || true
-            fi
-        fi
+        fetch_raw_bin "$url" "$name" || rc=1
     fi
 
     if [[ "$rc" -eq 0 ]]; then
@@ -284,8 +261,98 @@ fetch_gh_release() {
         echo "$tag" > "$stamp_file"
         success "$name installed ($tag)"
     fi
+    return "$rc"
+}
+
+# Download a tarball to disk, refuse it if its members could escape the
+# extraction directory, then install the named binaries out of it.
+fetch_tarball_bins() {
+    local url="$1"; shift
+    local tmp_dir tmp_file rc=0
+    tmp_dir="$(mktemp -d "${BIN_DIR}/.tmpdir.XXXXXX")"
+    tmp_file="$tmp_dir/asset.tar.gz"
+
+    if ! curl "${GH_CURL_FILE[@]}" "$url" -o "$tmp_file"; then
+        warn "Failed to download $url"
+        rc=1
+    elif [[ -n "${EXPECTED_SHA256:-}" ]] && ! verify_sha256 "$tmp_file" "$EXPECTED_SHA256"; then
+        warn "Checksum mismatch for $url — refusing to install"
+        rc=1
+    elif ! tar_is_safe "$tmp_file"; then
+        warn "Refusing archive from $url (absolute, traversing, or escaping entries)"
+        rc=1
+    elif ! tar -xzf "$tmp_file" -C "$tmp_dir" --no-same-owner; then
+        warn "Failed to extract $url"
+        rc=1
+    elif ! install_bins_from_dir "$tmp_dir" "$@"; then
+        rc=1
+    fi
+
     rm -rf "$tmp_dir"
     return "$rc"
+}
+
+# Download a bare binary to a temp file and swap it into place, so an
+# interrupted download can't leave a truncated executable on PATH.
+fetch_raw_bin() {
+    local url="$1" name="$2"
+    local tmp_dir rc=0
+    tmp_dir="$(mktemp -d "${BIN_DIR}/.tmpdir.XXXXXX")"
+
+    if ! curl "${GH_CURL_FILE[@]}" "$url" -o "$tmp_dir/$name"; then
+        warn "Failed to download $url"
+        rc=1
+    else
+        chmod +x "$tmp_dir/$name"
+        mv -f "$tmp_dir/$name" "$BIN_DIR/$name"
+        if command -v restorecon &>/dev/null; then
+            restorecon "$BIN_DIR/$name" 2>/dev/null || true
+        fi
+    fi
+
+    rm -rf "$tmp_dir"
+    return "$rc"
+}
+
+# oc ships from Red Hat's mirror rather than a GitHub release, so it tracks the
+# version in release.txt instead of a tag.
+OC_MIRROR="https://mirror.openshift.com/pub/openshift-v4/clients/ocp"
+
+install_oc() {
+    local asset="openshift-client-linux.tar.gz"
+    local target="${OC_VERSION:-latest}"
+    if [[ "$target" == "latest" ]]; then
+        # Fetch into a variable rather than piping: an awk that exits on the
+        # first match closes the pipe early and trips curl under pipefail.
+        local release_txt
+        release_txt="$(curl "${GH_CURL_META[@]}" "$OC_MIRROR/latest/release.txt")" || release_txt=""
+        # release.txt indents the field: "  Version:  4.22.10"
+        target="$(awk '/^[[:space:]]*Version:/ {print $2; exit}' <<< "$release_txt")"
+    fi
+    if [[ -z "$target" ]]; then
+        warn "Could not resolve latest oc version"
+        return 1
+    fi
+
+    local current
+    current="$("$BIN_DIR/oc" version --client 2>/dev/null | awk '/Client Version:/ {print $3; exit}' || true)"
+    if [[ "${UPDATE:-0}" -eq 0 && "$current" == "$target" ]]; then
+        success "oc is up to date ($current)"
+        return 0
+    fi
+
+    # Unlike every other download here, Red Hat publishes per-release checksums.
+    local sums EXPECTED_SHA256
+    sums="$(curl "${GH_CURL_META[@]}" "$OC_MIRROR/${target}/sha256sum.txt")" || sums=""
+    EXPECTED_SHA256="$(awk -v a="$asset" '$2 == a {print $1; exit}' <<< "$sums")"
+    if [[ -z "$EXPECTED_SHA256" ]]; then
+        warn "No published checksum for oc $asset ($target) — refusing to install"
+        return 1
+    fi
+
+    info "Downloading oc ($target)..."
+    fetch_tarball_bins "$OC_MIRROR/${target}/${asset}" oc || return 1
+    success "oc installed ($target, checksum verified)"
 }
 
 install_cli_tools() {
@@ -304,6 +371,7 @@ install_cli_tools() {
     fetch_gh_release "shellcheck"     "koalaman/shellcheck" "shellcheck-{tag}.linux.x86_64.tar.gz"    || failed=1
     fetch_gh_release "actionlint"     "rhysd/actionlint"    "actionlint_{ver}_linux_amd64.tar.gz"     || failed=1
     fetch_gh_release "uv"             "astral-sh/uv"        "uv-x86_64-unknown-linux-gnu.tar.gz" "uv uvx" || failed=1
+    install_oc || failed=1
 
     # Clean up legacy podman-compose python wrapper script
     if [[ -x "$BIN_DIR/docker-compose" && -f "$BIN_DIR/podman-compose" ]]; then
@@ -413,6 +481,8 @@ install_agy() {
     fi
 
     info "Installing agy CLI..."
+    # ponytail: upstream publishes no versioned installer or checksum, so this
+    # trusts TLS and Google's origin alone. Pin it if they ever ship a tag.
     curl -fsSL https://antigravity.google/cli/install.sh | bash
 
     if command -v restorecon &>/dev/null && [[ -f "$AGY_BIN" ]]; then
@@ -434,20 +504,17 @@ install_cursor() {
 
     info "Fetching latest Cursor AppImage URL..."
     local CURSOR_URL
-    CURSOR_URL="$(curl -fsSL \
-        'https://www.cursor.com/api/download?platform=linux-x64&releaseTrack=stable' \
-        | grep -o '"downloadUrl":"[^"]*"' | cut -d'"' -f4 || true)"
-
-    if [[ -z "$CURSOR_URL" ]]; then
-        warn "Could not resolve Cursor download URL — skipping"
+    if ! CURSOR_URL="$(cursor_latest_url)"; then
+        warn "Cursor download URL missing or outside $CURSOR_URL_PREFIX — skipping"
         warn "Manual download: https://www.cursor.com/downloads"
         return 1
     fi
 
     info "Downloading Cursor: $CURSOR_URL"
     mkdir -p "$BIN_DIR"
-    curl -fsSL "$CURSOR_URL" -o "$CURSOR_BIN"
-    chmod +x "$CURSOR_BIN"
+    curl -fsSL "$CURSOR_URL" -o "$CURSOR_BIN.tmp"
+    chmod +x "$CURSOR_BIN.tmp"
+    mv -f "$CURSOR_BIN.tmp" "$CURSOR_BIN"
 
     if command -v restorecon &>/dev/null; then
         restorecon "$CURSOR_BIN" 2>/dev/null || true
@@ -458,6 +525,9 @@ install_cursor() {
     echo "$CURSOR_URL" > "$STAMP_FILE"
 
     mkdir -p "$APPS_DIR"
+    # --no-sandbox: the AppImage can't use Chromium's SUID sandbox without
+    # unprivileged userns, which Kinoite restricts for AppImages. This gives up
+    # renderer isolation — drop the flag if a future build starts working with it.
     cat > "$APPS_DIR/cursor.desktop" << DESKTOP
 [Desktop Entry]
 Name=Cursor
@@ -484,9 +554,17 @@ install_ponytail() {
     if [[ -f "$CURSOR_RULES_DIR/ponytail.mdc" ]]; then
         success "Cursor rule already present"
     else
-        if curl -fsSL "https://raw.githubusercontent.com/dietrichgebert/ponytail/main/.cursor/rules/ponytail.mdc" -o "$CURSOR_RULES_DIR/ponytail.mdc"; then
+        # Pinned to a commit: this file becomes standing instructions for every
+        # agent session, so it must not change under us when upstream moves main.
+        # Bump PONYTAIL_REF deliberately after reading the diff.
+        local PONYTAIL_REF="2ed6c52c9d7e5e56942508591085fd45dea277d3"
+        local PONYTAIL_URL="https://raw.githubusercontent.com/DietrichGebert/ponytail/${PONYTAIL_REF}/.cursor/rules/ponytail.mdc"
+        if curl -fsSL "$PONYTAIL_URL" -o "$CURSOR_RULES_DIR/ponytail.mdc.tmp" \
+            && [[ -s "$CURSOR_RULES_DIR/ponytail.mdc.tmp" ]]; then
+            mv -f "$CURSOR_RULES_DIR/ponytail.mdc.tmp" "$CURSOR_RULES_DIR/ponytail.mdc"
             success "Cursor rule downloaded to $CURSOR_RULES_DIR/ponytail.mdc"
         else
+            rm -f "$CURSOR_RULES_DIR/ponytail.mdc.tmp"
             warn "Failed to download Cursor rule"
         fi
     fi
@@ -508,11 +586,6 @@ install_ponytail() {
             fi
         fi
     fi
-}
-
-install_oc() {
-    section "OpenShift CLI (oc)"
-    bash "$DOTFILES_DIR/scripts/bootstrap-tools.sh"
 }
 
 install_repos() {
@@ -570,7 +643,6 @@ main() {
     install_agy
     install_cursor
     install_ponytail
-    install_oc
     install_repos
     success "Developer stack configuration complete"
 }

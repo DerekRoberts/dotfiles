@@ -45,7 +45,7 @@ source ~/.bashrc
 | **Silent OS & App Updates** (`updown` via systemd) | ✅ | ✅ |
 | **Essential Desktop Apps** (Chrome, VLC, Insync) | ✅ | ✅ |
 | **Git Setup & SSH Commit Signing** (`git-setup.sh`) | ❌ *(Untouched)* | ✅ |
-| **Global Git Hooks & Regression Guardian** | ❌ | ✅ |
+| **Global Git Hooks (gitleaks secret scanning)** | ❌ | ✅ |
 | **Developer CLI Suite** (`gh`, `jq`, `gitleaks`, `shellcheck`, `actionlint`, `uv`, `docker-compose`, `oc`) | ❌ | ✅ |
 | **Node.js LTS** (via NVM) | ❌ | ✅ |
 | **AI Assistants & Prompt Rules** (Cursor, Antigravity Hub, `agy`, Ponytail) | ❌ | ✅ |
@@ -122,7 +122,6 @@ This repository establishes a client-side safety net and policy framework that e
 ├──────────────────────────────────┼──────────────────────────────────────┤
 │ Global Git Hooks Layer           │ config/hooks/pre-commit (~/.githooks)│
 │                                  │ • Gitleaks secret scanning           │
-│                                  │ • General Version Regression Guardian│
 ├──────────────────────────────────┼──────────────────────────────────────┤
 │ Shell & Environment Layer        │ config/bashrc                        │
 │                                  │ • Agent marker detection             │
@@ -131,7 +130,7 @@ This repository establishes a client-side safety net and policy framework that e
 └──────────────────────────────────┴──────────────────────────────────────┘
 ```
 
-1. **Global Git Pre-Commit Hook (`~/.githooks/pre-commit`)**: Configured globally via `git config --global core.hooksPath ~/.githooks`. Executes `gitleaks protect --staged --redact --no-banner` on every commit and inspects staged changes across `package.json`, `Containerfile`, `Dockerfile`, `compose.yml`, `pyproject.toml`, and GitHub Actions workflows to detect and block version regressions.
+1. **Global Git Pre-Commit Hook (`~/.githooks/pre-commit`)**: Configured globally via `git config --global core.hooksPath ~/.githooks`. Executes `gitleaks protect --staged --redact --no-banner` on every commit.
 2. **Prompt-Scope Fencing & Behavioral Instructions (`config/instructions.md`)**: Injected into `~/.gemini/GEMINI.md` and Cursor global instructions to enforce operational discipline, fail-fast mechanics, diffs-as-receipts, and immutable data safety rules.
 3. **Shell & Agent Environment Isolation (`config/bashrc`)**: Copied to `~/.config/dotfiles/bashrc` on setup (not sourced from the git work tree). Detects AI agent execution (`ANTIGRAVITY_AGENT`) to strip prompt evaluation overhead and unset ambient `GITHUB_TOKEN` / `GH_TOKEN` environment variables so commands use authenticated local credentials.
 
@@ -145,6 +144,36 @@ This repository establishes a client-side safety net and policy framework that e
   ```bash
   git commit --no-verify -m "fix: emergency out-of-band hotfix"
   ```
+
+## Supply Chain & Trust Model
+
+This repo's job is downloading and executing third-party software, and
+`dotfiles-update.service` does it unattended at graphical login. That makes the
+upstreams below part of the trusted computing base: compromise any one of them
+and you get code execution on this machine at next login. What is verifiable is
+verified; the rest is documented here rather than left implicit.
+
+| Component | Integrity check | Notes |
+| --- | --- | --- |
+| `oc` | **sha256 verified** | Red Hat publishes `sha256sum.txt` per release; a mismatch aborts the install. |
+| `jq`, `gh`, `gitleaks`, `docker-compose`, `shellcheck`, `actionlint`, `uv` | TLS only | GitHub release assets, resolved from the `/releases/latest` redirect. No upstream checksums. Archives are rejected if their members are absolute, traversing, or link outside the extraction directory. |
+| Cursor AppImage | TLS + URL anchored | The download URL comes from Cursor's API and must sit under `https://downloads.cursor.com/`. |
+| Antigravity hub | TLS + URL anchored | URL scraped from the download page, must be under `storage.googleapis.com/antigravity-public/`; archive checked for path traversal. |
+| Insync | TLS + URL anchored + digest | URL anchored to `cdn.insynchq.com`. **Insync ships unsigned RPMs** (no `SIGPGP`/`RSAHEADER`), so there is nothing to verify against a key. `rpmkeys --checksig` confirms the package's own digests, and the installed hash is recorded to `~/.local/share/dotfiles/insync.sha256`. |
+| `agy` CLI | TLS only | `curl \| bash` of `antigravity.google/cli/install.sh`. Upstream publishes no versioned installer or checksum. |
+| `nvm` | Pinned tag | Installer fetched at a resolved release tag, not `main`. |
+| Ponytail agent rule | Pinned commit | Pinned by SHA in `dev.sh`, since it becomes standing instructions for every agent session. Bump deliberately after reading the diff. |
+
+Two other deliberate trade-offs:
+
+* **Cursor runs with `--no-sandbox`**, because the AppImage can't use Chromium's
+  sandbox without unprivileged userns. This gives up renderer isolation; drop
+  the flag if a future build works without it.
+* **`tpm-enroll.sh` binds to PCR 7 by default**, which measures Secure Boot
+  state only — unlocking requires no secret from you, so someone with physical
+  access and a kernel Secure Boot already trusts can have the TPM release the
+  key. Harden with `TPM2_PIN=yes` (recommended) or `TPM2_PCRS=7+11` to also
+  bind the booted kernel, which requires re-running after each kernel update.
 
 ## Repository Structure
 
@@ -167,13 +196,13 @@ This repository establishes a client-side safety net and policy framework that e
 ├── scripts/
 │   ├── setup/                         # Modular setup subsystem scripts
 │   │   ├── core.sh                    # Shell profiles, XDG dirs, systemd, Dolphin places & MIME defaults
-│   │   ├── desktop.sh                 # KDE Plasma layout, panel, system tray, notifications & natural scrolling
+│   │   ├── desktop.sh                 # KDE Plasma layout, panel, notifications & natural scrolling
 │   │   ├── apps.sh                    # Application installers (Chrome, VLC, Yakuake, Insync)
 │   │   └── dev.sh                     # Toolchains (jq, gh, uv, nvm; `--tools` for CLIs only), AI assistants, oc & repos
+│   ├── lib.sh                         # Shared helpers: output, install_copy, download guards
 │   ├── updown.sh                      # Workstation updater script (installed to ~/.local/bin/updown)
-│   ├── bootstrap-tools.sh             # CLI binary installer (`oc`)
 │   ├── clone-repos.sh                 # Idempotent repository cloner
-│   ├── tpm-enroll.sh                  # Optional TPM2 disk unlock helper
+│   ├── tpm-enroll.sh                  # Optional TPM2 disk unlock helper (see Supply Chain below)
 │   ├── update-antigravity.sh          # Runtime updater for Antigravity Hub
 │   └── git-setup.sh                   # Interactive git config & signing helper
 ```
