@@ -44,7 +44,7 @@ wire_bashrc() {
         sed -i -e '/tty: ttyname error/! s|\. /etc/bashrc|. /etc/bashrc 2> >(grep -v '"'"'tty: ttyname error'"'"' >\&2)|' "$BASHRC"
         
         # Drop our own loader before re-appending it
-        sed -i '/Source personal dotfiles configuration/d; /if \[ -f.*bashrc.*\]; then/d; /\. .*bashrc/d; /fi/d' "$BASHRC"
+        sed -i '/^# Source personal dotfiles configuration$/,/^fi$/d' "$BASHRC"
         
         printf '\n# Source personal dotfiles configuration\nif [ -f "%s" ]; then\n    . "%s"\nfi\n' "$installed_bashrc" "$installed_bashrc" >> "$BASHRC"
         success "bashrc sourcing updated"
