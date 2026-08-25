@@ -116,19 +116,20 @@ install_insync() {
         success "Insync is layered via rpm-ostree"
         return
     fi
-    info "Insync is not installed. To layer it natively, run:"
-    info "sudo curl -fsSL https://d2t3ff60b2tol4.cloudfront.net/repomd.asc -o /etc/pki/rpm-gpg/RPM-GPG-KEY-insync"
-    info "sudo cat << 'EOF' > /etc/yum.repos.d/insync.repo"
-    info "[insync]"
-    info "name=insync repo"
-    info "baseurl=http://yum.insync.io/fedora/\$releasever/"
-    info "gpgcheck=1"
-    info "gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-insync"
-    info "enabled=1"
-    info "metadata_expire=120m"
-    info "type=rpm-md"
-    info "EOF"
-    info "rpm-ostree install insync"
+    info "Installing Insync natively via rpm-ostree (will prompt for sudo)..."
+    sudo curl -fsSL https://d2t3ff60b2tol4.cloudfront.net/repomd.asc -o /etc/pki/rpm-gpg/RPM-GPG-KEY-insync || true
+    sudo bash -c "cat > /etc/yum.repos.d/insync.repo << 'EOF'
+[insync]
+name=insync repo
+baseurl=http://yum.insync.io/fedora/\$releasever/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-insync
+enabled=1
+metadata_expire=120m
+type=rpm-md
+EOF"
+    # Polkit will intercept this and prompt graphically if running as user
+    rpm-ostree install insync || warn "Failed to layer Insync"
 }
 
 # ── Main ─────────────────────────────────────────────────────────────────────
