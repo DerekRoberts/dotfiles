@@ -657,7 +657,7 @@ setup_github_mcp() {
     fi
 
     local gh_token
-    gh_token="$(unset GITHUB_TOKEN && gh auth token 2>/dev/null || true)"
+    gh_token="$(unset GITHUB_TOKEN; gh auth token 2>/dev/null || true)"
 
     if [[ -z "$gh_token" ]]; then
         warn "No active GitHub CLI login found. Run 'gh auth login' before configuring GitHub MCP."
