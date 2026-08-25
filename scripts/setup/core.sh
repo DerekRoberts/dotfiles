@@ -249,10 +249,8 @@ PY
     fi
 
     # Invalidate and rebuild KDE system configuration cache for XDG user directories
-    if command -v kbuildsycoca6 &>/dev/null; then
-        kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
-        info "KDE sycoca cache rebuilt"
-    fi
+    rebuild_ksycoca
+    info "KDE sycoca cache rebuilt"
 }
 
 # ── Application MIME Defaults & Spectacle ────────────────────────────────────

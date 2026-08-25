@@ -92,6 +92,10 @@ else
     echo "Profile: desktop (essentials)"
 fi
 
+if command -v kbuildsycoca6 &>/dev/null; then
+    kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
+fi
+
 echo ""
 echo "✅ Setup complete!"
 echo "   Run: source ~/.bashrc   (or restart terminal)"

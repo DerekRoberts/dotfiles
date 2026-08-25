@@ -120,6 +120,8 @@ configure_plasma_desktop() {
     # id and activity uuid, which we read out of appletsrc. appletsrc itself is
     # owned by plasmashell — read it, never rewrite it. The desktop and panel
     # below are set through the supported scripting API instead.
+    repair_icon_theme_pollution
+    rebuild_ksycoca
     configure_kickoff_favorites "$PROFILE"
 
     local PANEL_SCRIPT='
@@ -152,6 +154,7 @@ for (var i = 0; i < p.length; i++) {
         "$QDBUS" org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$PANEL_SCRIPT" >/dev/null 2>&1 || true
     fi
 
+    rebuild_ksycoca
     success "Desktops (DarkestHour), panel layout & task manager configured"
 }
 
