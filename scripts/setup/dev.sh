@@ -142,6 +142,7 @@ if os.path.exists(path):
 
 data["git.defaultCloneDirectory"] = "~/Repos"
 data["files.dialog.defaultPath"] = "~/Repos"
+data["update.mode"] = "none"
 
 tmp_fd, tmp_path = tempfile.mkstemp(prefix=".settings.tmp.", dir=dir_path)
 with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
