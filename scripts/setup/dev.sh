@@ -497,34 +497,35 @@ install_cursor() {
     local CURSOR_BIN="$BIN_DIR/cursor.AppImage"
     local APPS_DIR="$HOME/.local/share/applications"
 
-    if [[ -x "$CURSOR_BIN" ]]; then
+    if [[ ! -x "$CURSOR_BIN" ]]; then
+        info "Fetching latest Cursor AppImage URL..."
+        local CURSOR_URL
+        if ! CURSOR_URL="$(cursor_latest_url)"; then
+            warn "Cursor download URL missing or outside $CURSOR_URL_PREFIX — skipping"
+            warn "Manual download: https://www.cursor.com/downloads"
+            return 1
+        fi
+
+        info "Downloading Cursor: $CURSOR_URL"
+        mkdir -p "$BIN_DIR"
+        curl -fsSL "$CURSOR_URL" -o "$CURSOR_BIN.tmp"
+        chmod +x "$CURSOR_BIN.tmp"
+        mv -f "$CURSOR_BIN.tmp" "$CURSOR_BIN"
+
+        if command -v restorecon &>/dev/null; then
+            restorecon "$CURSOR_BIN" 2>/dev/null || true
+        fi
+
+        local STAMP_FILE="$HOME/.local/share/dotfiles/cursor.url"
+        mkdir -p "$(dirname "$STAMP_FILE")"
+        echo "$CURSOR_URL" > "$STAMP_FILE"
+        success "Cursor AppImage installed to $CURSOR_BIN"
+    else
         success "Cursor already installed"
-        return
     fi
 
-    info "Fetching latest Cursor AppImage URL..."
-    local CURSOR_URL
-    if ! CURSOR_URL="$(cursor_latest_url)"; then
-        warn "Cursor download URL missing or outside $CURSOR_URL_PREFIX — skipping"
-        warn "Manual download: https://www.cursor.com/downloads"
-        return 1
-    fi
-
-    info "Downloading Cursor: $CURSOR_URL"
-    mkdir -p "$BIN_DIR"
-    curl -fsSL "$CURSOR_URL" -o "$CURSOR_BIN.tmp"
-    chmod +x "$CURSOR_BIN.tmp"
-    mv -f "$CURSOR_BIN.tmp" "$CURSOR_BIN"
-
-    if command -v restorecon &>/dev/null; then
-        restorecon "$CURSOR_BIN" 2>/dev/null || true
-    fi
-
-    local STAMP_FILE="$HOME/.local/share/dotfiles/cursor.url"
-    mkdir -p "$(dirname "$STAMP_FILE")"
-    echo "$CURSOR_URL" > "$STAMP_FILE"
-
-    mkdir -p "$APPS_DIR"
+    # Always ensure desktop launcher and CLI wrapper are configured idempotently
+    mkdir -p "$APPS_DIR" "$BIN_DIR"
     # --appimage-extract-and-run: Kinoite/Fedora 44 omits libfuse.so.2 (FUSE 2).
     # --no-sandbox: AppImage cannot use Chromium's SUID sandbox on Kinoite.
     cat > "$APPS_DIR/cursor.desktop" << DESKTOP
@@ -547,7 +548,7 @@ exec "$HOME/.local/bin/cursor.AppImage" --appimage-extract-and-run --no-sandbox 
 WRAPPER
     chmod +x "$BIN_DIR/cursor"
 
-    success "Cursor AppImage installed to $CURSOR_BIN"
+    success "Cursor desktop launcher and CLI wrapper configured"
 }
 
 install_ponytail() {
