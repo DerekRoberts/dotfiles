@@ -25,6 +25,8 @@ DOTFILES_USER_CONFIG="${DOTFILES_USER_CONFIG:-$HOME/.config/dotfiles}"
 
 wire_bashrc() {
     section "Shell Profile Wiring"
+    
+    info "Note: For a containerized userspace, consider using 'distrobox enter dev' or 'toolbox enter dev' after setup."
 
     local installed_bashrc="$DOTFILES_USER_CONFIG/bashrc"
     if [[ -f "$DOTFILES_DIR/config/bashrc" ]]; then
@@ -40,13 +42,19 @@ wire_bashrc() {
             cp "$BASHRC" "$BASHRC.orig"
         fi
 
+        local tmp_bashrc
+        tmp_bashrc="$(mktemp "${BASHRC%/*}/.bashrc.XXXXXX")"
+        cp "$BASHRC" "$tmp_bashrc"
+
         # Filter broken Fedora gnupg2 profile.d tty warning during /etc/bashrc sourcing in flatpak/subshells
-        sed -i -e '/tty: ttyname error/! s|\. /etc/bashrc|. /etc/bashrc 2> >(grep -v '"'"'tty: ttyname error'"'"' >\&2)|' "$BASHRC"
+        sed -i -e '/tty: ttyname error/! s|\. /etc/bashrc|. /etc/bashrc 2> >(grep -v '"'"'tty: ttyname error'"'"' >\&2)|' "$tmp_bashrc"
         
         # Drop our own loader before re-appending it
-        sed -i '/^# Source personal dotfiles configuration$/,/^fi$/d' "$BASHRC"
+        sed -i '/^# Source personal dotfiles configuration$/,/^fi$/d' "$tmp_bashrc"
         
-        printf '\n# Source personal dotfiles configuration\nif [ -f "%s" ]; then\n    . "%s"\nfi\n' "$installed_bashrc" "$installed_bashrc" >> "$BASHRC"
+        printf '\n# Source personal dotfiles configuration\nif [ -f "%s" ]; then\n    . "%s"\nfi\n' "$installed_bashrc" "$installed_bashrc" >> "$tmp_bashrc"
+        chmod 644 "$tmp_bashrc"
+        mv -f "$tmp_bashrc" "$BASHRC"
         success "bashrc sourcing updated"
     fi
 
@@ -139,17 +147,25 @@ EOF
 
     # Ensure Downloads explicitly defines the folder-downloads icon metadata
     if [[ -d "$HOME/Downloads" ]]; then
-        echo -e "[Desktop Entry]\nIcon=folder-downloads\nType=Directory" > "$HOME/Downloads/.directory"
+        local tmp_dir
+        tmp_dir="$(mktemp "${HOME}/Downloads/.dir.XXXXXX")"
+        echo -e "[Desktop Entry]\nIcon=folder-downloads\nType=Directory" > "$tmp_dir"
+        chmod 644 "$tmp_dir"
+        mv -f "$tmp_dir" "$HOME/Downloads/.directory"
     fi
 
     info "Configuring Dolphin sidebar places..."
     if [[ -f "$DOTFILES_DIR/config/kde/user-places.xbel" ]]; then
         mkdir -p "$HOME/.local/share"
+        local staged_file
+        staged_file="$(mktemp "${HOME}/.local/share/user-places.XXXXXX")"
         if [[ "$PROFILE" == "desktop" && ! -d "$HOME/Repos" ]]; then
-            sed -e "s|/var/home/derek|$HOME|g" -e '/<title>Repos<\/title>/d' "$DOTFILES_DIR/config/kde/user-places.xbel" > "$HOME/.local/share/user-places.xbel"
+            sed -e '/<bookmark href="file:\/\/\/var\/home\/derek\/Repos">/,/<\/bookmark>/d' -e "s|/var/home/derek|$HOME|g" "$DOTFILES_DIR/config/kde/user-places.xbel" > "$staged_file"
         else
-            sed "s|/var/home/derek|$HOME|g" "$DOTFILES_DIR/config/kde/user-places.xbel" > "$HOME/.local/share/user-places.xbel"
+            sed "s|/var/home/derek|$HOME|g" "$DOTFILES_DIR/config/kde/user-places.xbel" > "$staged_file"
         fi
+        chmod 644 "$staged_file"
+        mv -f "$staged_file" "$HOME/.local/share/user-places.xbel"
         success "Dolphin sidebar configured"
     fi
 

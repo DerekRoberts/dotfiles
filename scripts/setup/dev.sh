@@ -117,9 +117,15 @@ install_ai_wiring() {
         echo "{}" > "$CURSOR_SETTINGS"
     fi
     # Strip comments loosely and merge with jq, write back standard JSON
-    local tmp_file="${CURSOR_SETTINGS}.tmp"
-    sed -E 's|//.*||g; s|/\*.*\*/||g' "$CURSOR_SETTINGS" | \
-        jq '. + {"git.defaultCloneDirectory": "~/Repos", "files.dialog.defaultPath": "~/Repos"}' > "$tmp_file" && mv "$tmp_file" "$CURSOR_SETTINGS"
+    local tmp_file
+    tmp_file="$(mktemp "${CURSOR_SETTINGS%/*}/settings.XXXXXX")"
+    if sed -E 's|//.*||g; s|/\*.*\*/||g' "$CURSOR_SETTINGS" | \
+        jq '. + {"git.defaultCloneDirectory": "~/Repos", "files.dialog.defaultPath": "~/Repos"}' > "$tmp_file"; then
+        mv -f "$tmp_file" "$CURSOR_SETTINGS"
+    else
+        rm -f "$tmp_file"
+        warn "Failed to update Cursor settings"
+    fi
     success "Cursor default project paths configured"
 }
 
@@ -549,9 +555,16 @@ write_github_mcp_config() {
         echo '{"mcpServers": {}}' > "$config_file"
     fi
 
-    local tmp_file="${config_file}.tmp"
-    jq --arg token "$gh_token" '.mcpServers.github = {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-github"], "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": $token}}' "$config_file" > "$tmp_file" && mv "$tmp_file" "$config_file"
-    chmod 600 "$config_file"
+    local tmp_file
+    tmp_file="$(mktemp "$(dirname "$config_file")/mcp.XXXXXX")"
+    
+    if jq --arg token "$gh_token" '.mcpServers.github = {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-github"], "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": $token}}' "$config_file" > "$tmp_file"; then
+        chmod 600 "$tmp_file"
+        mv -f "$tmp_file" "$config_file"
+    else
+        rm -f "$tmp_file"
+        warn "Failed to write GitHub MCP config"
+    fi
 }
 
 setup_github_mcp() {
