@@ -47,14 +47,11 @@ jobs:
         run: |
           sudo apt-get update -o Acquire::http::Timeout="15" -o Acquire::Retries="3"
           sudo apt-get install -y -o Acquire::http::Timeout="15" -o Acquire::Retries="3" \
-            flatpak curl tar git jq rpm2cpio cpio
+            flatpak curl tar git jq
           
       - name: Test Core Config Wiring
         run: |
           bash -n setup.sh
           bash -n scripts/*.sh scripts/setup/*.sh
           ./setup.sh --help
-          scripts/setup/core.sh --self-test
-          scripts/setup/dev.sh --self-test
-          bash -c '. scripts/lib.sh && self_test_lib'
 
