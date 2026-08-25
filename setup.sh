@@ -96,6 +96,10 @@ if command -v kbuildsycoca6 &>/dev/null; then
     kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
 fi
 
+if command -v systemctl &>/dev/null && systemctl --user is-active plasma-plasmashell &>/dev/null; then
+    systemctl --user restart plasma-plasmashell >/dev/null 2>&1 || true
+fi
+
 echo ""
 echo "✅ Setup complete!"
 echo "   Run: source ~/.bashrc   (or restart terminal)"

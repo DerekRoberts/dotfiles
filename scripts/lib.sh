@@ -155,6 +155,7 @@ repair_icon_theme_pollution() {
         if command -v gtk-update-icon-cache &>/dev/null; then
             gtk-update-icon-cache -f -q "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
         fi
+        plasmashell_restart
         info "Moved shadowing icon theme directories to $stash"
     fi
 }
@@ -165,6 +166,13 @@ repair_icon_theme_pollution() {
 rebuild_ksycoca() {
     if command -v kbuildsycoca6 &>/dev/null; then
         kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
+    fi
+}
+
+# Restart plasmashell if active under systemd. Best effort: absent on a headless run.
+plasmashell_restart() {
+    if command -v systemctl &>/dev/null && systemctl --user is-active plasma-plasmashell &>/dev/null; then
+        systemctl --user restart plasma-plasmashell >/dev/null 2>&1 || true
     fi
 }
 
