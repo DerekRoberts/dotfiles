@@ -59,7 +59,10 @@ install_update_helpers() {
         success "Installed update-antigravity → $HOME/.local/bin/update-antigravity"
     fi
 
-    [[ -L "$HOME/.copilot.md" ]] && rm -f "$HOME/.copilot.md" && info "Removed legacy ~/.copilot.md"
+    if [[ -L "$HOME/.copilot.md" ]]; then
+        rm -f "$HOME/.copilot.md"
+        info "Removed legacy ~/.copilot.md"
+    fi
 }
 
 # ── AI Assistant Wiring (Antigravity & Cursor) ───────────────────────────────
