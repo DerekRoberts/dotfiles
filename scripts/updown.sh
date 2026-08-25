@@ -13,15 +13,10 @@
 set -euo pipefail
 
 SHUTDOWN=1
-INSTALL_INSYNC=0
 
 for arg in "$@"; do
     case "$arg" in
         --background|-b|--no-shutdown|-n)
-            SHUTDOWN=0
-            ;;
-        --install-insync)
-            INSTALL_INSYNC=1
             SHUTDOWN=0
             ;;
         --shutdown|-s)
@@ -31,7 +26,6 @@ for arg in "$@"; do
             echo "Usage: updown [options]"
             echo "  (default)            Run updates and power off"
             echo "  --background, -b     Run updates in background without power off"
-            echo "  --install-insync     Bootstrap/update Insync only without power off"
             echo "  --help, -h           Show this help"
             exit 0
             ;;
@@ -67,8 +61,7 @@ info()    { echo "[updown] $*"; }
 success() { echo "[updown] ✓ $*"; }
 warn()    { echo "[updown] ⚠ $*" >&2; }
 
-if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
-    # ── 1. rpm-ostree ────────────────────────────────────────────────────────────
+# ── 1. rpm-ostree ────────────────────────────────────────────────────────────
     # Stages the update; does NOT reboot automatically.
     # On Kinoite, apply takes effect on next reboot (user-controlled).
 
@@ -134,122 +127,8 @@ if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
     else
         info "agy CLI not installed — skipping"
     fi
-fi
 
-# ── 5. Insync ────────────────────────────────────────────────────────────────
 
-# Insync publishes unsigned RPMs — SIGPGP, SIGGPG, RSAHEADER and DSAHEADER are
-# all empty, so there is no key to check the package against and no published
-# checksum to compare it to. What we can do is refuse a package whose own
-# digests don't hold (truncated or corrupted download) and record what we
-# installed, so an unexpected change is at least visible after the fact.
-# The URL itself is already anchored to Insync's CDN by the regex below.
-insync_rpm_is_trusted() {
-    local rpm="$1"
-    if ! command -v rpmkeys &>/dev/null; then
-        warn "rpmkeys not found — cannot check Insync package integrity"
-        return 1
-    fi
-    if ! rpmkeys --checksig "$rpm" >/dev/null 2>&1; then
-        warn "Insync RPM failed its internal digest check — refusing to install"
-        return 1
-    fi
-    mkdir -p "${HOME}/.local/share/dotfiles"
-    sha256sum "$rpm" | cut -d' ' -f1 > "${HOME}/.local/share/dotfiles/insync.sha256"
-    return 0
-}
-
-INSYNC_BIN="${HOME}/.local/bin/insync"
-INSYNC_LIB_DIR="${HOME}/.local/lib/insync"
-if [[ -x "$INSYNC_BIN" ]] || [[ "$INSTALL_INSYNC" -eq 1 ]]; then
-    info "Checking Insync for updates..."
-    INSYNC_JS_URL="https://cdn.insynchq.com/web/webflow/js/linux_download_links.js"
-    LATEST_INSYNC_URL="$(curl -fsSL "$INSYNC_JS_URL" | grep -oE 'https://cdn\.insynchq\.com/builds/linux/[^"]+\.x86_64\.rpm' | grep -v 'headless' | grep 'fc44' | head -n 1 || true)"
-    if [[ -z "$LATEST_INSYNC_URL" ]]; then
-        LATEST_INSYNC_URL="$(curl -fsSL "$INSYNC_JS_URL" | grep -oE 'https://cdn\.insynchq\.com/builds/linux/[^"]+\.x86_64\.rpm' | grep -v 'headless' | grep -E 'fc[0-9]+' | sort -t'c' -k2 -rn | head -n 1 || true)"
-    fi
-
-    STAMP_FILE="${HOME}/.local/share/dotfiles/insync.url"
-    if [[ -n "$LATEST_INSYNC_URL" ]]; then
-        if [[ -f "$STAMP_FILE" ]] && [[ -x "$INSYNC_LIB_DIR/insync" ]] && [[ "$(cat "$STAMP_FILE")" == "$LATEST_INSYNC_URL" ]]; then
-            success "Insync is up to date"
-        else
-            info "Updating Insync..."
-            tmp_dir="$(mktemp -d)"
-            if curl -fsSL "$LATEST_INSYNC_URL" -o "$tmp_dir/insync.rpm" && \
-               insync_rpm_is_trusted "$tmp_dir/insync.rpm" && \
-               (cd "$tmp_dir" && rpm2cpio insync.rpm | cpio -idm 2>/dev/null); then
-                extracted_lib="$(find "$tmp_dir" -type d -path "*/usr/lib/insync" | head -n 1 || true)"
-                if [[ -n "$extracted_lib" && -f "$extracted_lib/insync" ]]; then
-                    mkdir -p "${HOME}/.local/lib" "${HOME}/.local/bin"
-                    rm -rf "${INSYNC_LIB_DIR}.old"
-                    [[ -d "$INSYNC_LIB_DIR" ]] && mv "$INSYNC_LIB_DIR" "${INSYNC_LIB_DIR}.old"
-                    if cp -rf "$extracted_lib" "$INSYNC_LIB_DIR"; then
-                        rm -rf "${INSYNC_LIB_DIR}.old"
-                        chmod +x "$INSYNC_LIB_DIR/insync"
-                        
-                        # Extract application and status icons from RPM into hicolor only
-                        extracted_icons="$(find "$tmp_dir" -type d -path "*/usr/share/icons" | head -n 1 || true)"
-                        if [[ -n "$extracted_icons" && -d "$extracted_icons" ]]; then
-                            if [[ -d "$extracted_icons/hicolor" ]]; then
-                                mkdir -p "${HOME}/.local/share/icons/hicolor"
-                                cp -rf "$extracted_icons/hicolor/"* "${HOME}/.local/share/icons/hicolor/"
-                            fi
-                            [[ -f "/usr/share/icons/hicolor/index.theme" ]] && cp -f "/usr/share/icons/hicolor/index.theme" "${HOME}/.local/share/icons/hicolor/index.theme"
-                            python3 - << 'PY'
-import os
-try:
-    from PIL import Image
-except ImportError:
-    import sys
-    sys.exit(0)
-
-# Insync ships its tray icons at 48x48 only, so fill in the other sizes the
-# tray asks for. hicolor only: it is the fallback every icon theme inherits, and
-# writing into ~/.local/share/icons/breeze* would shadow the system Breeze theme
-# (a theme directory there without an index.theme breaks all Breeze lookups).
-src_dir = os.path.expanduser("~/.local/share/icons/hicolor/48x48/status")
-sizes = [16, 22, 24, 32, 48, 64, 128, 256]
-icons = ["insync-alert", "insync-normal", "insync-offline", "insync-paused", "insync-synced", "insync-syncing"]
-
-for icon in icons:
-    src_file = os.path.join(src_dir, f"{icon}.png")
-    if not os.path.exists(src_file):
-        continue
-    img = Image.open(src_file)
-    for sz in sizes:
-        dest_dir = os.path.expanduser(f"~/.local/share/icons/hicolor/{sz}x{sz}/status")
-        os.makedirs(dest_dir, exist_ok=True)
-        img.resize((sz, sz), Image.LANCZOS).save(os.path.join(dest_dir, f"{icon}.png"), "PNG")
-PY
-                            repair_icon_theme_pollution
-                        fi
-
-                        write_insync_wrapper "$INSYNC_BIN"
-                        mkdir -p "$(dirname "$STAMP_FILE")"
-                        echo "$LATEST_INSYNC_URL" > "$STAMP_FILE"
-                        success "Insync updated"
-                    else
-                        warn "Insync copy failed — restoring previous installation"
-                        rm -rf "$INSYNC_LIB_DIR"
-                        [[ -d "${INSYNC_LIB_DIR}.old" ]] && mv "${INSYNC_LIB_DIR}.old" "$INSYNC_LIB_DIR"
-                    fi
-                else
-                    warn "Insync update failed (library bundle not found in RPM)"
-                fi
-            else
-                warn "Insync update failed (download/extract error)"
-            fi
-            rm -rf "$tmp_dir"
-        fi
-    else
-        warn "Could not resolve Insync URL — skipping update"
-    fi
-else
-    info "Insync not installed — skipping"
-fi
-
-if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
     # ── 6. Cursor ────────────────────────────────────────────────────────────────
 
     CURSOR_BIN="${HOME}/.local/bin/cursor.AppImage"
@@ -286,7 +165,6 @@ if [[ "$INSTALL_INSYNC" -eq 0 ]]; then
         info "Checking standalone CLI tools for updates..."
         UPDATE=1 bash "$DOTFILES_DIR/scripts/setup/dev.sh" --tools || warn "CLI tools update encountered warnings"
     fi
-fi
 
 
 # ── 8. SELinux context fix ───────────────────────────────────────────────────

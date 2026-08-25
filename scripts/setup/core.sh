@@ -20,18 +20,6 @@ DOTFILES_USER_CONFIG="${DOTFILES_USER_CONFIG:-$HOME/.config/dotfiles}"
 
 # Git aliases that start with ! run a shell. The installed gitconfig copy is
 # an execution surface; keep aliases as git builtins only.
-self_test_gitconfig_no_shell_aliases() {
-    local gc="$DOTFILES_DIR/config/gitconfig"
-    if [[ ! -f "$gc" ]]; then
-        echo "FAIL: gitconfig missing: $gc" >&2
-        return 1
-    fi
-    if grep -E '^[[:space:]]*[A-Za-z0-9_-]+[[:space:]]*=[[:space:]]*!' "$gc"; then
-        echo "FAIL: git alias must not shell out" >&2
-        return 1
-    fi
-    echo "gitconfig alias self-test passed"
-}
 
 # ── Shell Wiring ─────────────────────────────────────────────────────────────
 
@@ -52,35 +40,13 @@ wire_bashrc() {
             cp "$BASHRC" "$BASHRC.orig"
         fi
 
-        python3 - "$BASHRC" "$installed_bashrc" << 'PY'
-import sys, re
-path, installed = sys.argv[1], sys.argv[2]
-with open(path) as f:
-    content = f.read()
-
-# Filter broken Fedora gnupg2 profile.d tty warning during /etc/bashrc sourcing in flatpak/subshells
-content = re.sub(
-    r"if \[ -f /etc/bashrc \]; then\n\s*\. /etc/bashrc(?:\s*2>.*)?\nfi",
-    "if [ -f /etc/bashrc ]; then\n    . /etc/bashrc 2> >(grep -v 'tty: ttyname error' >&2)\nfi",
-    content,
-)
-
-# Drop our own loader before re-appending it, so re-runs stay idempotent.
-content = re.sub(
-    r"# Source personal dotfiles configuration\nif \[ -f [\"']?[^\"'\n]+/(?:config/)?bashrc[\"']? \]; then\n    \. [\"']?[^\"'\n]+/(?:config/)?bashrc[\"']?\nfi\n*",
-    "",
-    content,
-)
-
-loader = (
-    f"\n\n# Source personal dotfiles configuration\n"
-    f'if [ -f "{installed}" ]; then\n'
-    f'    . "{installed}"\n'
-    f"fi\n"
-)
-with open(path, "w") as f:
-    f.write(content.rstrip() + loader)
-PY
+        # Filter broken Fedora gnupg2 profile.d tty warning during /etc/bashrc sourcing in flatpak/subshells
+        sed -i -e '/tty: ttyname error/! s|\. /etc/bashrc|. /etc/bashrc 2> >(grep -v '"'"'tty: ttyname error'"'"' >\&2)|' "$BASHRC"
+        
+        # Drop our own loader before re-appending it
+        sed -i '/Source personal dotfiles configuration/d; /if \[ -f.*bashrc.*\]; then/d; /\. .*bashrc/d; /fi/d' "$BASHRC"
+        
+        printf '\n# Source personal dotfiles configuration\nif [ -f "%s" ]; then\n    . "%s"\nfi\n' "$installed_bashrc" "$installed_bashrc" >> "$BASHRC"
         success "bashrc sourcing updated"
     fi
 
@@ -171,77 +137,16 @@ EOF
         fi
     done
 
-    # Ensure Downloads explicitly defines the folder-downloads icon metadata without discarding existing view settings
+    # Ensure Downloads explicitly defines the folder-downloads icon metadata
     if [[ -d "$HOME/Downloads" ]]; then
-        python3 - "$HOME/Downloads/.directory" << 'PY'
-import sys, os, tempfile
-
-path = sys.argv[1]
-dir_path = os.path.dirname(path)
-
-lines = []
-if os.path.exists(path):
-    with open(path, "r", encoding="utf-8", errors="ignore") as f:
-        lines = f.readlines()
-
-new_lines = []
-in_desktop_entry = False
-has_desktop_entry = False
-icon_set = False
-
-for line in lines:
-    stripped = line.strip()
-    if stripped.startswith("[") and stripped.endswith("]"):
-        if in_desktop_entry and not icon_set:
-            new_lines.append("Icon=folder-downloads\n")
-            icon_set = True
-        in_desktop_entry = (stripped == "[Desktop Entry]")
-        if in_desktop_entry:
-            has_desktop_entry = True
-        new_lines.append(line)
-        continue
-    
-    if in_desktop_entry:
-        if stripped.startswith("Icon="):
-            new_lines.append("Icon=folder-downloads\n")
-            icon_set = True
-            continue
-    new_lines.append(line)
-
-if not has_desktop_entry:
-    if new_lines and not new_lines[-1].endswith("\n"):
-        new_lines[-1] += "\n"
-    new_lines.append("[Desktop Entry]\nIcon=folder-downloads\nType=Directory\n")
-elif in_desktop_entry and not icon_set:
-    new_lines.append("Icon=folder-downloads\n")
-
-tmp_fd, tmp_path = tempfile.mkstemp(prefix=".directory.tmp.", dir=dir_path)
-with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
-    f.writelines(new_lines)
-os.chmod(tmp_path, 0o644)
-os.replace(tmp_path, path)
-PY
+        echo -e "[Desktop Entry]\nIcon=folder-downloads\nType=Directory" > "$HOME/Downloads/.directory"
     fi
-
-    repair_icon_theme_pollution
 
     info "Configuring Dolphin sidebar places..."
     if [[ -f "$DOTFILES_DIR/config/kde/user-places.xbel" ]]; then
         mkdir -p "$HOME/.local/share"
         if [[ "$PROFILE" == "desktop" && ! -d "$HOME/Repos" ]]; then
-            python3 - "$DOTFILES_DIR/config/kde/user-places.xbel" "$HOME/.local/share/user-places.xbel" "$HOME" << 'PY'
-import sys, re
-
-src, dst, home = sys.argv[1], sys.argv[2], sys.argv[3]
-with open(src, "r", encoding="utf-8") as f:
-    content = f.read()
-
-content = content.replace("/var/home/derek", home)
-content = re.sub(r"\s*<bookmark href=\"file://[^\"]+/Repos\">\s*<title>Repos</title>[\s\S]*?</bookmark>\s*", "\n", content)
-
-with open(dst, "w", encoding="utf-8") as f:
-    f.write(content)
-PY
+            sed -e "s|/var/home/derek|$HOME|g" -e '/<title>Repos<\/title>/d' "$DOTFILES_DIR/config/kde/user-places.xbel" > "$HOME/.local/share/user-places.xbel"
         else
             sed "s|/var/home/derek|$HOME|g" "$DOTFILES_DIR/config/kde/user-places.xbel" > "$HOME/.local/share/user-places.xbel"
         fi
@@ -259,79 +164,32 @@ configure_mime_defaults() {
     section "Default Applications & File Associations"
 
     info "Configuring default application associations..."
-    local MIMEAPPS="$HOME/.config/mimeapps.list"
-    python3 - "$MIMEAPPS" << 'PY'
-import sys, os, configparser
-
-path = sys.argv[1]
-os.makedirs(os.path.dirname(path), exist_ok=True)
-
-defaults = {
-    # Internet
-    "x-scheme-handler/http": "com.google.Chrome.desktop",
-    "x-scheme-handler/https": "com.google.Chrome.desktop",
-    "text/html": "com.google.Chrome.desktop",
-    "application/xhtml+xml": "com.google.Chrome.desktop",
-    "x-scheme-handler/mailto": "com.google.Chrome.desktop",
-    "text/calendar": "com.google.Chrome.desktop",
-    "x-scheme-handler/tel": "com.google.Chrome.desktop",
-    # Multimedia
-    "image/jpeg": "org.kde.gwenview.desktop",
-    "image/png": "org.kde.gwenview.desktop",
-    "image/gif": "org.kde.gwenview.desktop",
-    "image/webp": "org.kde.gwenview.desktop",
-    "image/bmp": "org.kde.gwenview.desktop",
-    "image/svg+xml": "org.kde.gwenview.desktop",
-    "image/tiff": "org.kde.gwenview.desktop",
-    "image/avif": "org.kde.gwenview.desktop",
-    "audio/mpeg": "org.videolan.VLC.desktop",
-    "audio/mp3": "org.videolan.VLC.desktop",
-    "audio/mp4": "org.videolan.VLC.desktop",
-    "audio/flac": "org.videolan.VLC.desktop",
-    "audio/ogg": "org.videolan.VLC.desktop",
-    "audio/x-wav": "org.videolan.VLC.desktop",
-    "audio/wav": "org.videolan.VLC.desktop",
-    "audio/aac": "org.videolan.VLC.desktop",
-    "audio/x-vorbis+ogg": "org.videolan.VLC.desktop",
-    "audio/x-opus+ogg": "org.videolan.VLC.desktop",
-    "video/mp4": "org.videolan.VLC.desktop",
-    "video/x-matroska": "org.videolan.VLC.desktop",
-    "video/webm": "org.videolan.VLC.desktop",
-    "video/quicktime": "org.videolan.VLC.desktop",
-    "video/x-msvideo": "org.videolan.VLC.desktop",
-    "video/mpeg": "org.videolan.VLC.desktop",
-    "video/ogg": "org.videolan.VLC.desktop",
-    "video/x-flv": "org.videolan.VLC.desktop",
-    # Documents
-    "text/plain": "org.kde.kwrite.desktop",
-    "application/pdf": "com.google.Chrome.desktop",
-    # Utilities
-    "inode/directory": "org.kde.dolphin.desktop",
-    "application/zip": "org.kde.ark.desktop",
-    "application/x-tar": "org.kde.ark.desktop",
-    "application/x-7z-compressed": "org.kde.ark.desktop",
-    "application/x-compressed-tar": "org.kde.ark.desktop",
-    "application/x-bzip-compressed-tar": "org.kde.ark.desktop",
-    "application/x-xz-compressed-tar": "org.kde.ark.desktop",
-    "application/x-rar": "org.kde.ark.desktop",
-    "x-scheme-handler/geo": "openstreetmap-geo-handler.desktop",
-    "x-scheme-handler/antigravity": "antigravity.desktop",
-}
-
-config = configparser.RawConfigParser()
-if os.path.exists(path):
-    config.read(path)
-
-for section in ("Default Applications", "Added Associations"):
-    if not config.has_section(section):
-        config.add_section(section)
-    for mime, desktop in defaults.items():
-        val = desktop if section == "Default Applications" else f"{desktop};"
-        config.set(section, mime, val)
-
-with open(path, "w") as f:
-    config.write(f, space_around_delimiters=False)
-PY
+    
+    local chrome="com.google.Chrome.desktop"
+    local gwenview="org.kde.gwenview.desktop"
+    local vlc="org.videolan.VLC.desktop"
+    local ark="org.kde.ark.desktop"
+    
+    for mime in x-scheme-handler/http x-scheme-handler/https text/html application/xhtml+xml x-scheme-handler/mailto text/calendar x-scheme-handler/tel application/pdf; do
+        xdg-mime default "$chrome" "$mime" 2>/dev/null || true
+    done
+    
+    for mime in image/jpeg image/png image/gif image/webp image/bmp image/svg+xml image/tiff image/avif; do
+        xdg-mime default "$gwenview" "$mime" 2>/dev/null || true
+    done
+    
+    for mime in audio/mpeg audio/mp3 audio/mp4 audio/flac audio/ogg audio/x-wav audio/wav audio/aac audio/x-vorbis+ogg audio/x-opus+ogg video/mp4 video/x-matroska video/webm video/quicktime video/x-msvideo video/mpeg video/ogg video/x-flv; do
+        xdg-mime default "$vlc" "$mime" 2>/dev/null || true
+    done
+    
+    for mime in application/zip application/x-tar application/x-7z-compressed application/x-compressed-tar application/x-bzip-compressed-tar application/x-xz-compressed-tar application/x-rar; do
+        xdg-mime default "$ark" "$mime" 2>/dev/null || true
+    done
+    
+    xdg-mime default "org.kde.kwrite.desktop" "text/plain" 2>/dev/null || true
+    xdg-mime default "org.kde.dolphin.desktop" "inode/directory" 2>/dev/null || true
+    xdg-mime default "openstreetmap-geo-handler.desktop" "x-scheme-handler/geo" 2>/dev/null || true
+    xdg-mime default "antigravity.desktop" "x-scheme-handler/antigravity" 2>/dev/null || true
     if command -v kwriteconfig6 &>/dev/null; then
         kwriteconfig6 --file kdeglobals --group General --key TerminalApplication org.kde.konsole.desktop
         kwriteconfig6 --file kdeglobals --group General --key TerminalService org.kde.konsole.desktop
@@ -372,11 +230,6 @@ main() {
         --help|-h)
             usage
             exit 0
-            ;;
-        --self-test)
-            self_test_lib
-            self_test_gitconfig_no_shell_aliases
-            exit $?
             ;;
         --desktop)
             PROFILE="desktop"

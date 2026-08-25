@@ -112,58 +112,23 @@ DESKTOP
 
 install_insync() {
     section "Insync"
-    # Insync has no Flatpak or AppImage. We download the RPM, verify its
-    # signature, extract to ~/.local — zero host mutation.
-    local BIN_DIR="$HOME/.local/bin"
-    local INSYNC_BIN="$BIN_DIR/insync"
-    local APPS_DIR="$HOME/.local/share/applications"
-
-    if [[ -x "$INSYNC_BIN" ]]; then
-        write_insync_wrapper "$INSYNC_BIN"
-        success "Insync already installed (wrapper updated)"
-        local AUTOSTART_DIR="$HOME/.config/autostart"
-        mkdir -p "$AUTOSTART_DIR" "$APPS_DIR"
-        if [[ -f "$APPS_DIR/insync.desktop" ]]; then
-            grep -q "X-KDE-autostart-after=panel" "$APPS_DIR/insync.desktop" || printf '\nX-KDE-autostart-after=panel\nX-KDE-autostart-phase=2\n' >> "$APPS_DIR/insync.desktop"
-            rm -f "$AUTOSTART_DIR/insync.desktop"
-            cp -f "$APPS_DIR/insync.desktop" "$AUTOSTART_DIR/insync.desktop"
-            success "Insync added to autostart"
-        fi
+    if rpm -q insync &>/dev/null; then
+        success "Insync is layered via rpm-ostree"
         return
     fi
-
-    info "Downloading/Updating Insync..."
-    bash "$DOTFILES_DIR/scripts/updown.sh" --install-insync
-
-    if [[ ! -x "$INSYNC_BIN" ]]; then
-        warn "Insync installation failed"
-        return 1
-    fi
-
-    # Desktop entry
-    mkdir -p "$APPS_DIR"
-    cat > "$APPS_DIR/insync.desktop" << 'DESKTOP'
-[Desktop Entry]
-Name=Insync
-Comment=Google Drive, OneDrive, and Dropbox sync
-Exec=%h/.local/bin/insync start
-Icon=insync
-Terminal=false
-Type=Application
-Categories=Network;FileTransfer;
-StartupNotify=true
-X-KDE-autostart-after=panel
-X-KDE-autostart-phase=2
-DESKTOP
-    sed -i "s|%h|$HOME|g" "$APPS_DIR/insync.desktop"
-
-    local AUTOSTART_DIR="$HOME/.config/autostart"
-    mkdir -p "$AUTOSTART_DIR"
-    rm -f "$AUTOSTART_DIR/insync.desktop"
-    cp -f "$APPS_DIR/insync.desktop" "$AUTOSTART_DIR/insync.desktop"
-
-    success "Insync installed to $INSYNC_BIN and added to autostart"
-    info "Run: insync start"
+    info "Insync is not installed. To layer it natively, run:"
+    info "sudo curl -fsSL https://d2t3ff60b2tol4.cloudfront.net/repomd.asc -o /etc/pki/rpm-gpg/RPM-GPG-KEY-insync"
+    info "sudo cat << 'EOF' > /etc/yum.repos.d/insync.repo"
+    info "[insync]"
+    info "name=insync repo"
+    info "baseurl=http://yum.insync.io/fedora/\$releasever/"
+    info "gpgcheck=1"
+    info "gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-insync"
+    info "enabled=1"
+    info "metadata_expire=120m"
+    info "type=rpm-md"
+    info "EOF"
+    info "rpm-ostree install insync"
 }
 
 # ── Main ─────────────────────────────────────────────────────────────────────
@@ -207,7 +172,6 @@ main() {
         install_yakuake
     fi
     install_insync
-    repair_icon_theme_pollution
     rebuild_ksycoca
     success "Application installation complete"
 }
