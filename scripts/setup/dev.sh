@@ -525,14 +525,13 @@ install_cursor() {
     echo "$CURSOR_URL" > "$STAMP_FILE"
 
     mkdir -p "$APPS_DIR"
-    # --no-sandbox: the AppImage can't use Chromium's SUID sandbox without
-    # unprivileged userns, which Kinoite restricts for AppImages. This gives up
-    # renderer isolation — drop the flag if a future build starts working with it.
+    # --appimage-extract-and-run: Kinoite/Fedora 44 omits libfuse.so.2 (FUSE 2).
+    # --no-sandbox: AppImage cannot use Chromium's SUID sandbox on Kinoite.
     cat > "$APPS_DIR/cursor.desktop" << DESKTOP
 [Desktop Entry]
 Name=Cursor
 Comment=AI-first code editor
-Exec=$CURSOR_BIN --no-sandbox %F
+Exec=$CURSOR_BIN --appimage-extract-and-run --no-sandbox %F
 Icon=cursor
 Terminal=false
 Type=Application
@@ -541,6 +540,12 @@ MimeType=text/plain;inode/directory;
 StartupNotify=true
 StartupWMClass=Cursor
 DESKTOP
+
+    cat > "$BIN_DIR/cursor" << 'WRAPPER'
+#!/usr/bin/env bash
+exec "$HOME/.local/bin/cursor.AppImage" --appimage-extract-and-run --no-sandbox "$@"
+WRAPPER
+    chmod +x "$BIN_DIR/cursor"
 
     success "Cursor AppImage installed to $CURSOR_BIN"
 }
