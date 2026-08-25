@@ -128,8 +128,8 @@ enabled=1
 metadata_expire=120m
 type=rpm-md
 EOF"
-    # Polkit will intercept this and prompt graphically if running as user
-    rpm-ostree install insync || warn "Failed to layer Insync"
+    # Inherit the cached sudo credential so we don't pop a separate graphical polkit prompt
+    sudo rpm-ostree install insync || warn "Failed to layer Insync"
 }
 
 # ── Main ─────────────────────────────────────────────────────────────────────
@@ -147,6 +147,8 @@ EOF
 }
 
 main() {
+    sudo -v # Cache sudo credential upfront so the user isn't prompted mid-script
+    
     local PROFILE="dev"
     case "${1:-}" in
         --help|-h)
