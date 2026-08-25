@@ -207,6 +207,8 @@ main() {
         install_yakuake
     fi
     install_insync
+    repair_icon_theme_pollution
+    rebuild_ksycoca
     success "Application installation complete"
 }
 

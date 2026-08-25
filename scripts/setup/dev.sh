@@ -763,6 +763,7 @@ main() {
     install_ponytail
     setup_github_mcp
     install_repos
+    rebuild_ksycoca
     success "Developer stack configuration complete"
 }
 

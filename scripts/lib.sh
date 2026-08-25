@@ -139,15 +139,42 @@ repair_icon_theme_pollution() {
         esac
     done
 
+    # An index.theme or cache directly inside ~/.icons makes the directory itself
+    # act as a theme rather than a collection of themes, breaking icon lookups.
+    for file in "$HOME/.icons/index.theme" "$HOME/.icons/icon-theme.cache"; do
+        [[ -f "$file" ]] || continue
+        mkdir -p "$stash"
+        mv "$file" "$stash/dot-icons-$(basename "$file").$stamp"
+        moved=1
+    done
+    if [[ -d "$HOME/.icons" ]] && [[ -z "$(ls -A "$HOME/.icons" 2>/dev/null)" ]]; then
+        rmdir "$HOME/.icons" 2>/dev/null || true
+    fi
+
     if [[ "$moved" -eq 1 ]]; then
         if command -v gtk-update-icon-cache &>/dev/null; then
             gtk-update-icon-cache -f -q "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
         fi
+        plasmashell_restart
         info "Moved shadowing icon theme directories to $stash"
     fi
 }
 
 # ── KDE ──────────────────────────────────────────────────────────────────────
+
+# Invalidate and rebuild KDE system configuration cache.
+rebuild_ksycoca() {
+    if command -v kbuildsycoca6 &>/dev/null; then
+        kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
+    fi
+}
+
+# Restart plasmashell if active under systemd. Best effort: absent on a headless run.
+plasmashell_restart() {
+    if command -v systemctl &>/dev/null && systemctl --user is-active plasma-plasmashell &>/dev/null; then
+        systemctl --user restart plasma-plasmashell >/dev/null 2>&1 || true
+    fi
+}
 
 # Plasma 6 ships qdbus under several names depending on the image.
 qdbus_bin() {
@@ -238,6 +265,8 @@ self_test_lib() {
     printf '[Icon Theme]\nName=Real\n' > "$HOME/.local/share/icons/breeze-dark/index.theme"
     mkdir -p "$HOME/.icons/MyTheme"
     printf '[Icon Theme]\nName=Mine\n' > "$HOME/.icons/MyTheme/index.theme"
+    printf '[Icon Theme]\nName=Hicolor\n' > "$HOME/.icons/index.theme"
+    touch "$HOME/.icons/icon-theme.cache"
     repair_icon_theme_pollution >/dev/null
 
     if [[ -d "$HOME/.local/share/icons/breeze" ]]; then
@@ -245,6 +274,9 @@ self_test_lib() {
     fi
     if [[ -d "$HOME/.icons/48x48" ]]; then
         echo "FAIL: left a size-named dir in ~/.icons" >&2; rm -rf "$tmp"; return 1
+    fi
+    if [[ -f "$HOME/.icons/index.theme" || -f "$HOME/.icons/icon-theme.cache" ]]; then
+        echo "FAIL: left root index.theme or cache in ~/.icons" >&2; rm -rf "$tmp"; return 1
     fi
     if [[ ! -f "$HOME/.local/share/icons/breeze-dark/index.theme" ]]; then
         echo "FAIL: removed a valid theme that has an index.theme" >&2; rm -rf "$tmp"; return 1
