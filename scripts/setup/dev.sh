@@ -594,6 +594,114 @@ install_ponytail() {
     fi
 }
 
+write_github_mcp_config() {
+    local config_file="$1"
+    local gh_token="$2"
+
+    python3 - "$config_file" "$gh_token" << 'PY'
+import sys, os, json, tempfile
+
+path = sys.argv[1]
+token = sys.argv[2]
+dir_path = os.path.dirname(os.path.abspath(path))
+os.makedirs(dir_path, mode=0o700, exist_ok=True)
+
+data = {}
+if os.path.exists(path):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            raw = f.read().strip()
+            if raw:
+                data = json.loads(raw)
+    except Exception as e:
+        sys.stderr.write(f"Warning: Could not parse existing config ({e}), creating fresh configuration.\n")
+        data = {}
+
+if not isinstance(data, dict):
+    data = {}
+
+servers = data.setdefault("mcpServers", {})
+if not isinstance(servers, dict):
+    servers = {}
+    data["mcpServers"] = servers
+
+servers["github"] = {
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-github"],
+    "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": token
+    }
+}
+
+tmp_fd, tmp_path = tempfile.mkstemp(prefix=".mcp_config.tmp.", dir=dir_path)
+with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2)
+    f.write("\n")
+os.chmod(tmp_path, 0o600)
+os.replace(tmp_path, path)
+PY
+}
+
+setup_github_mcp() {
+    section "GitHub MCP Server (Antigravity / Gemini)"
+
+    local config_dir="$HOME/.gemini/config"
+    local config_file="$config_dir/mcp_config.json"
+
+    if ! command -v gh &>/dev/null; then
+        warn "GitHub CLI ('gh') is not installed. Skipping GitHub MCP configuration."
+        return 0
+    fi
+
+    local gh_token
+    gh_token="$(unset GITHUB_TOKEN && gh auth token 2>/dev/null || true)"
+
+    if [[ -z "$gh_token" ]]; then
+        warn "No active GitHub CLI login found. Run 'gh auth login' before configuring GitHub MCP."
+        return 0
+    fi
+
+    mkdir -p "$config_dir"
+    write_github_mcp_config "$config_file" "$gh_token"
+    success "GitHub MCP Server configured at $config_file"
+}
+
+self_test_github_mcp() {
+    local tmp_dir
+    tmp_dir="$(mktemp -d)"
+    local test_config="$tmp_dir/mcp_config.json"
+
+    # 1. Fresh config creation
+    write_github_mcp_config "$test_config" "test-token-123"
+    [[ -f "$test_config" ]] || { echo "FAIL: test_config not created" >&2; rm -rf "$tmp_dir"; return 1; }
+
+    local token_read
+    token_read="$(python3 -c "import json; print(json.load(open('$test_config'))['mcpServers']['github']['env']['GITHUB_PERSONAL_ACCESS_TOKEN'])")"
+    [[ "$token_read" == "test-token-123" ]] || { echo "FAIL: token mismatch" >&2; rm -rf "$tmp_dir"; return 1; }
+
+    # 2. Existing config with another server is preserved
+    python3 -c "
+import json
+with open('$test_config', 'r+') as f:
+    d = json.load(f)
+    d['mcpServers']['other'] = {'command': 'other-cmd'}
+    f.seek(0)
+    json.dump(d, f)
+    f.truncate()
+"
+
+    # Update github token
+    write_github_mcp_config "$test_config" "test-token-456"
+    local other_cmd
+    other_cmd="$(python3 -c "import json; print(json.load(open('$test_config'))['mcpServers']['other']['command'])")"
+    [[ "$other_cmd" == "other-cmd" ]] || { echo "FAIL: other server lost" >&2; rm -rf "$tmp_dir"; return 1; }
+    token_read="$(python3 -c "import json; print(json.load(open('$test_config'))['mcpServers']['github']['env']['GITHUB_PERSONAL_ACCESS_TOKEN'])")"
+    [[ "$token_read" == "test-token-456" ]] || { echo "FAIL: updated token mismatch" >&2; rm -rf "$tmp_dir"; return 1; }
+
+    rm -rf "$tmp_dir"
+    echo "github_mcp self-test passed"
+}
+
 install_repos() {
     section "Repositories"
     bash "$DOTFILES_DIR/scripts/clone-repos.sh" || warn "Some repositories could not be cloned. Run 'scripts/clone-repos.sh' once your SSH key is authorized on GitHub."
@@ -624,6 +732,7 @@ main() {
             ;;
         --self-test)
             self_test_fetch_gh_release
+            self_test_github_mcp
             exit $?
             ;;
         --tools|-t)
@@ -649,6 +758,7 @@ main() {
     install_agy
     install_cursor
     install_ponytail
+    setup_github_mcp
     install_repos
     success "Developer stack configuration complete"
 }

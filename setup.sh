@@ -42,7 +42,7 @@ Default (no flags): full dev stack, same as --dev.
 
 Options:
   --dev       Full developer stack: Node LTS, CLI tools, Chrome, VLC, Yakuake, Insync,
-              Antigravity hub, agy CLI, Cursor, oc, Ponytail, and repositories
+              Antigravity hub, agy CLI, Cursor, oc, Ponytail, GitHub MCP, and repositories
   --desktop   Minimal desktop essentials: Chrome, VLC, and Insync
   --help, -h  Show this help
 
