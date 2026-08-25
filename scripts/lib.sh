@@ -66,7 +66,7 @@ tar_is_safe() {
 
 # ── Upstream endpoints ───────────────────────────────────────────────────────
 
-CURSOR_DOWNLOAD_API='https://www.cursor.com/api/download?platform=linux-x64&releaseTrack=stable'
+CURSOR_DOWNLOAD_API='https://www.cursor.com/api/download?platform=linux-x64&releaseTrack=latest'
 CURSOR_URL_PREFIX='https://downloads.cursor.com/'
 
 # Resolve the current Cursor AppImage URL. The API response decides what we
