@@ -136,7 +136,10 @@ install_insync() {
         if [[ -n "$latest" ]] && evr_older_than "$installed" "$latest"; then
             info "Updating Insync ($installed → $latest) via rpm-ostree..."
             ensure_insync_repo
-            # Inherit the cached sudo credential so we don't pop a separate graphical polkit prompt
+            # rpm-ostree has no "update this layered package". `install insync` while
+            # it's already requested is a no-op error. One transaction: drop the old
+            # overlay and re-resolve `insync` against current yum metadata, same OS
+            # tree. (`rpm-ostree upgrade` would also pull a Fedora rebase.)
             sudo rpm-ostree uninstall insync --install insync || warn "Failed to update Insync"
             return
         fi
