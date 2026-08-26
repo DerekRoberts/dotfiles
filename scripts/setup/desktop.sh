@@ -120,7 +120,6 @@ configure_plasma_desktop() {
     # id and activity uuid, which we read out of appletsrc. appletsrc itself is
     # owned by plasmashell — read it, never rewrite it. The desktop and panel
     # below are set through the supported scripting API instead.
-    repair_icon_theme_pollution
     rebuild_ksycoca
     configure_kickoff_favorites "$PROFILE"
 

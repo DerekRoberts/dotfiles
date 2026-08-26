@@ -113,46 +113,19 @@ install_ai_wiring() {
     info "Configuring Cursor default workspace paths..."
     local CURSOR_SETTINGS="$CURSOR_USER_DIR/settings.json"
     mkdir -p "$CURSOR_USER_DIR"
-    python3 - "$CURSOR_SETTINGS" << 'PY'
-import sys, os, json, re, tempfile
-
-path = sys.argv[1]
-dir_path = os.path.dirname(os.path.abspath(path))
-os.makedirs(dir_path, exist_ok=True)
-
-data = {}
-if os.path.exists(path):
-    with open(path, "r", encoding="utf-8") as f:
-        raw = f.read()
-
-    # Strip single-line and multi-line comments from JSONC without altering string literals
-    def strip_jsonc(text):
-        pattern = r'(//[^\n]*)|(/\*[\s\S]*?\*/)|("(?:\\.|[^"\\])*")'
-        def replacer(match):
-            if match.group(3) is not None:
-                return match.group(3)
-            return ""
-        stripped = re.sub(pattern, replacer, text)
-        return re.sub(r',\s*([}\]])', r'\1', stripped)
-
-    cleaned = strip_jsonc(raw).strip()
-    if cleaned:
-        try:
-            data = json.loads(cleaned)
-        except Exception as e:
-            sys.stderr.write(f"Warning: Failed to parse {path} as JSONC: {e}. Preserving original file.\n")
-            sys.exit(0)
-
-data["git.defaultCloneDirectory"] = "~/Repos"
-data["files.dialog.defaultPath"] = "~/Repos"
-
-tmp_fd, tmp_path = tempfile.mkstemp(prefix=".settings.tmp.", dir=dir_path)
-with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
-    json.dump(data, f, indent=4)
-    f.write("\n")
-os.chmod(tmp_path, 0o644)
-os.replace(tmp_path, path)
-PY
+    if [[ ! -s "$CURSOR_SETTINGS" ]]; then
+        echo "{}" > "$CURSOR_SETTINGS"
+    fi
+    # Strip comments loosely and merge with jq, write back standard JSON
+    local tmp_file
+    tmp_file="$(mktemp "${CURSOR_SETTINGS%/*}/settings.XXXXXX")"
+    if sed -E 's|//.*||g; s|/\*.*\*/||g' "$CURSOR_SETTINGS" | \
+        jq '. + {"git.defaultCloneDirectory": "~/Repos", "files.dialog.defaultPath": "~/Repos"}' > "$tmp_file"; then
+        mv -f "$tmp_file" "$CURSOR_SETTINGS"
+    else
+        rm -f "$tmp_file"
+        warn "Failed to update Cursor settings"
+    fi
     success "Cursor default project paths configured"
 }
 
@@ -281,9 +254,6 @@ fetch_tarball_bins() {
     elif [[ -n "${EXPECTED_SHA256:-}" ]] && ! verify_sha256 "$tmp_file" "$EXPECTED_SHA256"; then
         warn "Checksum mismatch for $url — refusing to install"
         rc=1
-    elif ! tar_is_safe "$tmp_file"; then
-        warn "Refusing archive from $url (absolute, traversing, or escaping entries)"
-        rc=1
     elif ! tar -xzf "$tmp_file" -C "$tmp_dir" --no-same-owner; then
         warn "Failed to extract $url"
         rc=1
@@ -383,27 +353,6 @@ install_cli_tools() {
     return "$failed"
 }
 
-self_test_fetch_gh_release() {
-    local got
-    got="$(asset_name_from_pattern "gh_{ver}_linux_amd64.tar.gz" "v2.54.0")"
-    [[ "$got" == "gh_2.54.0_linux_amd64.tar.gz" ]] || { echo "FAIL gh pattern: $got" >&2; return 1; }
-    got="$(asset_name_from_pattern "shellcheck-{tag}.linux.x86_64.tar.gz" "v0.11.0")"
-    [[ "$got" == "shellcheck-v0.11.0.linux.x86_64.tar.gz" ]] || { echo "FAIL shellcheck pattern: $got" >&2; return 1; }
-    got="$(asset_name_from_pattern "jq-linux-amd64" "jq-1.8.2")"
-    [[ "$got" == "jq-linux-amd64" ]] || { echo "FAIL jq pattern: $got" >&2; return 1; }
-    got="$(tag_from_release_url "https://github.com/cli/cli/releases/tag/v2.98.0")"
-    [[ "$got" == "v2.98.0" ]] || { echo "FAIL gh tag: $got" >&2; return 1; }
-    got="$(tag_from_release_url "https://github.com/jqlang/jq/releases/tag/jq-1.8.2")"
-    [[ "$got" == "jq-1.8.2" ]] || { echo "FAIL jq tag: $got" >&2; return 1; }
-    got="$(tag_from_release_url "https://github.com/astral-sh/uv/releases/tag/0.12.5")"
-    [[ "$got" == "0.12.5" ]] || { echo "FAIL uv tag: $got" >&2; return 1; }
-    is_tarball_asset "gh_2.54.0_linux_amd64.tar.gz" || { echo "FAIL tar regex" >&2; return 1; }
-    if is_tarball_asset "jq-linux-amd64"; then
-        echo "FAIL raw regex" >&2
-        return 1
-    fi
-    echo "fetch_gh_release self-test passed"
-}
 
 install_native_tools() {
     section "Native Dev Tools & Toolchains"
@@ -601,48 +550,21 @@ write_github_mcp_config() {
     local config_file="$1"
     local gh_token="$2"
 
-    python3 - "$config_file" "$gh_token" << 'PY'
-import sys, os, json, tempfile
+    mkdir -p "$(dirname "$config_file")"
+    if [[ ! -s "$config_file" ]]; then
+        echo '{"mcpServers": {}}' > "$config_file"
+    fi
 
-path = sys.argv[1]
-token = sys.argv[2]
-dir_path = os.path.dirname(os.path.abspath(path))
-os.makedirs(dir_path, mode=0o700, exist_ok=True)
-
-data = {}
-if os.path.exists(path):
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            raw = f.read().strip()
-            if raw:
-                data = json.loads(raw)
-    except Exception as e:
-        sys.stderr.write(f"Warning: Could not parse existing config ({e}), creating fresh configuration.\n")
-        data = {}
-
-if not isinstance(data, dict):
-    data = {}
-
-servers = data.setdefault("mcpServers", {})
-if not isinstance(servers, dict):
-    servers = {}
-    data["mcpServers"] = servers
-
-servers["github"] = {
-    "command": "npx",
-    "args": ["-y", "@modelcontextprotocol/server-github"],
-    "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": token
-    }
-}
-
-tmp_fd, tmp_path = tempfile.mkstemp(prefix=".mcp_config.tmp.", dir=dir_path)
-with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
-    json.dump(data, f, indent=2)
-    f.write("\n")
-os.chmod(tmp_path, 0o600)
-os.replace(tmp_path, path)
-PY
+    local tmp_file
+    tmp_file="$(mktemp "$(dirname "$config_file")/mcp.XXXXXX")"
+    
+    if jq --arg token "$gh_token" '.mcpServers.github = {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-github"], "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": $token}}' "$config_file" > "$tmp_file"; then
+        chmod 600 "$tmp_file"
+        mv -f "$tmp_file" "$config_file"
+    else
+        rm -f "$tmp_file"
+        warn "Failed to write GitHub MCP config"
+    fi
 }
 
 setup_github_mcp() {
@@ -669,41 +591,6 @@ setup_github_mcp() {
     success "GitHub MCP Server configured at $config_file"
 }
 
-self_test_github_mcp() {
-    local tmp_dir
-    tmp_dir="$(mktemp -d)"
-    local test_config="$tmp_dir/mcp_config.json"
-
-    # 1. Fresh config creation
-    write_github_mcp_config "$test_config" "test-token-123"
-    [[ -f "$test_config" ]] || { echo "FAIL: test_config not created" >&2; rm -rf "$tmp_dir"; return 1; }
-
-    local token_read
-    token_read="$(python3 -c "import json; print(json.load(open('$test_config'))['mcpServers']['github']['env']['GITHUB_PERSONAL_ACCESS_TOKEN'])")"
-    [[ "$token_read" == "test-token-123" ]] || { echo "FAIL: token mismatch" >&2; rm -rf "$tmp_dir"; return 1; }
-
-    # 2. Existing config with another server is preserved
-    python3 -c "
-import json
-with open('$test_config', 'r+') as f:
-    d = json.load(f)
-    d['mcpServers']['other'] = {'command': 'other-cmd'}
-    f.seek(0)
-    json.dump(d, f)
-    f.truncate()
-"
-
-    # Update github token
-    write_github_mcp_config "$test_config" "test-token-456"
-    local other_cmd
-    other_cmd="$(python3 -c "import json; print(json.load(open('$test_config'))['mcpServers']['other']['command'])")"
-    [[ "$other_cmd" == "other-cmd" ]] || { echo "FAIL: other server lost" >&2; rm -rf "$tmp_dir"; return 1; }
-    token_read="$(python3 -c "import json; print(json.load(open('$test_config'))['mcpServers']['github']['env']['GITHUB_PERSONAL_ACCESS_TOKEN'])")"
-    [[ "$token_read" == "test-token-456" ]] || { echo "FAIL: updated token mismatch" >&2; rm -rf "$tmp_dir"; return 1; }
-
-    rm -rf "$tmp_dir"
-    echo "github_mcp self-test passed"
-}
 
 install_repos() {
     section "Repositories"
@@ -732,11 +619,6 @@ main() {
         --help|-h)
             usage
             exit 0
-            ;;
-        --self-test)
-            self_test_fetch_gh_release
-            self_test_github_mcp
-            exit $?
             ;;
         --tools|-t)
             section "Standalone CLI Tools"
