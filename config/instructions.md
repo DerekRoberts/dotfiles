@@ -50,8 +50,8 @@
 
 ## Git & Branch Hygiene
 
-- ALWAYS fetch and merge `origin/main` before new edits or pushing.
-- PR Feedback: ALWAYS fetch all inline review comments via `unset GITHUB_TOKEN && gh api "repos/{owner}/{repo}/pulls/$(gh pr view --json number -q .number)/comments" --paginate` (NEVER rely solely on `gh pr view`).
+- ALWAYS `unset GITHUB_TOKEN` before every `gh` command. Ambient tokens 401; local credentials are the ones that work.
+- PR Feedback: `unset GITHUB_TOKEN && gh api "repos/{owner}/{repo}/pulls/$(gh pr view --json number -q .number)/comments" --paginate` (NEVER rely solely on `gh pr view`).
 - Close Issues: Use `Closes #<num>` ONLY if an issue is explicitly provided. NEVER guess.
 
 ## Project Standards
@@ -67,11 +67,3 @@
 ## Agent Interaction
 
 - **Default:** implement when the prompt contains an explicit imperative to modify, create, or delete code. Diagnostic, investigatory, or open-ended prompts are NOT implementation tasks — respond with text only.
-
-## Process
-
-- **Git & PR Automation:** Execute Git operations in sequence:
-  1. Branch: per Hard Stops above.
-  2. Commit: Create local commits as you work.
-  3. Push & PR: When complete, check for an existing PR using `unset GITHUB_TOKEN && gh pr view`. If a PR already exists, push commits with `git push` and update it with `unset GITHUB_TOKEN && gh pr edit` if metadata needs updating; otherwise, push with `git push -u origin HEAD` and create a new PR with `unset GITHUB_TOKEN && gh pr create --fill --body "<description>"`.
-- If GitHub CLI (`gh`) fails with `401 Bad credentials`, ALWAYS run `unset GITHUB_TOKEN` before `gh` so it uses local credentials.
