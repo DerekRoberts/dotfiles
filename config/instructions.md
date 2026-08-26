@@ -12,6 +12,7 @@
 
 - NEVER run test runners, compilers, or migrations on the host, even if containers are stopped. Cap concurrency at 2 workers (Jest `--maxWorkers=2`/`--runInBand`; Vitest `--maxConcurrency=2`/`--threads=false`). Recipes: `podman-runner` skill.
 - ALWAYS stop on the first error; chain related commands with `&&`.
+- Scratch files: git-ignored `./.tmp/`, else `/tmp`. NEVER elsewhere in the tree.
 
 ## Think & Plan
 
@@ -33,7 +34,7 @@
 
 - ALWAYS use direct code; propose a refactor on duplication. Touch only logical path files.
 - ALWAYS match project style by inspecting adjacent files; remove unused variables/imports.
-- NEVER default missing environments or toggles to PROD. Hard-stop if the value is unset.
+- ALWAYS default missing environments and toggles to PROD. TEST and DEV must be set explicitly — an omitted value must not select a non-prod environment.
 
 ## Definition of Done
 
