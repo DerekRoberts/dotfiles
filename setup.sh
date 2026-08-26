@@ -75,13 +75,10 @@ esac
 
 echo "=== Bootstrapping Dotfiles (Fedora Kinoite) ==="
 
-# shellcheck source=scripts/lib.sh
-. "$DOTFILES_DIR/scripts/lib.sh"
-
-# Insync is the only privileged step. Skip the password prompt unless we still
-# need to layer it or a newer RPM is in the yum repo.
-if insync_needs_root; then
-    echo "Prompting for sudo to layer or update Insync via rpm-ostree..."
+# Insync is the only privileged step. Once layered, version bumps come from
+# `rpm-ostree upgrade` (updown), so re-runs don't need a password.
+if ! rpm -q insync &>/dev/null; then
+    echo "Prompting for sudo to layer Insync via rpm-ostree..."
     sudo -v
     while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
 fi

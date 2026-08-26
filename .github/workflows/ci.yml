@@ -54,11 +54,4 @@ jobs:
           bash -n setup.sh
           bash -n scripts/*.sh scripts/setup/*.sh
           ./setup.sh --help
-          bash -c '
-            set -euo pipefail
-            . scripts/lib.sh
-            evr_older_than 3.9.10.60041-fc44 3.9.11.60043-fc44
-            if evr_older_than 3.9.11.60043-fc44 3.9.11.60043-fc44; then exit 1; fi
-            if evr_older_than 3.9.11.60043-fc44 3.9.10.60041-fc44; then exit 1; fi
-          '
 

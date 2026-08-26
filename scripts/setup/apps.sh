@@ -129,25 +129,13 @@ EOF"
 
 install_insync() {
     section "Insync"
-    local installed latest
     if rpm -q insync &>/dev/null; then
-        installed="$(rpm -q --qf '%{VERSION}-%{RELEASE}' insync)"
-        latest="$(insync_repo_evr || true)"
-        if [[ -n "$latest" ]] && evr_older_than "$installed" "$latest"; then
-            info "Updating Insync ($installed → $latest) via rpm-ostree..."
-            ensure_insync_repo
-            # rpm-ostree has no "update this layered package". `install insync` while
-            # it's already requested is a no-op error. One transaction: drop the old
-            # overlay and re-resolve `insync` against current yum metadata, same OS
-            # tree. (`rpm-ostree upgrade` would also pull a Fedora rebase.)
-            sudo rpm-ostree uninstall insync --install insync || warn "Failed to update Insync"
-            return
-        fi
-        success "Insync is layered via rpm-ostree ($installed)"
+        success "Insync is layered via rpm-ostree"
         return
     fi
     info "Installing Insync natively via rpm-ostree (will prompt for sudo)..."
     ensure_insync_repo
+    # Inherit the cached sudo credential so we don't pop a separate graphical polkit prompt
     sudo rpm-ostree install insync || warn "Failed to layer Insync"
 }
 
@@ -185,9 +173,9 @@ main() {
             ;;
     esac
 
-    # Insync is the only step that needs root; skip the prompt unless we still
-    # need to layer it or a newer RPM is in the yum repo.
-    if insync_needs_root; then
+    # Insync is the only step that needs root; once layered, updates come from
+    # `rpm-ostree upgrade` (updown), so skip the prompt.
+    if ! rpm -q insync &>/dev/null; then
         sudo -v
     fi
 
