@@ -57,7 +57,7 @@
 
 ## Project Standards
 
-- ALWAYS use Conventional Commits. NEVER upgrade, downgrade, or edit lock files unless the user asked.
+- ALWAYS use Conventional Commits. ALWAYS upgrade to the latest stable packages. NEVER downgrade. Lockfile changes only as the result of an upgrade — never a hand-edit.
 - ALWAYS use minimum permissions (e.g., `permissions: {}` in GitHub Actions). NEVER add manual version tracking artifacts.
 
 ## Communication Style
