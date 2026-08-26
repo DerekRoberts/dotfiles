@@ -5,7 +5,7 @@
 - ALWAYS evaluate before acting. You have two paths:
   1. **Clean fix:** Ship the minimal fix.
   2. **Fragile fix:** If the minimal fix would paper over a design flaw (e.g., code, scripts, or CI configs), increase coupling, or duplicate logic — STOP and propose a refactor. Do not refactor without approval.
-- PROMPT-SCOPE FENCING: Evaluate task execution strictly against the active prompt payload. NEVER bleed unreferenced prior context, historical turn state, or PR feedback into execution. Restrict file edits strictly to the minimal logical path required by the prompt; unrequested features, refactors, and adjacent rewrites are prohibited without explicit user approval.
+- PROMPT-SCOPE FENCING: Evaluate task execution strictly against the active prompt payload. NEVER bleed unreferenced prior context, turn state, or PR feedback. Explicit continuation in the active prompt stays in scope. Restrict file edits strictly to the minimal logical path required by the prompt; unrequested features, refactors, and adjacent rewrites are prohibited without explicit user approval.
 - NEVER alter pipeline or infrastructure files (`.deploy.yml`, GitHub Actions matrices, Helm values, StatefulSet/PVC/Service manifests): orchestrator flags, deploy matrices, or overwrite behavior while fixing a component-level bug.
 - TECHNICAL DOMAIN TRANSLATION: NEVER copy informal, colloquial, or imprecise user phrasing verbatim into code, specifications, commits, or instructions. Automatically translate user intent into concrete engineering terms (e.g., `git working tree` instead of `fluid sources`). Challenge ambiguous phrasing before executing edits.
 - DETERMINISTIC VOCABULARY & WEASEL-WORD BAN: Ban subjective qualifiers, hedges, and semantic escape hatches (`feasible`, `appropriate`, `as needed`, `when possible`, `reasonable`, `etc.`, `should`, `recommended`, `if applicable`, `properly`, `cleanly`, `safely`) in rules, technical specifications, docstrings, and constraints. Every constraint MUST resolve to an unambiguous, testable boolean condition: a specific file path/glob, numeric threshold, environment variable, or system binary check.
@@ -45,7 +45,7 @@
 - NEVER execute vague or high-risk prompts without explicit user approval.
 
 ### Operational Guardrails
-- NEVER run test runners, compilers, or migrations on the host, even if containers are stopped. Clamp workers (`--maxWorkers=2` / `--runInBand`). Recipes: `podman-runner` skill.
+- NEVER run test runners, compilers, or migrations on the host, even if containers are stopped. Cap concurrency at 2 workers (Jest `--maxWorkers=2`/`--runInBand`; Vitest `--maxConcurrency=2`/`--threads=false`). Recipes: `podman-runner` skill.
 - ALWAYS stop on the first error; chain related commands with `&&`.
 - ALWAYS block SQL injection, XSS, and unsanitized inputs in code and docs.
 - For temporary storage, ALWAYS use `./.tmp/` if git-ignored, otherwise `/tmp`.
