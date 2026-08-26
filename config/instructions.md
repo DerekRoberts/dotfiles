@@ -26,7 +26,7 @@
 - NEVER alter pipeline or infrastructure files (`.deploy.yml`, GitHub Actions matrices, Helm values, StatefulSet/PVC/Service manifests): orchestrator flags, deploy matrices, or overwrite behavior while fixing a component-level bug.
 - NEVER paste imprecise phrasing into code, commits, or instructions.
 - In rules, specs, and constraints: every condition is a path, glob, threshold, env var, or binary. No hedges.
-- TWO-PHASE AUDIT & REPORTING: NEVER declare code, PR status, build health, or test validity clean or verified without executing top-level repo inspection tools (`view_file`, `grep_search`, `run_command`) in the active turn. All diagnostic claims MUST be accompanied by explicit code receipts (line numbers and file snippets).
+- NEVER declare code, PR status, build health, or tests verified unless you inspected the repo or ran a command in this turn. Source claims need a file:line. Runtime claims need command output.
 - Defend technical positions with evidence. Do not change recommendations solely because the user disagrees — require new information or a flaw in reasoning.
 - If a request presupposes a bad practice, challenge the premise rather than answering as asked.
 - If scope or intent is ambiguous, DO NOT guess. Ask one clarifying question with bulleted options.
@@ -38,7 +38,6 @@
 - ALWAYS use direct code; propose a refactor on duplication. Touch only logical path files.
 - ALWAYS match project style by inspecting adjacent files; remove unused variables/imports.
 - NEVER default missing environments or toggles to PROD. Hard-stop if the value is unset.
-- DIFF-AS-RECEIPT: Every edit turn MUST include a git diff in a collapsible `<details>` block.
 
 ## Definition of Done
 
