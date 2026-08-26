@@ -110,13 +110,10 @@ DESKTOP
 
 # ── Standalone Applications ──────────────────────────────────────────────────
 
-install_insync() {
-    section "Insync"
-    if rpm -q insync &>/dev/null; then
-        success "Insync is layered via rpm-ostree"
-        return
+ensure_insync_repo() {
+    if [[ -f /etc/yum.repos.d/insync.repo ]]; then
+        return 0
     fi
-    info "Installing Insync natively via rpm-ostree (will prompt for sudo)..."
     sudo curl -fsSL https://d2t3ff60b2tol4.cloudfront.net/repomd.xml.key -o /etc/pki/rpm-gpg/RPM-GPG-KEY-insync || true
     sudo bash -c "cat > /etc/yum.repos.d/insync.repo << 'EOF'
 [insync]
@@ -128,6 +125,16 @@ enabled=1
 metadata_expire=120m
 type=rpm-md
 EOF"
+}
+
+install_insync() {
+    section "Insync"
+    if insync_is_live; then
+        success "Insync is available"
+        return
+    fi
+    info "Installing Insync natively via rpm-ostree (will prompt for sudo)..."
+    ensure_insync_repo
     # Inherit the cached sudo credential so we don't pop a separate graphical polkit prompt
     sudo rpm-ostree install insync || warn "Failed to layer Insync"
 }
@@ -147,8 +154,6 @@ EOF
 }
 
 main() {
-    sudo -v # Cache sudo credential upfront so the user isn't prompted mid-script
-    
     local PROFILE="dev"
     case "${1:-}" in
         --help|-h)
@@ -168,6 +173,14 @@ main() {
             ;;
     esac
 
+    # Insync is the only step that needs root. If it isn't a command on this
+    # boot, cache sudo, layer it, and offer a reboot (unless setup.sh will).
+    local insync_needs_reboot=0
+    if ! insync_is_live; then
+        sudo -v
+        insync_needs_reboot=1
+    fi
+
     echo "=== Installing Applications ($PROFILE profile) ==="
     install_chrome
     install_vlc
@@ -177,6 +190,9 @@ main() {
     install_insync
     rebuild_ksycoca
     success "Application installation complete"
+    if [[ "$insync_needs_reboot" -eq 1 && -z "${DOTFILES_DEFER_REBOOT_PROMPT:-}" ]]; then
+        prompt_reboot_for_insync
+    fi
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
