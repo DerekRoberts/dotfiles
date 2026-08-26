@@ -48,7 +48,7 @@ source ~/.bashrc
 | **Global Git Hooks (gitleaks secret scanning)** | ❌ | ✅ |
 | **Developer CLI Suite** (`gh`, `jq`, `gitleaks`, `shellcheck`, `actionlint`, `uv`, `docker-compose`, `oc`) | ❌ | ✅ |
 | **Node.js LTS** (via NVM) | ❌ | ✅ |
-| **AI Assistants & Prompt Rules** (Cursor, Antigravity Hub, `agy`, Ponytail) | ❌ | ✅ |
+| **AI Assistants & Prompt Rules** (Cursor, Antigravity Hub, `agy`, Kilo CLI, Ponytail) | ❌ | ✅ |
 | **Drop-Down Terminal** (Yakuake) | ❌ | ✅ |
 | **GitHub Work Repositories** (`~/Repos`) | ❌ | ✅ |
 
@@ -161,6 +161,7 @@ verified; the rest is documented here rather than left implicit.
 | Antigravity hub | TLS + URL anchored | URL scraped from the download page, must be under `storage.googleapis.com/antigravity-public/`; archive checked for path traversal. |
 | Insync | TLS + URL anchored + digest | URL anchored to `cdn.insynchq.com`. **Insync ships unsigned RPMs** (no `SIGPGP`/`RSAHEADER`), so there is nothing to verify against a key. `rpmkeys --checksig` confirms the package's own digests, and the installed hash is recorded to `~/.local/share/dotfiles/insync.sha256`. |
 | `agy` CLI | TLS only | `curl \| bash` of `antigravity.google/cli/install.sh`. Upstream publishes no versioned installer or checksum. |
+| Kilo CLI | TLS only | `npm install -g @kilocode/cli` into nvm's userspace prefix (`--allow-scripts=@kilocode/cli` so its postinstall runs on npm 11+). Upstream publishes no checksum. |
 | `nvm` | Pinned tag | Installer fetched at a resolved release tag, not `main`. |
 | Ponytail agent rule | Pinned commit | Pinned by SHA in `dev.sh`, since it becomes standing instructions for every agent session. Bump deliberately after reading the diff. |
 

@@ -64,6 +64,15 @@ cursor_latest_url() {
     printf '%s\n' "$url"
 }
 
+# Load nvm so Node/npm globals (Kilo CLI) are on PATH. Fails if nvm isn't installed.
+load_nvm() {
+    export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+    [[ -s "$NVM_DIR/nvm.sh" ]] || return 1
+    # shellcheck source=/dev/null
+    \. "$NVM_DIR/nvm.sh"
+    command -v npm >/dev/null 2>&1
+}
+
 # ── Insync ───────────────────────────────────────────────────────────────────
 
 # Live on this boot? One check: a real executable on PATH. Layering is setup's

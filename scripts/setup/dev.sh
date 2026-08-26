@@ -443,6 +443,22 @@ install_agy() {
     success "agy CLI installed"
 }
 
+install_kilo() {
+    section "Kilo Code CLI"
+    if ! load_nvm; then
+        warn "nvm/npm not available — skipping Kilo CLI"
+        return 0
+    fi
+    local update="${UPDATE:-0}"
+    if [[ "$update" -eq 0 ]] && type -p kilo >/dev/null 2>&1; then
+        success "Kilo CLI already installed: $(kilo --version 2>/dev/null || echo unknown)"
+        return 0
+    fi
+    info "Installing @kilocode/cli via nvm npm (userspace, not /usr)..."
+    npm install -g --allow-scripts=@kilocode/cli @kilocode/cli
+    success "Kilo CLI installed: $(kilo --version 2>/dev/null || echo ok)"
+}
+
 install_cursor() {
     section "Cursor (AppImage)"
     local BIN_DIR="$HOME/.local/bin"
@@ -641,6 +657,7 @@ main() {
     install_native_tools
     install_antigravity
     install_agy
+    install_kilo
     install_cursor
     install_ponytail
     setup_github_mcp
