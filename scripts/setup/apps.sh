@@ -117,7 +117,7 @@ install_insync() {
         return
     fi
     info "Installing Insync natively via rpm-ostree (will prompt for sudo)..."
-    sudo curl -fsSL https://d2t3ff60b2tol4.cloudfront.net/repomd.asc -o /etc/pki/rpm-gpg/RPM-GPG-KEY-insync || true
+    sudo curl -fsSL https://d2t3ff60b2tol4.cloudfront.net/repomd.xml.key -o /etc/pki/rpm-gpg/RPM-GPG-KEY-insync || true
     sudo bash -c "cat > /etc/yum.repos.d/insync.repo << 'EOF'
 [insync]
 name=insync repo
