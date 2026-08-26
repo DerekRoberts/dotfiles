@@ -66,9 +66,51 @@ cursor_latest_url() {
 
 # ── Insync ───────────────────────────────────────────────────────────────────
 
-# Insync ships no Flatpak or AppImage, so it runs from ~/.local/lib via this
-# wrapper. Written from one place because both the installer and the updater
-# need it to stay identical.
+INSYNC_YUM_PREFIX='http://yum.insync.io/fedora/'
+
+# True if $1 is a lower EVR than $2 (strings like 3.9.11.60043-fc44).
+# ponytail: sort -V, not rpm.labelCompare — Insync EVRs are dotted-numeric with a
+# matching dist tag; switch to rpmdev-vercmp if epoch or rpm-odd suffixes appear.
+evr_older_than() {
+    local a="$1" b="$2"
+    [[ -n "$a" && -n "$b" && "$a" != "$b" ]] || return 1
+    [[ "$(printf '%s\n%s\n' "$a" "$b" | sort -V | tail -1)" == "$b" ]]
+}
+
+# Latest insync VERSION-RELEASE from the yum repo. No root needed.
+insync_repo_evr() {
+    local rel href primary listing evr
+    rel="$(rpm -E '%fedora' 2>/dev/null)" || return 1
+    [[ "$rel" =~ ^[0-9]+$ ]] || return 1
+    href="$(curl -fsSL --connect-timeout 10 --max-time 20 \
+        "${INSYNC_YUM_PREFIX}${rel}/repodata/repomd.xml" \
+        | grep -o 'href="repodata/[^"]*-primary.xml.gz"' \
+        | head -1 | cut -d'"' -f2)" || return 1
+    primary="${INSYNC_YUM_PREFIX}${rel}/${href}"
+    require_url_prefix "$primary" "${INSYNC_YUM_PREFIX}${rel}/repodata/" || return 1
+    listing="$(curl -fsSL --connect-timeout 10 --max-time 20 "$primary" | gzip -dc)" || return 1
+    evr="$(printf '%s\n' "$listing" \
+        | grep -o 'href="x86_64/insync-[0-9][^"]*\.x86_64\.rpm"' \
+        | sed -e 's|^href="x86_64/insync-||' -e 's|\.x86_64\.rpm"$||' \
+        | sort -V | tail -1)"
+    [[ -n "$evr" ]] || return 1
+    printf '%s\n' "$evr"
+}
+
+insync_update_available() {
+    local installed latest
+    installed="$(rpm -q --qf '%{VERSION}-%{RELEASE}' insync 2>/dev/null)" || return 1
+    latest="$(insync_repo_evr)" || return 1
+    evr_older_than "$installed" "$latest"
+}
+
+# True when setup still has privileged Insync work: missing, or a newer RPM in the repo.
+insync_needs_root() {
+    if ! rpm -q insync &>/dev/null; then
+        return 0
+    fi
+    insync_update_available
+}
 
 # ── Icon themes ──────────────────────────────────────────────────────────────
 
