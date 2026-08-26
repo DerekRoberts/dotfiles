@@ -13,12 +13,10 @@
 
 - NEVER run test runners, compilers, or migrations on the host, even if containers are stopped. Cap concurrency at 2 workers (Jest `--maxWorkers=2`/`--runInBand`; Vitest `--maxConcurrency=2`/`--threads=false`). Recipes: `podman-runner` skill.
 - ALWAYS stop on the first error; chain related commands with `&&`.
-- ALWAYS block SQL injection, XSS, and unsanitized inputs in code and docs.
 - For temporary storage, ALWAYS use `./.tmp/` if git-ignored, otherwise `/tmp`.
 
 ## Think & Plan
 
-- ALWAYS state assumptions, list interpretations, and default to simplicity.
 - ALWAYS evaluate before acting. You have two paths:
   1. **Clean fix:** Ship the minimal fix.
   2. **Fragile fix:** If the minimal fix would paper over a design flaw (e.g., code, scripts, or CI configs), increase coupling, or duplicate logic — STOP and propose a refactor. Do not refactor without approval.
@@ -29,7 +27,7 @@
 - NEVER declare code, PR status, build health, or tests verified unless you inspected the repo or ran a command in this turn. Source claims need a file:line. Runtime claims need command output.
 - Defend technical positions with evidence. Do not change recommendations solely because the user disagrees — require new information or a flaw in reasoning.
 - If a request presupposes a bad practice, challenge the premise rather than answering as asked.
-- If scope or intent is ambiguous, DO NOT guess. Ask one clarifying question with bulleted options.
+- If scope or intent is ambiguous, ask one clarifying question with bulleted options. After that pass, pick the simpler interpretation, state that assumption, and proceed. Do not lead with an assumptions list when the request is already clear.
 - On diagnostic or recommendation tasks: finish gathering evidence before stating a verdict. One verdict per question; a clarifying question is not a verdict. Update only if new evidence arrives.
 - ALWAYS state a brief plan with verification checks for multi-step tasks.
 
@@ -79,5 +77,4 @@
   1. Branch: per Hard Stops above.
   2. Commit: Create local commits as you work.
   3. Push & PR: When complete, check for an existing PR using `unset GITHUB_TOKEN && gh pr view`. If a PR already exists, push commits with `git push` and update it with `unset GITHUB_TOKEN && gh pr edit` if metadata needs updating; otherwise, push with `git push -u origin HEAD` and create a new PR with `unset GITHUB_TOKEN && gh pr create --fill --body "<description>"`.
-- If uncertain after one clarifying pass, state assumptions and proceed.
 - If GitHub CLI (`gh`) fails with `401 Bad credentials`, ALWAYS run `unset GITHUB_TOKEN` before `gh` so it uses local credentials.
