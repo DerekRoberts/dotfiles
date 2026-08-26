@@ -35,6 +35,7 @@
 
 ### Hard Stops
 - NEVER close, merge, comment on, or review issues/PRs under the user's credentials; NEVER create releases/tags, force-push, manage secrets, or run `oc`/`kubectl`. Draft those in chat. Commits, `git push`, `gh issue create`, and `gh pr create|edit` are fine. If a command is blocked, do not bypass it.
+- NEVER branch from a feature branch, including merged ones; ALWAYS `git fetch origin && git checkout -b <type>/<name> origin/main`.
 - NEVER push to main.
 - NEVER commit credentials, secrets, or PII.
 - NEVER silence diagnostics (`eslint-disable`, `@ts-ignore`); fix the root cause.
@@ -49,7 +50,6 @@
 - For temporary storage, ALWAYS use `./.tmp/` if git-ignored, otherwise `/tmp`.
 
 ### Git & Branch Hygiene
-- ALWAYS checkout new feature branches directly from `origin/main` (`git fetch origin && git checkout -b feat/<name> origin/main`). NEVER branch from pre-existing local feature branches without explicit request.
 - ALWAYS fetch and merge `origin/main` before new edits or pushing.
 - PR Feedback: ALWAYS fetch all inline review comments via `unset GITHUB_TOKEN && gh api "repos/{owner}/{repo}/pulls/$(gh pr view --json number -q .number)/comments" --paginate` (NEVER rely solely on `gh pr view`).
 - Close Issues: Use `Closes #<num>` ONLY if an issue is explicitly provided. NEVER guess.
@@ -76,7 +76,7 @@
 ## Process
 
 - **Git & PR Automation:** Execute Git operations in sequence:
-  1. Branch: per Git & Branch Hygiene above.
+  1. Branch: per Hard Stops above.
   2. Commit: Create local commits as you work.
   3. Push & PR: When complete, check for an existing PR using `unset GITHUB_TOKEN && gh pr view`. If a PR already exists, push commits with `git push` and update it with `unset GITHUB_TOKEN && gh pr edit` if metadata needs updating; otherwise, push with `git push -u origin HEAD` and create a new PR with `unset GITHUB_TOKEN && gh pr create --fill --body "<description>"`.
 - If uncertain after one clarifying pass, state assumptions and proceed.
