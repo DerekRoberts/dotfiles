@@ -66,9 +66,29 @@ cursor_latest_url() {
 
 # ── Insync ───────────────────────────────────────────────────────────────────
 
-# Layering is setup's only privileged Insync step. Version bumps ride on
-# `rpm-ostree upgrade` (updown): ostree re-resolves the named overlay against
-# current yum metadata as part of the next deployment, not as `dnf update insync`.
+# Live on this boot? One check: a real executable on PATH. Layering is setup's
+# only privileged step; after that, `rpm-ostree upgrade` (updown) owns versions.
+insync_is_live() {
+    type -p insync >/dev/null 2>&1
+}
+
+# Layered packages are not on PATH until reboot. Ask when stdin is a TTY;
+# otherwise print the reminder (curl|bash / CI must not block on `read`).
+prompt_reboot_for_insync() {
+    echo ""
+    echo "Insync was layered and will be available after reboot."
+    if [[ ! -t 0 ]]; then
+        echo "Reboot when ready."
+        return 0
+    fi
+    local ans=""
+    read -r -p "Reboot now? [y/N] " ans || true
+    case "$ans" in
+        y|Y|yes|YES)
+            sudo systemctl reboot
+            ;;
+    esac
+}
 
 # ── Icon themes ──────────────────────────────────────────────────────────────
 

@@ -129,8 +129,8 @@ EOF"
 
 install_insync() {
     section "Insync"
-    if rpm -q insync &>/dev/null; then
-        success "Insync is layered via rpm-ostree"
+    if insync_is_live; then
+        success "Insync is available"
         return
     fi
     info "Installing Insync natively via rpm-ostree (will prompt for sudo)..."
@@ -173,10 +173,12 @@ main() {
             ;;
     esac
 
-    # Insync is the only step that needs root; once layered, updates come from
-    # `rpm-ostree upgrade` (updown), so skip the prompt.
-    if ! rpm -q insync &>/dev/null; then
+    # Insync is the only step that needs root. If it isn't a command on this
+    # boot, cache sudo, layer it, and offer a reboot (unless setup.sh will).
+    local insync_needs_reboot=0
+    if ! insync_is_live; then
         sudo -v
+        insync_needs_reboot=1
     fi
 
     echo "=== Installing Applications ($PROFILE profile) ==="
@@ -188,6 +190,9 @@ main() {
     install_insync
     rebuild_ksycoca
     success "Application installation complete"
+    if [[ "$insync_needs_reboot" -eq 1 && -z "${DOTFILES_DEFER_REBOOT_PROMPT:-}" ]]; then
+        prompt_reboot_for_insync
+    fi
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

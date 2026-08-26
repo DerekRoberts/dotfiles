@@ -75,13 +75,20 @@ esac
 
 echo "=== Bootstrapping Dotfiles (Fedora Kinoite) ==="
 
-# Insync is the only privileged step. Once layered, version bumps come from
-# `rpm-ostree upgrade` (updown), so re-runs don't need a password.
-if ! rpm -q insync &>/dev/null; then
+# shellcheck source=scripts/lib.sh
+. "$DOTFILES_DIR/scripts/lib.sh"
+
+# Insync is the only privileged step. If it isn't a command on this boot, ask
+# for sudo now, layer it later, and offer a reboot at the end.
+INSYNC_NEEDS_REBOOT=0
+if ! insync_is_live; then
     echo "Prompting for sudo to layer Insync via rpm-ostree..."
+    echo "Insync will not be available until you reboot."
     sudo -v
     while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
+    INSYNC_NEEDS_REBOOT=1
 fi
+export DOTFILES_DEFER_REBOOT_PROMPT=1
 
 # 1. Core system and shell profile wiring
 bash "$DOTFILES_DIR/scripts/setup/core.sh" "--$PROFILE"
@@ -114,4 +121,7 @@ echo "   Run: source ~/.bashrc   (or restart terminal)"
 if [[ -f "$DOTFILES_DIR/scripts/tpm-enroll.sh" ]]; then
     echo "   Optional: To enable TPM 2.0 LUKS auto-unlock, run:"
     echo "             $DOTFILES_DIR/scripts/tpm-enroll.sh"
+fi
+if [[ "$INSYNC_NEEDS_REBOOT" -eq 1 ]]; then
+    prompt_reboot_for_insync
 fi
