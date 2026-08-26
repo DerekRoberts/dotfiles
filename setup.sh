@@ -75,11 +75,12 @@ esac
 
 echo "=== Bootstrapping Dotfiles (Fedora Kinoite) ==="
 
-# Pre-authenticate sudo upfront so the script doesn't hang mid-execution
-echo "Prompting for sudo to enable unattended package layering (Insync, etc.)..."
-sudo -v
-# Keep-alive: update sudo timestamp until this script finishes
-while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
+# Insync is the only privileged step. Skip the password prompt when it's already layered.
+if ! rpm -q insync &>/dev/null; then
+    echo "Prompting for sudo to layer Insync via rpm-ostree..."
+    sudo -v
+    while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
+fi
 
 # 1. Core system and shell profile wiring
 bash "$DOTFILES_DIR/scripts/setup/core.sh" "--$PROFILE"

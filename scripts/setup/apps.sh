@@ -147,8 +147,6 @@ EOF
 }
 
 main() {
-    sudo -v # Cache sudo credential upfront so the user isn't prompted mid-script
-    
     local PROFILE="dev"
     case "${1:-}" in
         --help|-h)
@@ -167,6 +165,11 @@ main() {
             exit 1
             ;;
     esac
+
+    # Insync is the only step that needs root; skip the prompt when it's already layered.
+    if ! rpm -q insync &>/dev/null; then
+        sudo -v
+    fi
 
     echo "=== Installing Applications ($PROFILE profile) ==="
     install_chrome
