@@ -7,13 +7,11 @@
 - NEVER silence diagnostics (`eslint-disable`, `@ts-ignore`); fix the root cause.
 - NEVER delete failing tests; ALWAYS fix the code.
 - NEVER modify database mutability, overwrite, or recreation settings (`overwrite: false` -> `true`, destructive template replaces, volume reclaim policies, storage classes) without explicit user confirmation. Treat `overwrite: false` on database components as an immutable safety guardrail.
-- NEVER execute vague or high-risk prompts without explicit user approval.
 
 ## Operational Guardrails
 
 - NEVER run test runners, compilers, or migrations on the host, even if containers are stopped. Cap concurrency at 2 workers (Jest `--maxWorkers=2`/`--runInBand`; Vitest `--maxConcurrency=2`/`--threads=false`). Recipes: `podman-runner` skill.
 - ALWAYS stop on the first error; chain related commands with `&&`.
-- For temporary storage, ALWAYS use `./.tmp/` if git-ignored, otherwise `/tmp`.
 
 ## Think & Plan
 
@@ -69,7 +67,6 @@
 ## Agent Interaction
 
 - **Default:** implement when the prompt contains an explicit imperative to modify, create, or delete code. Diagnostic, investigatory, or open-ended prompts are NOT implementation tasks — respond with text only.
-- Imperatives and bullets beat polite paragraphs. Task *why* only when scope or tradeoffs are ambiguous.
 
 ## Process
 
