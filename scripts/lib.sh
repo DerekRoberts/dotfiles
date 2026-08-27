@@ -64,6 +64,36 @@ cursor_latest_url() {
     printf '%s\n' "$url"
 }
 
+# Load nvm, select default/LTS Node, and require npm from nvm's prefix under $HOME.
+load_nvm() {
+    export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+    [[ -s "$NVM_DIR/nvm.sh" ]] || return 1
+    # shellcheck source=/dev/null
+    \. "$NVM_DIR/nvm.sh"
+    nvm use default >/dev/null 2>&1 || nvm use --lts >/dev/null 2>&1 || return 1
+    local npm_bin prefix
+    npm_bin="$(type -p npm 2>/dev/null)" || return 1
+    [[ "$npm_bin" == "$NVM_DIR"/* ]] || return 1
+    prefix="$(npm prefix -g)" || return 1
+    [[ "$prefix" == "$HOME"/* ]] || return 1
+}
+
+kilo_cli_installed() {
+    npm list -g --depth=0 @kilocode/cli >/dev/null 2>&1
+}
+
+# npm 11+ needs an explicit allowlist for global lifecycle scripts; older npm runs them by default.
+install_kilo_cli_pkg() {
+    local major
+    major="$(npm -v | cut -d. -f1)"
+    [[ "$major" =~ ^[0-9]+$ ]] || return 1
+    if [[ "$major" -ge 11 ]]; then
+        npm install -g --allow-scripts=@kilocode/cli @kilocode/cli
+    else
+        npm install -g @kilocode/cli
+    fi
+}
+
 # ── Insync ───────────────────────────────────────────────────────────────────
 
 # Live on this boot? One check: a real executable on PATH. Layering is setup's

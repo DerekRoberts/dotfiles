@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # updown — Workstation silent maintenance
 # Stages rpm-ostree upgrade, updates flatpaks, updates third-party binaries,
-# and updates Antigravity CLI + hub.
+# and updates Antigravity CLI + hub, Kilo CLI, and Cursor.
 #
 # Usage:
 #   updown                 — run updates then power off (default / interactive)
@@ -126,6 +126,19 @@ warn()    { echo "[updown] ⚠ $*" >&2; }
         fi
     else
         info "agy CLI not installed — skipping"
+    fi
+
+
+    # ── 5. Kilo Code CLI (nvm npm global) ────────────────────────────────────
+    if load_nvm && kilo_cli_installed; then
+        info "Updating Kilo CLI..."
+        if install_kilo_cli_pkg 2>&1; then
+            success "Kilo CLI updated ($(kilo --version 2>/dev/null || echo ok))"
+        else
+            warn "Kilo CLI update failed — continuing"
+        fi
+    else
+        info "Kilo CLI not installed — skipping"
     fi
 
 
