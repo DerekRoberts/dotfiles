@@ -130,9 +130,9 @@ warn()    { echo "[updown] ⚠ $*" >&2; }
 
 
     # ── 5. Kilo Code CLI (nvm npm global) ────────────────────────────────────
-    if load_nvm && type -p kilo >/dev/null 2>&1; then
+    if load_nvm && kilo_cli_installed; then
         info "Updating Kilo CLI..."
-        if npm install -g --allow-scripts=@kilocode/cli @kilocode/cli 2>&1; then
+        if install_kilo_cli_pkg 2>&1; then
             success "Kilo CLI updated ($(kilo --version 2>/dev/null || echo ok))"
         else
             warn "Kilo CLI update failed — continuing"

@@ -450,12 +450,12 @@ install_kilo() {
         return 0
     fi
     local update="${UPDATE:-0}"
-    if [[ "$update" -eq 0 ]] && type -p kilo >/dev/null 2>&1; then
+    if [[ "$update" -eq 0 ]] && kilo_cli_installed; then
         success "Kilo CLI already installed: $(kilo --version 2>/dev/null || echo unknown)"
         return 0
     fi
     info "Installing @kilocode/cli via nvm npm (userspace, not /usr)..."
-    npm install -g --allow-scripts=@kilocode/cli @kilocode/cli
+    install_kilo_cli_pkg
     success "Kilo CLI installed: $(kilo --version 2>/dev/null || echo ok)"
 }
 
