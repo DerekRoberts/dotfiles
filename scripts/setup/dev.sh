@@ -110,7 +110,7 @@ install_ai_wiring() {
         success "Cursor instructions installed"
     fi
 
-    info "Configuring Cursor default workspace paths..."
+    info "Configuring Cursor default workspace paths and update settings..."
     local CURSOR_SETTINGS="$CURSOR_USER_DIR/settings.json"
     mkdir -p "$CURSOR_USER_DIR"
     if [[ ! -s "$CURSOR_SETTINGS" ]]; then
@@ -120,13 +120,13 @@ install_ai_wiring() {
     local tmp_file
     tmp_file="$(mktemp "${CURSOR_SETTINGS%/*}/settings.XXXXXX")"
     if sed -E 's|//.*||g; s|/\*.*\*/||g' "$CURSOR_SETTINGS" | \
-        jq '. + {"git.defaultCloneDirectory": "~/Repos", "files.dialog.defaultPath": "~/Repos"}' > "$tmp_file"; then
+        jq '. + {"git.defaultCloneDirectory": "~/Repos", "files.dialog.defaultPath": "~/Repos", "update.mode": "none"}' > "$tmp_file"; then
         mv -f "$tmp_file" "$CURSOR_SETTINGS"
     else
         rm -f "$tmp_file"
         warn "Failed to update Cursor settings"
     fi
-    success "Cursor default project paths configured"
+    success "Cursor default project paths and update settings configured"
 }
 
 # ── Native Standalone Tools & Toolchains ─────────────────────────────────────
@@ -465,7 +465,12 @@ install_cursor() {
     local CURSOR_BIN="$BIN_DIR/cursor.AppImage"
     local APPS_DIR="$HOME/.local/share/applications"
 
-    if [[ ! -x "$CURSOR_BIN" ]]; then
+    local STAMP_FILE="$HOME/.local/share/dotfiles/cursor.url"
+    local update="${UPDATE:-0}"
+
+    if [[ -x "$CURSOR_BIN" && -f "$STAMP_FILE" && "$update" -eq 0 ]]; then
+        success "Cursor already installed"
+    else
         info "Fetching latest Cursor AppImage URL..."
         local CURSOR_URL
         if ! CURSOR_URL="$(cursor_latest_url)"; then
@@ -474,22 +479,23 @@ install_cursor() {
             return 1
         fi
 
-        info "Downloading Cursor: $CURSOR_URL"
-        mkdir -p "$BIN_DIR"
-        curl -fsSL "$CURSOR_URL" -o "$CURSOR_BIN.tmp"
-        chmod +x "$CURSOR_BIN.tmp"
-        mv -f "$CURSOR_BIN.tmp" "$CURSOR_BIN"
+        if [[ -x "$CURSOR_BIN" && -f "$STAMP_FILE" && "$(<"$STAMP_FILE")" == "$CURSOR_URL" ]]; then
+            success "Cursor is up to date"
+        else
+            info "Downloading Cursor: $CURSOR_URL"
+            mkdir -p "$BIN_DIR"
+            curl -fsSL "$CURSOR_URL" -o "$CURSOR_BIN.tmp"
+            chmod +x "$CURSOR_BIN.tmp"
+            mv -f "$CURSOR_BIN.tmp" "$CURSOR_BIN"
 
-        if command -v restorecon &>/dev/null; then
-            restorecon "$CURSOR_BIN" 2>/dev/null || true
+            if command -v restorecon &>/dev/null; then
+                restorecon "$CURSOR_BIN" 2>/dev/null || true
+            fi
+
+            mkdir -p "$(dirname "$STAMP_FILE")"
+            echo "$CURSOR_URL" > "$STAMP_FILE"
+            success "Cursor AppImage installed to $CURSOR_BIN"
         fi
-
-        local STAMP_FILE="$HOME/.local/share/dotfiles/cursor.url"
-        mkdir -p "$(dirname "$STAMP_FILE")"
-        echo "$CURSOR_URL" > "$STAMP_FILE"
-        success "Cursor AppImage installed to $CURSOR_BIN"
-    else
-        success "Cursor already installed"
     fi
 
     # Always ensure desktop launcher and CLI wrapper are configured idempotently
@@ -626,7 +632,7 @@ Options:
   --help, -h   Show this help
 
 Environment:
-  UPDATE=1     Re-check GitHub for newer CLI tool tags even if binaries exist
+  UPDATE=1     Re-check upstream for newer CLI tool tags and Cursor even if binaries exist
 EOF
 }
 
