@@ -122,11 +122,12 @@ install_ai_wiring() {
     if sed -E 's|//.*||g; s|/\*.*\*/||g' "$CURSOR_SETTINGS" | \
         jq '. + {"git.defaultCloneDirectory": "~/Repos", "files.dialog.defaultPath": "~/Repos", "update.mode": "none"}' > "$tmp_file"; then
         mv -f "$tmp_file" "$CURSOR_SETTINGS"
+        success "Cursor default project paths and update settings configured"
     else
         rm -f "$tmp_file"
         warn "Failed to update Cursor settings"
+        return 1
     fi
-    success "Cursor default project paths and update settings configured"
 }
 
 # ── Native Standalone Tools & Toolchains ─────────────────────────────────────
@@ -484,9 +485,15 @@ install_cursor() {
         else
             info "Downloading Cursor: $CURSOR_URL"
             mkdir -p "$BIN_DIR"
-            curl -fsSL "$CURSOR_URL" -o "$CURSOR_BIN.tmp"
-            chmod +x "$CURSOR_BIN.tmp"
-            mv -f "$CURSOR_BIN.tmp" "$CURSOR_BIN"
+            local tmp_bin
+            tmp_bin="$(mktemp "${CURSOR_BIN}.XXXXXX")"
+            if ! curl -fsSL "$CURSOR_URL" -o "$tmp_bin" \
+                || ! chmod +x "$tmp_bin" \
+                || ! mv -f "$tmp_bin" "$CURSOR_BIN"; then
+                rm -f "$tmp_bin"
+                warn "Failed to download or stage Cursor AppImage"
+                return 1
+            fi
 
             if command -v restorecon &>/dev/null; then
                 restorecon "$CURSOR_BIN" 2>/dev/null || true
