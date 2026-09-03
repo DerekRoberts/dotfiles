@@ -6,7 +6,8 @@
 - NEVER commit credentials, secrets, or PII.
 - NEVER silence diagnostics (`eslint-disable`, `@ts-ignore`); fix the root cause.
 - NEVER delete failing tests; ALWAYS fix the code.
-- NEVER write, symlink, delete, or gitignore outside the active workspace root unless the user named that exact path in this turn. NEVER iterate `$HOME/Repos/*` or other checkouts. Named home-dir installs (`~/.cursor/rules`, `~/.config/...`) are allowed when the task is workstation setup.
+- NEVER modify database mutability, overwrite, or recreation settings (`overwrite: false` -> `true`, destructive template replaces, volume reclaim policies, storage classes) without explicit user confirmation. Treat `overwrite: false` on database components as an immutable safety guardrail.
+- NEVER fan out one write, symlink, delete, or gitignore to N>1 git checkouts unless this turn named the batch (explicit path list, or "every repo under PATH"). One named checkout or home-dir path is fine. "Make it global" is not a batch.
 
 ## Operational Guardrails
 
