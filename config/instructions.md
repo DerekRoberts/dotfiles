@@ -7,6 +7,7 @@
 - NEVER silence diagnostics (`eslint-disable`, `@ts-ignore`); fix the root cause.
 - NEVER delete failing tests; ALWAYS fix the code.
 - NEVER modify database mutability, overwrite, or recreation settings (`overwrite: false` -> `true`, destructive template replaces, volume reclaim policies, storage classes) without explicit user confirmation. Treat `overwrite: false` on database components as an immutable safety guardrail.
+- NEVER write all-projects agent rules into a git checkout. ALWAYS store and deploy them from this repo (`config/instructions.md` + setup) into `$HOME` product config.
 
 ## Operational Guardrails
 
@@ -43,7 +44,7 @@
 ## Dependencies & Solutions
 
 - ALWAYS avoid dependencies for logic <20 lines. Add a library only when the user named it, or it is already in the project lockfile.
-- ZERO SPECULATION: Verify APIs via search/run command. NEVER guess. Use patterns already present in the repo.
+- ZERO SPECULATION: Verify APIs via search/run command. NEVER guess. Use patterns already present in the repo. NEVER copy a product config path from another product or a sibling file; ALWAYS fetch that product's current docs URL this turn.
 
 ## Fail Fast
 
