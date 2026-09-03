@@ -100,14 +100,28 @@ install_ai_wiring() {
         ln -sfn "$HOME/.agents/skills" "$link"
     done
 
-    # Cursor instructions and settings
+    # Cursor loads ~/.cursor/rules/*.mdc with alwaysApply. It does not inject
+    # Copilot-style User/prompts/*.instructions.md or @-includes of that path.
     local CURSOR_USER_DIR="$HOME/.config/Cursor/User"
+    local CURSOR_RULES_DIR="$HOME/.cursor/rules"
     if [[ -f "$INSTRUCTIONS_FILE" ]]; then
         info "Configuring Cursor instructions..."
-        mkdir -p "$CURSOR_USER_DIR/prompts"
+        mkdir -p "$CURSOR_USER_DIR/prompts" "$CURSOR_RULES_DIR"
         rm -f "$CURSOR_USER_DIR/prompts/global.instructions.md"
         cp -f "$INSTRUCTIONS_FILE" "$CURSOR_USER_DIR/prompts/global.instructions.md"
-        success "Cursor instructions installed"
+        local tmp_rule
+        tmp_rule="$(mktemp "$CURSOR_RULES_DIR/dotfiles.XXXXXX")"
+        {
+            printf '%s\n' '---' \
+                'description: Global AI agent instructions and guardrails from dotfiles' \
+                'alwaysApply: true' \
+                '---' \
+                ''
+            cat "$INSTRUCTIONS_FILE"
+        } > "$tmp_rule"
+        mv -f "$tmp_rule" "$CURSOR_RULES_DIR/dotfiles.mdc"
+        chmod 644 "$CURSOR_RULES_DIR/dotfiles.mdc"
+        success "Cursor instructions installed (~/.cursor/rules/dotfiles.mdc)"
     fi
 
     info "Configuring Cursor default workspace paths and update settings..."
