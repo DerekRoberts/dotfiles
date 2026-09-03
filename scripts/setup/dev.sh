@@ -100,8 +100,8 @@ install_ai_wiring() {
         ln -sfn "$HOME/.agents/skills" "$link"
     done
 
-    # Cursor project rules: <workspace>/.cursor/rules/*.mdc. Settings User Rules
-    # are account-synced and not writable from setup.
+    # Cursor user-rule files: ~/.cursor/rules (global, this machine). Do not
+    # write into repositories.
     local CURSOR_USER_DIR="$HOME/.config/Cursor/User"
     if [[ -f "$INSTRUCTIONS_FILE" ]]; then
         info "Configuring Cursor instructions..."
@@ -109,10 +109,7 @@ install_ai_wiring() {
         rm -f "$CURSOR_USER_DIR/prompts/global.instructions.md"
         cp -f "$INSTRUCTIONS_FILE" "$CURSOR_USER_DIR/prompts/global.instructions.md"
         write_cursor_dotfiles_mdc "$INSTRUCTIONS_FILE"
-        ignore_cursor_dotfiles_mdc
-        link_cursor_dotfiles_mdc_all_repos
-        link_cursor_dotfiles_mdc "$DOTFILES_DIR"
-        success "Cursor instructions installed (~/.cursor/rules/dotfiles.mdc → ~/Repos/*)"
+        success "Cursor instructions installed (~/.cursor/rules/dotfiles.mdc)"
     fi
 
     info "Configuring Cursor default workspace paths and update settings..."
