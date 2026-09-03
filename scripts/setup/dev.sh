@@ -100,16 +100,12 @@ install_ai_wiring() {
         ln -sfn "$HOME/.agents/skills" "$link"
     done
 
-    # Global Cursor instructions: ~/.cursor/rules/RULE.md and a user-scoped
-    # local plugin (not per-checkout copies).
+    # Global Cursor instructions: user-scoped local plugin only (not per-checkout).
     local CURSOR_USER_DIR="$HOME/.config/Cursor/User"
     if [[ -f "$INSTRUCTIONS_FILE" ]]; then
         info "Configuring Cursor instructions..."
-        mkdir -p "$CURSOR_USER_DIR/prompts"
-        rm -f "$CURSOR_USER_DIR/prompts/global.instructions.md"
-        cp -f "$INSTRUCTIONS_FILE" "$CURSOR_USER_DIR/prompts/global.instructions.md"
         install_cursor_global_instructions "$INSTRUCTIONS_FILE"
-        success "Cursor instructions installed (~/.cursor/rules/RULE.md, ~/.cursor/plugins/local/dotfiles)"
+        success "Cursor instructions installed (~/.cursor/plugins/local/dotfiles)"
     fi
 
     info "Configuring Cursor default workspace paths and update settings..."

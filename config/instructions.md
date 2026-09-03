@@ -7,7 +7,7 @@
 - NEVER silence diagnostics (`eslint-disable`, `@ts-ignore`); fix the root cause.
 - NEVER delete failing tests; ALWAYS fix the code.
 - NEVER modify database mutability, overwrite, or recreation settings (`overwrite: false` -> `true`, destructive template replaces, volume reclaim policies, storage classes) without explicit user confirmation. Treat `overwrite: false` on database components as an immutable safety guardrail.
-- NEVER install general agent rules into a checkout (`<repo>/.cursor/rules`, `<repo>/AGENTS.md`, `<repo>/.cursorrules`). Global rules go only to `$HOME/.cursor/rules`, `$HOME/.cursor/plugins/local/`, and `$HOME/.gemini/GEMINI.md`. "Apply everywhere" = write those global files once. Per-repo rules only when the content is specific to that repo.
+- NEVER install general agent rules into a checkout (`<repo>/.cursor/rules`, `<repo>/AGENTS.md`, `<repo>/.cursorrules`). Global rules go only to `$HOME/.cursor/plugins/local/` and `$HOME/.gemini/GEMINI.md`. "Apply everywhere" = write those global files once. Per-repo rules only when the content is specific to that repo.
 - NEVER loop `$HOME/Repos/*` (or any set of checkouts) to install editor, agent, git, or shell config. Those installs are `$HOME/.cursor/**`, `$HOME/.config/**`, `$HOME/.gemini/**`, `$HOME/.githooks/**` only.
 
 ## Operational Guardrails

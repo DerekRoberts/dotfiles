@@ -25,22 +25,22 @@ install_copy() {
 }
 
 # Cursor global instructions (this machine, all projects). Never into a checkout.
-# ~/.cursor/rules/RULE.md — file-based global rules (RULE.md format).
-# ~/.cursor/plugins/local/dotfiles/rules/*.mdc — Cursor's documented user-scoped
-# plugin rules loader (same injection as project .mdc, not per-repo).
+# ~/.cursor/plugins/local/dotfiles/rules/*.mdc — user-scoped plugin rules loader.
 install_cursor_global_instructions() {
     local src="$1"
     local plugin="${HOME}/.cursor/plugins/local/dotfiles"
-    local mdc tmp
+    local dest tmp
     [[ -f "$src" ]] || return 1
-    mkdir -p "${HOME}/.cursor/rules" "$plugin/.cursor-plugin" "$plugin/rules"
-    rm -f "${HOME}/.cursor/rules/dotfiles.mdc"
-    install_copy "$src" "${HOME}/.cursor/rules/RULE.md" 644
-    printf '%s\n' '{"name":"dotfiles","description":"Global AI agent instructions from dotfiles","version":"1.0.0"}' \
-        > "$plugin/.cursor-plugin/plugin.json"
-    chmod 644 "$plugin/.cursor-plugin/plugin.json"
-    mdc="$plugin/rules/instructions.mdc"
-    tmp="$(mktemp "${mdc}.XXXXXX")"
+    mkdir -p "$plugin/.cursor-plugin" "$plugin/rules"
+    rm -f "${HOME}/.cursor/rules/dotfiles.mdc" "${HOME}/.cursor/rules/RULE.md"
+
+    tmp="$(mktemp "$plugin/.cursor-plugin/plugin.XXXXXX")"
+    printf '%s\n' '{"name":"dotfiles","description":"Global AI agent instructions from dotfiles","version":"1.0.0"}' > "$tmp"
+    chmod 644 "$tmp"
+    mv -f "$tmp" "$plugin/.cursor-plugin/plugin.json"
+
+    dest="$plugin/rules/instructions.mdc"
+    tmp="$(mktemp "${dest}.XXXXXX")"
     {
         printf '%s\n' '---' \
             'description: Global AI agent instructions and guardrails from dotfiles' \
@@ -50,8 +50,8 @@ install_cursor_global_instructions() {
             ''
         cat "$src"
     } > "$tmp"
-    mv -f "$tmp" "$mdc"
-    chmod 644 "$mdc"
+    chmod 644 "$tmp"
+    mv -f "$tmp" "$dest"
 }
 
 # ── Download guards ──────────────────────────────────────────────────────────
