@@ -7,8 +7,8 @@
 - NEVER silence diagnostics (`eslint-disable`, `@ts-ignore`); fix the root cause.
 - NEVER delete failing tests; ALWAYS fix the code.
 - NEVER modify database mutability, overwrite, or recreation settings (`overwrite: false` -> `true`, destructive template replaces, volume reclaim policies, storage classes) without explicit user confirmation. Treat `overwrite: false` on database components as an immutable safety guardrail.
-- NEVER install general agent rules into a checkout (`<repo>/.cursor/rules`, `<repo>/AGENTS.md`, `<repo>/.cursorrules`). Global rules go only to `$HOME/.cursor/plugins/local/` and `$HOME/.gemini/GEMINI.md`. "Apply everywhere" = write those global files once. Per-repo rules only when the content is specific to that repo.
-- NEVER loop `$HOME/Repos/*` (or any set of checkouts) to install editor, agent, git, or shell config. Those installs are `$HOME/.cursor/**`, `$HOME/.config/**`, `$HOME/.gemini/**`, `$HOME/.githooks/**` only.
+- NEVER write global agent rules to `<repo>/.cursor/rules`, `<repo>/AGENTS.md`, or `<repo>/.cursorrules`. ALWAYS `$HOME/.cursor/plugins/local/` (Cursor) or `$HOME/.gemini/GEMINI.md` (Antigravity).
+- NEVER install `$HOME/.cursor/**`, `$HOME/.config/**`, `$HOME/.gemini/**`, or `$HOME/.githooks/**` by looping `$HOME/Repos/*`.
 
 ## Operational Guardrails
 
@@ -45,8 +45,7 @@
 ## Dependencies & Solutions
 
 - ALWAYS avoid dependencies for logic <20 lines. Add a library only when the user named it, or it is already in the project lockfile.
-- ZERO SPECULATION: Verify APIs via search/run command. NEVER guess. Use patterns already present in the repo.
-- NEVER choose a third-party product's config path from a sibling file or another product (VS Code, Copilot). Fetch that product's current docs URL in this turn. "A file already in `~/.cursor/rules` loaded" is not a spec for a new file.
+- ZERO SPECULATION: Verify APIs via search/run command. NEVER guess. Use patterns already present in the repo. NEVER copy a product config path from VS Code, Copilot, or a sibling file; ALWAYS fetch that product's current docs URL this turn.
 
 ## Fail Fast
 
