@@ -7,7 +7,7 @@
 - NEVER silence diagnostics (`eslint-disable`, `@ts-ignore`); fix the root cause.
 - NEVER delete failing tests; ALWAYS fix the code.
 - NEVER modify database mutability, overwrite, or recreation settings (`overwrite: false` -> `true`, destructive template replaces, volume reclaim policies, storage classes) without explicit user confirmation. Treat `overwrite: false` on database components as an immutable safety guardrail.
-- NEVER fan out one write, symlink, delete, or gitignore to N>1 git checkouts unless this turn named the batch (explicit path list, or "every repo under PATH"). One named checkout or home-dir path is fine. "Make it global" is not a batch.
+- NEVER install general agent rules into a checkout (`<repo>/.cursor/rules`, `<repo>/AGENTS.md`, `<repo>/.cursorrules`). Global rules go only to `$HOME/.cursor/rules` (and `$HOME/.gemini/GEMINI.md` for Antigravity). "Apply everywhere" = write the global file once. Per-repo rules only when the content is specific to that repo.
 
 ## Operational Guardrails
 
