@@ -7,7 +7,8 @@
 - NEVER silence diagnostics (`eslint-disable`, `@ts-ignore`); fix the root cause.
 - NEVER delete failing tests; ALWAYS fix the code.
 - NEVER modify database mutability, overwrite, or recreation settings (`overwrite: false` -> `true`, destructive template replaces, volume reclaim policies, storage classes) without explicit user confirmation. Treat `overwrite: false` on database components as an immutable safety guardrail.
-- NEVER write global agent rules to `<repo>/.cursor/rules`, `<repo>/AGENTS.md`, or `<repo>/.cursorrules`. ALWAYS `$HOME/.cursor/plugins/local/` (Cursor) or `$HOME/.gemini/GEMINI.md` (Antigravity).
+- NEVER write all-projects / global agent rules into a git checkout.
+- ALWAYS store and deploy them via this dotfiles repo (`config/instructions.md` + setup) so they land in `$HOME` product config, not `<repo>/`.
 
 ## Operational Guardrails
 
@@ -44,7 +45,7 @@
 ## Dependencies & Solutions
 
 - ALWAYS avoid dependencies for logic <20 lines. Add a library only when the user named it, or it is already in the project lockfile.
-- ZERO SPECULATION: Verify APIs via search/run command. NEVER guess. Use patterns already present in the repo. NEVER copy a product config path from VS Code, Copilot, or a sibling file; ALWAYS fetch that product's current docs URL this turn.
+- ZERO SPECULATION: Verify APIs via search/run command. NEVER guess. Use patterns already present in the repo. NEVER copy a product config path from another product or a sibling file; ALWAYS fetch that product's current docs URL this turn.
 
 ## Fail Fast
 
