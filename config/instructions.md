@@ -8,7 +8,6 @@
 - NEVER delete failing tests; ALWAYS fix the code.
 - NEVER modify database mutability, overwrite, or recreation settings (`overwrite: false` -> `true`, destructive template replaces, volume reclaim policies, storage classes) without explicit user confirmation. Treat `overwrite: false` on database components as an immutable safety guardrail.
 - NEVER write global agent rules to `<repo>/.cursor/rules`, `<repo>/AGENTS.md`, or `<repo>/.cursorrules`. ALWAYS `$HOME/.cursor/plugins/local/` (Cursor) or `$HOME/.gemini/GEMINI.md` (Antigravity).
-- NEVER install `$HOME/.cursor/**`, `$HOME/.config/**`, `$HOME/.gemini/**`, or `$HOME/.githooks/**` by looping `$HOME/Repos/*`.
 
 ## Operational Guardrails
 
