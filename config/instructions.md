@@ -6,7 +6,7 @@
 - NEVER commit credentials, secrets, or PII.
 - NEVER silence diagnostics (`eslint-disable`, `@ts-ignore`); fix the root cause.
 - NEVER delete failing tests; ALWAYS fix the code.
-- NEVER modify database mutability, overwrite, or recreation settings (`overwrite: false` -> `true`, destructive template replaces, volume reclaim policies, storage classes) without explicit user confirmation. Treat `overwrite: false` on database components as an immutable safety guardrail.
+- NEVER write, symlink, delete, or gitignore outside the active workspace root unless the user named that exact path in this turn. NEVER iterate `$HOME/Repos/*` or other checkouts. Named home-dir installs (`~/.cursor/rules`, `~/.config/...`) are allowed when the task is workstation setup.
 
 ## Operational Guardrails
 
