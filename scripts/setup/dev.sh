@@ -100,16 +100,17 @@ install_ai_wiring() {
         ln -sfn "$HOME/.agents/skills" "$link"
     done
 
-    # Cursor user-rule files: ~/.cursor/rules (global, this machine). Do not
-    # write into repositories.
+    # Cursor global file rules: ~/.cursor/rules/RULE.md (all projects, this machine).
+    # https://forum.cursor.com/t/why-cant-user-rules-be-set-in-the-system-user-directory-and-why-can-commands-be-set-in-c-users-user-cursor-commands/148764
     local CURSOR_USER_DIR="$HOME/.config/Cursor/User"
     if [[ -f "$INSTRUCTIONS_FILE" ]]; then
         info "Configuring Cursor instructions..."
-        mkdir -p "$CURSOR_USER_DIR/prompts"
+        mkdir -p "$CURSOR_USER_DIR/prompts" "$HOME/.cursor/rules"
         rm -f "$CURSOR_USER_DIR/prompts/global.instructions.md"
         cp -f "$INSTRUCTIONS_FILE" "$CURSOR_USER_DIR/prompts/global.instructions.md"
-        write_cursor_dotfiles_mdc "$INSTRUCTIONS_FILE"
-        success "Cursor instructions installed (~/.cursor/rules/dotfiles.mdc)"
+        rm -f "$HOME/.cursor/rules/dotfiles.mdc"
+        install_copy "$INSTRUCTIONS_FILE" "$HOME/.cursor/rules/RULE.md" 644
+        success "Cursor instructions installed (~/.cursor/rules/RULE.md)"
     fi
 
     info "Configuring Cursor default workspace paths and update settings..."

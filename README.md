@@ -131,7 +131,7 @@ This repository establishes a client-side safety net and policy framework that e
 ```
 
 1. **Global Git Pre-Commit Hook (`~/.githooks/pre-commit`)**: Configured globally via `git config --global core.hooksPath ~/.githooks`. Executes `gitleaks protect --staged --redact --no-banner` on every commit.
-2. **Prompt-Scope Fencing & Behavioral Instructions (`config/instructions.md`)**: Copied to `~/.gemini/GEMINI.md` and Cursor's machine-local user-rule file `~/.cursor/rules/dotfiles.mdc` (same global store as Ponytail). Setup does not write into other repositories.
+2. **Prompt-Scope Fencing & Behavioral Instructions (`config/instructions.md`)**: Copied to `~/.gemini/GEMINI.md` and Cursor's global file-rules path `~/.cursor/rules/RULE.md` (applies to all projects on this machine; not written into other repos).
 3. **Shell & Agent Environment Isolation (`config/bashrc`)**: Copied to `~/.config/dotfiles/bashrc` on setup (not sourced from the git work tree). Detects AI agent execution (`ANTIGRAVITY_AGENT`) to strip prompt evaluation overhead and unset ambient `GITHUB_TOKEN` / `GH_TOKEN` environment variables so commands use authenticated local credentials.
 
 ### Bypassing (Human Developers Only)

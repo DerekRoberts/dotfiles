@@ -24,28 +24,6 @@ install_copy() {
     install -m "$mode" "$src" "$dest"
 }
 
-# Cursor user-rule files live in ~/.cursor/rules (machine-local, all projects).
-# Never write into individual repositories.
-write_cursor_dotfiles_mdc() {
-    local src="$1"
-    local dest="${HOME}/.cursor/rules/dotfiles.mdc"
-    local tmp
-    [[ -f "$src" ]] || return 1
-    mkdir -p "$(dirname "$dest")"
-    tmp="$(mktemp "${dest}.XXXXXX")"
-    {
-        printf '%s\n' '---' \
-            'description: Global AI agent instructions and guardrails from dotfiles' \
-            'globs:' \
-            'alwaysApply: true' \
-            '---' \
-            ''
-        cat "$src"
-    } > "$tmp"
-    mv -f "$tmp" "$dest"
-    chmod 644 "$dest"
-}
-
 # ── Download guards ──────────────────────────────────────────────────────────
 #
 # Nothing here is a substitute for signature verification; these guards only
