@@ -115,6 +115,7 @@ clone_repos() {
 
         if [[ -d "$target/.git" ]]; then
             info "$repo — already cloned, skipping"
+            link_cursor_dotfiles_mdc "$target" || true
             ((skipped++)) || true
             continue
         fi
@@ -124,6 +125,7 @@ clone_repos() {
 
         if git clone --filter=blob:none "$url" "$target" 2>&1 | sed 's/^/    /'; then
             success "$repo cloned"
+            link_cursor_dotfiles_mdc "$target" || true
             ((cloned++)) || true
         else
             warn "$repo — clone failed (SSH key loaded? Repo access granted?)"

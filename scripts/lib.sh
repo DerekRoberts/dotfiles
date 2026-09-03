@@ -24,6 +24,65 @@ install_copy() {
     install -m "$mode" "$src" "$dest"
 }
 
+# Cursor injects project rules from <workspace>/.cursor/rules/*.mdc.
+# Settings User Rules live on the Cursor account (not a local file).
+# ~/.cursor/rules is a documented local store but is not a reliable auto-load.
+write_cursor_dotfiles_mdc() {
+    local src="$1"
+    local dest="${HOME}/.cursor/rules/dotfiles.mdc"
+    local tmp
+    [[ -f "$src" ]] || return 1
+    mkdir -p "$(dirname "$dest")"
+    tmp="$(mktemp "${dest}.XXXXXX")"
+    {
+        printf '%s\n' '---' \
+            'description: Global AI agent instructions and guardrails from dotfiles' \
+            'globs:' \
+            'alwaysApply: true' \
+            '---' \
+            ''
+        cat "$src"
+    } > "$tmp"
+    mv -f "$tmp" "$dest"
+    chmod 644 "$dest"
+}
+
+# Point a repo's project-rule scanner at the canonical mdc. Leave a real file alone.
+link_cursor_dotfiles_mdc() {
+    local repo="$1"
+    local dest="$repo/.cursor/rules/dotfiles.mdc"
+    local src="${HOME}/.cursor/rules/dotfiles.mdc"
+    [[ -d "$repo" && -f "$src" ]] || return 1
+    if [[ -e "$dest" && ! -L "$dest" ]]; then
+        warn "$dest exists and is not a symlink — leaving it alone"
+        return 0
+    fi
+    mkdir -p "$(dirname "$dest")"
+    ln -sfn "$src" "$dest"
+}
+
+link_cursor_dotfiles_mdc_all_repos() {
+    local repo
+    [[ -d "${HOME}/Repos" ]] || return 0
+    for repo in "${HOME}/Repos"/*; do
+        [[ -d "$repo/.git" ]] || continue
+        link_cursor_dotfiles_mdc "$repo"
+    done
+}
+
+# Keep the project-rule symlink out of git status.
+ignore_cursor_dotfiles_mdc() {
+    local gf
+    gf="$(command git config --global --get core.excludesfile 2>/dev/null || true)"
+    gf="${gf:-${HOME}/.gitignore_global}"
+    mkdir -p "$(dirname "$gf")"
+    touch "$gf"
+    grep -qxF '.cursor/rules/dotfiles.mdc' "$gf" || printf '%s\n' '.cursor/rules/dotfiles.mdc' >> "$gf"
+    if ! command git config --global --get core.excludesfile >/dev/null 2>&1; then
+        command git config --global core.excludesFile "$gf"
+    fi
+}
+
 # ── Download guards ──────────────────────────────────────────────────────────
 #
 # Nothing here is a substitute for signature verification; these guards only
