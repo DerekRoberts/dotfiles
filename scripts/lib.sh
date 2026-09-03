@@ -24,6 +24,36 @@ install_copy() {
     install -m "$mode" "$src" "$dest"
 }
 
+# Cursor global instructions (this machine, all projects). Never into a checkout.
+# ~/.cursor/rules/RULE.md — file-based global rules (RULE.md format).
+# ~/.cursor/plugins/local/dotfiles/rules/*.mdc — Cursor's documented user-scoped
+# plugin rules loader (same injection as project .mdc, not per-repo).
+install_cursor_global_instructions() {
+    local src="$1"
+    local plugin="${HOME}/.cursor/plugins/local/dotfiles"
+    local mdc tmp
+    [[ -f "$src" ]] || return 1
+    mkdir -p "${HOME}/.cursor/rules" "$plugin/.cursor-plugin" "$plugin/rules"
+    rm -f "${HOME}/.cursor/rules/dotfiles.mdc"
+    install_copy "$src" "${HOME}/.cursor/rules/RULE.md" 644
+    printf '%s\n' '{"name":"dotfiles","description":"Global AI agent instructions from dotfiles","version":"1.0.0"}' \
+        > "$plugin/.cursor-plugin/plugin.json"
+    chmod 644 "$plugin/.cursor-plugin/plugin.json"
+    mdc="$plugin/rules/instructions.mdc"
+    tmp="$(mktemp "${mdc}.XXXXXX")"
+    {
+        printf '%s\n' '---' \
+            'description: Global AI agent instructions and guardrails from dotfiles' \
+            'globs:' \
+            'alwaysApply: true' \
+            '---' \
+            ''
+        cat "$src"
+    } > "$tmp"
+    mv -f "$tmp" "$mdc"
+    chmod 644 "$mdc"
+}
+
 # ── Download guards ──────────────────────────────────────────────────────────
 #
 # Nothing here is a substitute for signature verification; these guards only
