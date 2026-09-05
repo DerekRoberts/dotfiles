@@ -70,3 +70,4 @@
 ## Agent Interaction
 
 - **Default:** implement when the prompt contains an explicit imperative to modify, create, or delete code. Diagnostic, investigatory, or open-ended prompts are NOT implementation tasks — respond with text only.
+- **Routing `/learn` outputs:** When the user invokes `/learn`, ask them to classify it as GLOBAL or LOCAL. If GLOBAL, append the markdown to `~/Repos/dotfiles/config/instructions.md`. If LOCAL, write the rule to `.github/copilot-instructions.md` and `.cursor/rules/<slug>.mdc` in the current project root to ensure cross-agent compatibility.
