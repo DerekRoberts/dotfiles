@@ -1,0 +1,19 @@
+#!/bin/bash
+# Global pre-push hook to block accidental pushes to main.
+# Bypass using: git push --no-verify
+
+protected_branches=("main" "master")
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+for branch in "${protected_branches[@]}"; do
+    if [ "$current_branch" = "$branch" ]; then
+        echo ""
+        echo "🚨 BLOCKED: Direct push to '$branch' is disabled by global pre-push hook."
+        echo "   Please create a pull request instead."
+        echo "   (If you must bypass this, use: git push <remote> $branch --no-verify)"
+        echo ""
+        exit 1
+    fi
+done
+
+exit 0
