@@ -188,6 +188,7 @@ Two other deliberate trade-offs:
 │   ├── instructions.md                # Unified AI agent instructions & guardrails
 │   ├── skills/
 │   │   ├── podman-runner/             # Containerized execution & resource limits
+│   │   ├── preflight/                 # Ground external prompts against reality
 │   │   └── typescript-standards/      # Modular agent skills
 │   ├── kde/
 │   │   └── user-places.xbel           # Dolphin sidebar bookmarks
