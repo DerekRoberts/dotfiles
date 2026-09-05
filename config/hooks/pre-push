@@ -2,15 +2,13 @@
 # Global pre-push hook to block accidental pushes to main.
 # Bypass using: git push --no-verify
 
-protected_branches=("main" "master")
-current_branch=$(git rev-parse --abbrev-ref HEAD)
-
-for branch in "${protected_branches[@]}"; do
-    if [ "$current_branch" = "$branch" ]; then
+# Read from stdin. Each line is: local_ref local_sha remote_ref remote_sha
+while read local_ref local_sha remote_ref remote_sha; do
+    if [ "$remote_ref" = "refs/heads/main" ] || [ "$remote_ref" = "refs/heads/master" ]; then
         echo ""
-        echo "🚨 BLOCKED: Direct push to '$branch' is disabled by global pre-push hook."
+        echo "🚨 BLOCKED: Direct push to '$remote_ref' is disabled by global pre-push hook."
         echo "   Please create a pull request instead."
-        echo "   (If you must bypass this, use: git push <remote> $branch --no-verify)"
+        echo "   (If you must bypass this, use: git push <remote> <ref> --no-verify)"
         echo ""
         exit 1
     fi
