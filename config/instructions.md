@@ -1,6 +1,6 @@
 # Hard Stops
 
-- NEVER close, merge, comment on, or review issues/PRs under the user's credentials; NEVER create releases/tags, force-push, manage secrets, or run `oc`/`kubectl`. Draft those in chat. Commits, `git push`, `gh issue create`, and `gh pr create|edit` are fine. If a command is blocked, do not bypass it.
+- NEVER close, merge, comment on, or review issues/PRs under the user's credentials; NEVER create releases/tags, force-push, manage secrets, modify repository settings (via `gh api` or `gh repo edit`), or run `oc`/`kubectl`. Draft those in chat. Commits, `git push`, `gh issue create`, and `gh pr create|edit` are fine. If a command is blocked, do not bypass it.
 - NEVER branch from a feature branch, including merged ones; ALWAYS `git fetch origin && git checkout -b <type>/<name> origin/main`.
 - NEVER push to main.
 - NEVER commit credentials, secrets, or PII.
