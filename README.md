@@ -76,7 +76,7 @@ This repository establishes a client-side safety net and policy framework that e
   - Modifying security configurations, repository secrets, or database destruction toggles.
 - **Soft Policy vs. Hard Checks**:
   - *Soft Policy (Behavioral Guidelines)*: Structured behavioral constraints, communication standards, and planning expectations live in [`config/instructions.md`](config/instructions.md) and deploy directly to agent prompts (e.g., Cursor, Antigravity).
-  - *Hard Checks (Hooks & Guardians)*: Automated verification runs locally via global Git hooks (`~/.githooks/pre-commit`) to block secret leakage and version regressions before commits are recorded.
+  - *Hard Checks (Hooks & Guardians)*: Automated verification runs locally via global Git hooks (`~/.githooks/pre-commit`, `~/.githooks/pre-push`) to block secret leakage and version regressions before commits are recorded.
 
 ### Allowed vs. Blocked Matrix
 
@@ -94,7 +94,7 @@ This repository establishes a client-side safety net and policy framework that e
 | Target / Tool | Blocked Action / Flag | Policy Rationale |
 | :--- | :--- | :--- |
 | **`oc` / `kubectl`** | All commands and subcommands | Prevents automated cluster access, data leakage, and unintended modifications to live OpenShift/Kubernetes environments. |
-| **`git`** | `commit --no-verify`, `commit -n` | Prohibits agents from bypassing local pre-commit hooks and secret scanning. |
+| **`git`** | `commit --no-verify`, `push --no-verify`, `commit -n` | Prohibits agents from bypassing local pre-commit hooks and secret scanning. |
 | **`git`** | `commit --amend` | Prevents history rewrites on shared or existing commit chains. |
 | **`git`** | `config` subcommand | Prevents agents from altering global/local git configurations or disabling safety hooks. |
 | **`git`** | write `tag`, `push --tags` | Restricts release tagging to human maintainers. |
@@ -120,8 +120,9 @@ This repository establishes a client-side safety net and policy framework that e
 │                                  │ • Prompt-Scope Fencing               │
 │                                  │ • Hard Stop behavioral rules         │
 ├──────────────────────────────────┼──────────────────────────────────────┤
-│ Global Git Hooks Layer           │ config/hooks/pre-commit (~/.githooks)│
+│ Global Git Hooks Layer           │ config/hooks/ (~/.githooks)         │
 │                                  │ • Gitleaks secret scanning           │
+│                                  │ • Block pushes to main (pre-push)    │
 ├──────────────────────────────────┼──────────────────────────────────────┤
 │ Shell & Environment Layer        │ config/bashrc                        │
 │                                  │ • Agent marker detection             │
@@ -131,8 +132,9 @@ This repository establishes a client-side safety net and policy framework that e
 ```
 
 1. **Global Git Pre-Commit Hook (`~/.githooks/pre-commit`)**: Configured globally via `git config --global core.hooksPath ~/.githooks`. Executes `gitleaks protect --staged --redact --no-banner` on every commit.
-2. **Prompt-Scope Fencing & Behavioral Instructions (`config/instructions.md`)**: Copied to `~/.gemini/GEMINI.md` and a user-scoped local Cursor plugin at `~/.cursor/plugins/local/dotfiles` (always-apply `.mdc`). Not written into other repositories.
-3. **Shell & Agent Environment Isolation (`config/bashrc`)**: Copied to `~/.config/dotfiles/bashrc` on setup (not sourced from the git work tree). Detects AI agent execution (`ANTIGRAVITY_AGENT`) to strip prompt evaluation overhead and unset ambient `GITHUB_TOKEN` / `GH_TOKEN` environment variables so commands use authenticated local credentials.
+2. **Global Git Pre-Push Hook (`~/.githooks/pre-push`)**: Blocks accidental direct pushes to `main` or `master` across all repositories unless explicitly bypassed by a human developer.
+3. **Prompt-Scope Fencing & Behavioral Instructions (`config/instructions.md`)**: Copied to `~/.gemini/GEMINI.md` and a user-scoped local Cursor plugin at `~/.cursor/plugins/local/dotfiles` (always-apply `.mdc`). Not written into other repositories.
+4. **Shell & Agent Environment Isolation (`config/bashrc`)**: Copied to `~/.config/dotfiles/bashrc` on setup (not sourced from the git work tree). Detects AI agent execution (`ANTIGRAVITY_AGENT`) to strip prompt evaluation overhead and unset ambient `GITHUB_TOKEN` / `GH_TOKEN` environment variables so commands use authenticated local credentials.
 
 ### Bypassing (Human Developers Only)
 
