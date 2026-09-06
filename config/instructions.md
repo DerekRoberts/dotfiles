@@ -54,6 +54,7 @@
 - ALWAYS `unset GITHUB_TOKEN` before every `gh` command. Ambient tokens 401; local credentials are the ones that work.
 - PR Feedback: `unset GITHUB_TOKEN && gh api "repos/{owner}/{repo}/pulls/$(gh pr view --json number -q .number)/comments" --paginate` (NEVER rely solely on `gh pr view`).
 - Close Issues: Use `Closes #<num>` ONLY if an issue is explicitly provided. NEVER guess.
+- **Artifacts vs Documentation:** NEVER commit or push audit reports, security scans, or diagnostic outputs (e.g., `MATURITY_REPORT.md`). These are sensitive local artifacts. Only commit source code and formal structural documentation (e.g., ADRs, READMEs).
 
 ## Project Standards
 
