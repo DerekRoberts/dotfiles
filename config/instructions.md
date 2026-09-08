@@ -48,6 +48,7 @@
 ## Fail Fast
 
 - NEVER write silent fallbacks or rescue scripts. Hard stop (`return`/`throw`/`exit`) with a clear error on failed preconditions.
+- STRICT SCHEMAS: Exactly one canonical input. NEVER add aliases or fallback cascades (`A || B || C`) to tolerate caller errors. Fix the caller; fail fast on invalid inputs.
 
 ## Git & Branch Hygiene
 
