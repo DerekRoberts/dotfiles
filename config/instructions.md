@@ -38,7 +38,7 @@
 
 ## Definition of Done
 
-- ALWAYS git push and `gh pr create` upon completing branch work.
+- ALWAYS `git push` and ensure the branch has a pull request (`gh pr create` only when none exists) upon completing branch work.
 - NEVER mark work complete until you have defined success criteria and executed active verification checks in the target runtime (e.g., test suite execution, build compilation, or API/CLI response inspection). Pure text responses and non-executable documentation edits are the sole exceptions.
 
 ## Dependencies & Solutions
