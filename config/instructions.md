@@ -4,7 +4,7 @@
 - NEVER branch from a feature branch, including merged ones; ALWAYS `git fetch origin && git checkout -b <type>/<name> origin/main`.
 - NEVER commit credentials, secrets, or PII.
 - NEVER silence diagnostics (`eslint-disable`, `@ts-ignore`); fix the root cause.
-- NEVER pass `--legacy-peer-deps` to `npm`/`npx`; NEVER set `NPM_CONFIG_LEGACY_PEER_DEPS`; NEVER write `legacy-peer-deps=true` to `.npmrc`, `npmrc`, or Renovate `npmrc`. Fix the dependency graph (`overrides`, peer ranges, callers). NEVER recommend these as a workaround.
+- NEVER pass `--legacy-peer-deps` to `npm`/`npx`; NEVER set `NPM_CONFIG_LEGACY_PEER_DEPS`; NEVER write `legacy-peer-deps=true` to `.npmrc`, `npmrc`, or Renovate `npmrc`. Fix the dependency graph (`overrides`, peer ranges, callers). NEVER recommend `--legacy-peer-deps`, `NPM_CONFIG_LEGACY_PEER_DEPS`, or `legacy-peer-deps=true` as a workaround.
 - NEVER delete failing tests; ALWAYS fix the code.
 - NEVER modify database mutability, overwrite, or recreation settings (`overwrite: false` -> `true`, destructive template replaces, volume reclaim policies, storage classes) without explicit user confirmation. Treat `overwrite: false` on database components as an immutable safety guardrail.
 - NEVER write all-projects agent rules into a git checkout. ALWAYS store and deploy them from this repo (`config/instructions.md` + setup) into `$HOME` product config.
