@@ -94,6 +94,55 @@ cursor_latest_url() {
     printf '%s\n' "$url"
 }
 
+# Newest Grok Bot AppImage the user dropped in ~/Downloads (browser fetch from
+# https://x.ai/bot / https://cursor.com/download/bot). There is no stable
+# unauthenticated AppImage URL to anchor the way Cursor's API is anchored.
+grok_bot_downloads_appimage() {
+    local f newest="" glob_state
+    glob_state="$(shopt -p nullglob)"
+    shopt -s nullglob
+    for f in "$HOME/Downloads"/Grok_Bot_*.AppImage "$HOME/Downloads"/grok-bot*.AppImage; do
+        [[ -f "$f" ]] || continue
+        if [[ -z "$newest" || "$f" -nt "$newest" ]]; then
+            newest="$f"
+        fi
+    done
+    eval "$glob_state"
+    [[ -n "$newest" ]] || return 1
+    printf '%s\n' "$newest"
+}
+
+# Copy that AppImage to ~/.local/bin when missing, or when UPDATE=1 and the
+# Downloads file's sha256 differs. 0 = dest exists; 1 = nothing to install.
+stage_grok_bot_appimage() {
+    local dest="$HOME/.local/bin/grok-bot.AppImage"
+    local stamp="$HOME/.local/share/dotfiles/grok-bot.sha256"
+    local src="" tmp actual
+    src="$(grok_bot_downloads_appimage 2>/dev/null || true)"
+    mkdir -p "$(dirname "$dest")" "$(dirname "$stamp")"
+
+    if [[ -x "$dest" && "${UPDATE:-0}" -eq 0 ]]; then
+        return 0
+    fi
+    if [[ -n "$src" ]]; then
+        actual="$(sha256sum "$src" | cut -d' ' -f1)" || return 1
+        if [[ -x "$dest" && -f "$stamp" && "$(<"$stamp")" == "$actual" ]]; then
+            return 0
+        fi
+        tmp="$(mktemp "${dest}.XXXXXX")"
+        if ! cp -f "$src" "$tmp" || ! chmod +x "$tmp" || ! mv -f "$tmp" "$dest"; then
+            rm -f "$tmp"
+            return 1
+        fi
+        printf '%s\n' "$actual" > "$stamp"
+        if command -v restorecon &>/dev/null; then
+            restorecon "$dest" 2>/dev/null || true
+        fi
+        return 0
+    fi
+    [[ -x "$dest" ]]
+}
+
 # Load nvm, select default/LTS Node, and require npm from nvm's prefix under $HOME.
 load_nvm() {
     export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"

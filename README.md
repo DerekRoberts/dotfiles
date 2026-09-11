@@ -48,7 +48,7 @@ source ~/.bashrc
 | **Global Git Hooks (gitleaks secret scanning)** | ❌ | ✅ |
 | **Developer CLI Suite** (`gh`, `jq`, `gitleaks`, `shellcheck`, `actionlint`, `uv`, `docker-compose`, `oc`) | ❌ | ✅ |
 | **Node.js LTS** (via NVM) | ❌ | ✅ |
-| **AI Assistants & Prompt Rules** (Cursor, Antigravity Hub, `agy`, Kilo CLI, Ponytail) | ❌ | ✅ |
+| **AI Assistants & Prompt Rules** (Cursor, Grok Bot, Antigravity Hub, `agy`, Kilo CLI, Ponytail) | ❌ | ✅ |
 | **Drop-Down Terminal** (Yakuake) | ❌ | ✅ |
 | **GitHub Work Repositories** (`~/Repos`) | ❌ | ✅ |
 
@@ -160,6 +160,7 @@ verified; the rest is documented here rather than left implicit.
 | `oc` | **sha256 verified** | Red Hat publishes `sha256sum.txt` per release; a mismatch aborts the install. |
 | `jq`, `gh`, `gitleaks`, `docker-compose`, `shellcheck`, `actionlint`, `uv` | TLS only | GitHub release assets, resolved from the `/releases/latest` redirect. No upstream checksums. Archives are rejected if their members are absolute, traversing, or link outside the extraction directory. |
 | Cursor AppImage | TLS + URL anchored | The download URL comes from Cursor's API and must sit under `https://downloads.cursor.com/`. |
+| Grok Bot AppImage | User-supplied file | Copied from `~/Downloads/Grok_Bot_*.AppImage` (browser download from `https://x.ai/bot` / `https://cursor.com/download/bot`). No unauthenticated AppImage URL to pin. `.deb`/`.rpm` are unused on Kinoite. |
 | Antigravity hub | TLS + URL anchored | URL scraped from the download page, must be under `storage.googleapis.com/antigravity-public/`; archive checked for path traversal. |
 | Insync | TLS + URL anchored + digest | URL anchored to `cdn.insynchq.com`. **Insync ships unsigned RPMs** (no `SIGPGP`/`RSAHEADER`), so there is nothing to verify against a key. `rpmkeys --checksig` confirms the package's own digests, and the installed hash is recorded to `~/.local/share/dotfiles/insync.sha256`. |
 | `agy` CLI | TLS only | `curl \| bash` of `antigravity.google/cli/install.sh`. Upstream publishes no versioned installer or checksum. |
@@ -169,9 +170,10 @@ verified; the rest is documented here rather than left implicit.
 
 Two other deliberate trade-offs:
 
-* **Cursor runs with `--no-sandbox`**, because the AppImage can't use Chromium's
-  sandbox without unprivileged userns. This gives up renderer isolation; drop
-  the flag if a future build works without it.
+* **Cursor and Grok Bot run with `--appimage-extract-and-run --no-sandbox`**.
+  Fedora 44 Atomic dropped FUSE 2 (`libfuse.so.2`), and the AppImage can't use
+  Chromium's SUID sandbox on Kinoite. That gives up renderer isolation; drop
+  `--no-sandbox` if a future build works without it.
 * **`tpm-enroll.sh` binds to PCR 7 by default**, which measures Secure Boot
   state only — unlocking requires no secret from you, so someone with physical
   access and a kernel Secure Boot already trusts can have the TPM release the

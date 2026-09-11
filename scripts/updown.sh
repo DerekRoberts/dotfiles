@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # updown — Workstation silent maintenance
 # Stages rpm-ostree upgrade, updates flatpaks, updates third-party binaries,
-# and updates Antigravity CLI + hub, Kilo CLI, and Cursor.
+# and updates Antigravity CLI + hub, Kilo CLI, Cursor, and Grok Bot.
 #
 # Usage:
 #   updown                 — run updates then power off (default / interactive)
@@ -171,6 +171,20 @@ warn()    { echo "[updown] ⚠ $*" >&2; }
         fi
     else
         info "Cursor not installed — skipping"
+    fi
+
+    # ── 6b. Grok Bot (user-dropped AppImage in ~/Downloads) ─────────────────────
+
+    GROK_BIN="${HOME}/.local/bin/grok-bot.AppImage"
+    if [[ -x "$GROK_BIN" ]] || grok_bot_downloads_appimage >/dev/null 2>&1; then
+        info "Checking Grok Bot AppImage from ~/Downloads..."
+        if UPDATE=1 stage_grok_bot_appimage; then
+            success "Grok Bot AppImage staged"
+        else
+            warn "Grok Bot stage failed — continuing"
+        fi
+    else
+        info "Grok Bot not installed — skipping"
     fi
 
     # ── 7. Standalone Dev CLI Tools (includes oc) ───────────────────────────────
