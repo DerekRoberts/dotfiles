@@ -530,6 +530,42 @@ WRAPPER
     success "Cursor desktop launcher and CLI wrapper configured"
 }
 
+install_grok_bot() {
+    section "Grok Bot (AppImage)"
+    local BIN_DIR="$HOME/.local/bin"
+    local GROK_BIN="$BIN_DIR/grok-bot.AppImage"
+    local APPS_DIR="$HOME/.local/share/applications"
+
+    if ! stage_grok_bot_appimage; then
+        warn "Grok Bot AppImage missing — drop Grok_Bot_*.AppImage in ~/Downloads"
+        warn "Download: https://cursor.com/download/bot (Linux AppImage). .deb/.rpm stay unused on Kinoite."
+        return 0
+    fi
+
+    mkdir -p "$APPS_DIR" "$BIN_DIR"
+    # Same Kinoite flags as Cursor: no libfuse.so.2, no SUID Chromium sandbox.
+    cat > "$APPS_DIR/grok-bot.desktop" << DESKTOP
+[Desktop Entry]
+Name=Grok Bot
+Comment=AI teammates on a cloud computer
+Exec=$GROK_BIN --appimage-extract-and-run --no-sandbox %U
+Icon=grok-bot
+Terminal=false
+Type=Application
+Categories=Network;Office;
+StartupNotify=true
+StartupWMClass=Grok Bot
+DESKTOP
+
+    cat > "$BIN_DIR/grok-bot" << 'WRAPPER'
+#!/usr/bin/env bash
+exec "$HOME/.local/bin/grok-bot.AppImage" --appimage-extract-and-run --no-sandbox "$@"
+WRAPPER
+    chmod +x "$BIN_DIR/grok-bot"
+
+    success "Grok Bot installed to $GROK_BIN"
+}
+
 install_ponytail() {
     section "Ponytail (Lazy Senior Dev)"
 
@@ -637,7 +673,7 @@ Options:
   --help, -h   Show this help
 
 Environment:
-  UPDATE=1     Re-check upstream for newer CLI tool tags and Cursor even if binaries exist
+  UPDATE=1     Re-check upstream for newer CLI tool tags, Cursor, and Grok Bot even if binaries exist
 EOF
 }
 
@@ -670,6 +706,7 @@ main() {
     install_agy
     install_kilo
     install_cursor
+    install_grok_bot
     install_ponytail
     setup_github_mcp
     install_repos

@@ -61,7 +61,7 @@ appletsrc, profile = sys.argv[1], sys.argv[2]
 if profile == "desktop":
     ordering = "google-chrome.desktop,org.kde.dolphin.desktop,org.kde.discover.desktop,systemsettings.desktop"
 else:
-    ordering = "antigravity.desktop,cursor.desktop,org.kde.discover.desktop,org.kde.dolphin.desktop,google-chrome.desktop,systemsettings.desktop"
+    ordering = "antigravity.desktop,cursor.desktop,grok-bot.desktop,org.kde.discover.desktop,org.kde.dolphin.desktop,google-chrome.desktop,systemsettings.desktop"
 
 # Read-only discovery of kickoff applet ids and activity uuids.
 applet_ids, activity_ids = [], []
