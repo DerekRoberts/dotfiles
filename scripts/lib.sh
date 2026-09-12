@@ -94,6 +94,21 @@ cursor_latest_url() {
     printf '%s\n' "$url"
 }
 
+# Stop this user's processes whose command line contains one of the patterns.
+# Used before replacing a managed binary. Skips this shell and its parent so
+# `pkill -f` cannot match the updater's own argv. No match is not an error.
+kill_running_apps() {
+    local uid pattern pid
+    uid="$(id -u)"
+    for pattern in "$@"; do
+        [[ -n "$pattern" ]] || continue
+        while read -r pid; do
+            [[ "$pid" == "$$" || "$pid" == "$PPID" ]] && continue
+            kill "$pid" 2>/dev/null || true
+        done < <(pgrep -u "$uid" -f -- "$pattern" || true)
+    done
+}
+
 # Newest Grok Bot AppImage the user dropped in ~/Downloads (browser fetch from
 # https://x.ai/bot / https://cursor.com/download/bot). There is no stable
 # unauthenticated AppImage URL to anchor the way Cursor's API is anchored.
@@ -129,6 +144,7 @@ stage_grok_bot_appimage() {
         if [[ -x "$dest" && -f "$stamp" && "$(<"$stamp")" == "$actual" ]]; then
             return 0
         fi
+        kill_running_apps "$dest"
         tmp="$(mktemp "${dest}.XXXXXX")"
         if ! cp -f "$src" "$tmp" || ! chmod +x "$tmp" || ! mv -f "$tmp" "$dest"; then
             rm -f "$tmp"
