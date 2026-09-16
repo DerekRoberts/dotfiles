@@ -41,6 +41,7 @@ Usage:
 Default (no flags): full dev stack, same as --dev.
 
 Options:
+  --ai        AI assistant wiring only (instructions, prompts, skills)
   --dev       Full developer stack: Node LTS, CLI tools, Chrome, VLC, Yakuake, Insync,
               Antigravity hub, agy CLI, Kilo CLI, Cursor, Grok Bot, oc, Ponytail, GitHub MCP, and repositories
   --desktop   Minimal desktop essentials: Chrome, VLC, and Insync
@@ -59,6 +60,9 @@ case "${1:-}" in
     --help|-h)
         usage
         exit 0
+        ;;
+    --ai)
+        exec bash "$DOTFILES_DIR/scripts/setup/dev.sh" --ai
         ;;
     --desktop)
         PROFILE="desktop"

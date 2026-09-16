@@ -668,6 +668,7 @@ Usage:
   scripts/setup/dev.sh [OPTIONS]
 
 Options:
+  --ai         Configure AI assistant environments only (instructions, prompts, skills)
   --tools, -t  Install/update standalone CLI tools only (jq, gh, gitleaks,
                docker-compose, shellcheck, actionlint, uv). Skips nvm/podman.
   --help, -h   Show this help
@@ -682,6 +683,10 @@ main() {
         --help|-h)
             usage
             exit 0
+            ;;
+        --ai)
+            install_ai_wiring
+            exit $?
             ;;
         --tools|-t)
             section "Standalone CLI Tools"
