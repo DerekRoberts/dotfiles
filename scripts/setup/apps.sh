@@ -102,6 +102,18 @@ DESKTOP
         mkdir -p "$(dirname "$YAKUAKE_CONFIG")"
         kwriteconfig6 --file "$YAKUAKE_CONFIG" --group Window --key ShowSystrayIcon false
 
+        # Configure default profile to start in ~/Repos
+        local YAKUAKE_DATA="$HOME/.var/app/org.kde.yakuake/data/konsole"
+        local YAKUAKE_KONSOLERC="$HOME/.var/app/org.kde.yakuake/config/konsolerc"
+        mkdir -p "$YAKUAKE_DATA"
+        cat > "$YAKUAKE_DATA/Repos.profile" << 'PROFILE'
+[General]
+Directory=$HOME/Repos
+Name=Repos
+Parent=FALLBACK/
+PROFILE
+        kwriteconfig6 --file "$YAKUAKE_KONSOLERC" --group "Desktop Entry" --key DefaultProfile "Repos.profile"
+
         kwin_reconfigure
     else
         warn "kwriteconfig6 not found — cannot set global shortcut automatically."
