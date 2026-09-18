@@ -64,7 +64,7 @@
 - ALWAYS use Conventional Commits.
 - New dependencies: latest stable. NEVER downgrade. Routine upgrades are Renovate's. If this task requires a version change, take latest and update only that lockfile entry. NEVER touch lockfiles on unrelated work. NEVER hand-edit a lockfile.
 - ALWAYS use minimum permissions (e.g., `permissions: {}` in GitHub Actions). NEVER add manual version tracking artifacts.
-- ALWAYS pin GitHub Actions to full 40-character commit SHAs with a trailing tag comment (e.g., `uses: actions/checkout@<sha> # v4`). NEVER pin to mutable tags or branch refs in work workflows.
+- ALWAYS pin third-party GitHub Actions to full 40-character commit SHAs with a trailing tag comment (e.g., `uses: bcgov/actions/workflow-results@<sha> # v0.7.0`). Official platform actions from `actions/*`, `github/*`, and `docker/*` may use version tags (e.g., `actions/checkout@v4`). All others (including `astral-sh/*`, `grafana/*`, and `bcgov/*`) must be SHA-pinned.
 
 ## Communication Style
 
