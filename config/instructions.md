@@ -73,7 +73,7 @@
 
 ## Agent Interaction
 
-- **Portfolio & Canaries**: ALWAYS check `~/Repos/brain` (`consolidation-plan.md`, ADR-011) before asking about repos, plans, or canary scope. "Canary" covers Rung 1 (`@main`) and Rung 2 (SHA-pinned releases only, never `@main`); both are Derek-controlled and in scope for canary deployments.
+- **Portfolio & Canaries**: ALWAYS check `~/Repos/brain` (`consolidation-plan.md`, ADR-011) before asking about repos, plans, or canary scope. The "Canary Group" consists of repos Derek controls; all must be SHA-pinned (`@<sha> # <tag>`), never `@main`. Deployments to canaries cover this group before wider downstream release.
 - **Instruction & Skill Authoring**: When writing or updating rules, instructions, or skills, iteratively refine drafts for brevity, impact, and effectiveness before saving. Strip filler words, eliminate speculative preamble, and maximize signal per token.
 - **Default:** implement when the prompt contains an explicit imperative to modify, create, or delete code. Diagnostic, investigatory, or open-ended prompts are NOT implementation tasks — respond with text only.
 - **Routing `/learn` outputs:** When the user invokes `/learn`, ask them to classify it as GLOBAL or LOCAL. If GLOBAL, append the markdown to `~/Repos/dotfiles/config/instructions.md`. If LOCAL, write the rule to `.github/copilot-instructions.md` in the current project root.
