@@ -44,6 +44,7 @@ Options:
   --dev       Full developer stack: Node LTS, CLI tools, Chrome, VLC, Yakuake, Insync,
               Antigravity hub, agy CLI, Kilo CLI, Cursor, Grok Bot, oc, Ponytail, GitHub MCP, and repositories
   --desktop   Minimal desktop essentials: Chrome, VLC, and Insync
+  --ai        Configure AI assistant environment only (~/.gemini, ~/.agents/skills, Cursor, Ponytail, GitHub MCP)
   --help, -h  Show this help
 
 Environment variables:
@@ -58,6 +59,10 @@ PROFILE="dev"
 case "${1:-}" in
     --help|-h)
         usage
+        exit 0
+        ;;
+    --ai)
+        bash "$DOTFILES_DIR/scripts/setup/ai.sh"
         exit 0
         ;;
     --desktop)
