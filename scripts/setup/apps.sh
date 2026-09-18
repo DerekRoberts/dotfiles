@@ -112,6 +112,7 @@ Directory=$HOME/Repos
 Name=Repos
 Parent=FALLBACK/
 EOF
+        kwriteconfig6 --file "$YAKUAKE_CONFIG" --group "Desktop Entry" --key DefaultProfile "Repos.profile"
         kwriteconfig6 --file "$YAKUAKE_KONSOLERC" --group "Desktop Entry" --key DefaultProfile "Repos.profile"
 
         kwin_reconfigure
