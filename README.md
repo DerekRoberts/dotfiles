@@ -204,7 +204,7 @@ Two other deliberate trade-offs:
 │   │   ├── core.sh                    # Shell profiles, XDG dirs, systemd, Dolphin places & MIME defaults
 │   │   ├── desktop.sh                 # KDE Plasma layout, panel, notifications & natural scrolling
 │   │   ├── apps.sh                    # Application installers (Chrome, VLC, Yakuake, Insync)
-│   │   └── dev.sh                     # Toolchains (jq, gh, uv, nvm; `--tools` for CLIs, `--ai` for AI wiring only), oc & repos
+│   │   └── dev.sh                     # Toolchains (jq, gh, uv, nvm; `--tools` for CLIs only), AI assistants, oc & repos
 │   ├── lib.sh                         # Shared helpers: output, install_copy, download guards
 │   ├── updown.sh                      # Workstation updater script (installed to ~/.local/bin/updown)
 │   ├── clone-repos.sh                 # Idempotent repository cloner

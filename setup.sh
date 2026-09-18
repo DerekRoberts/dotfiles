@@ -41,10 +41,10 @@ Usage:
 Default (no flags): full dev stack, same as --dev.
 
 Options:
-  --ai        AI assistant wiring only (instructions, prompts, skills)
   --dev       Full developer stack: Node LTS, CLI tools, Chrome, VLC, Yakuake, Insync,
               Antigravity hub, agy CLI, Kilo CLI, Cursor, Grok Bot, oc, Ponytail, GitHub MCP, and repositories
   --desktop   Minimal desktop essentials: Chrome, VLC, and Insync
+  --ai        Configure AI assistant environment only (~/.gemini, ~/.agents/skills, Cursor, Ponytail, GitHub MCP)
   --help, -h  Show this help
 
 Environment variables:
@@ -62,7 +62,8 @@ case "${1:-}" in
         exit 0
         ;;
     --ai)
-        exec bash "$DOTFILES_DIR/scripts/setup/dev.sh" --ai
+        bash "$DOTFILES_DIR/scripts/setup/ai.sh"
+        exit 0
         ;;
     --desktop)
         PROFILE="desktop"
