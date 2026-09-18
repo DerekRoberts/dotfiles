@@ -64,11 +64,35 @@ install_ai_wiring() {
     if [[ ! -s "$CURSOR_SETTINGS" ]]; then
         echo "{}" > "$CURSOR_SETTINGS"
     fi
-    # Strip comments loosely and merge with jq, write back standard JSON
+    # Parse JSONC string-aware (preserving URLs/strings with //), merge settings, and write back formatted JSON
     local tmp_file
     tmp_file="$(mktemp "${CURSOR_SETTINGS%/*}/settings.XXXXXX")"
-    if sed -E 's|//.*||g; s|/\*.*\*/||g' "$CURSOR_SETTINGS" | \
-        jq '. + {"git.defaultCloneDirectory": "~/Repos", "files.dialog.defaultPath": "~/Repos", "update.mode": "none"}' > "$tmp_file"; then
+    if python3 -c '
+import json, re, sys
+
+settings_path, out_path = sys.argv[1], sys.argv[2]
+try:
+    with open(settings_path, "r", encoding="utf-8") as f:
+        text = f.read()
+except FileNotFoundError:
+    text = "{}"
+
+# Strip comments (single-line and multi-line) while preserving quoted strings
+text = re.sub(r"(\"(?:\\.|[^\"\\])*\")|//[^\r\n]*|/\*[\s\S]*?\*/", lambda m: m.group(1) or "", text)
+# Strip trailing commas before closing braces/brackets while preserving quoted strings
+text = re.sub(r"(\"(?:\\.|[^\"\\])*\")|,\s*([\]}])", lambda m: m.group(1) or m.group(2), text)
+
+data = json.loads(text) if text.strip() else {}
+data.update({
+    "git.defaultCloneDirectory": "~/Repos",
+    "files.dialog.defaultPath": "~/Repos",
+    "update.mode": "none"
+})
+
+with open(out_path, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=4)
+    f.write("\n")
+' "$CURSOR_SETTINGS" "$tmp_file"; then
         mv -f "$tmp_file" "$CURSOR_SETTINGS"
         success "Cursor default project paths and update settings configured"
     else
