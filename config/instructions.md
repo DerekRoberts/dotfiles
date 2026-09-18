@@ -64,6 +64,7 @@
 - ALWAYS use Conventional Commits.
 - New dependencies: latest stable. NEVER downgrade. Routine upgrades are Renovate's. If this task requires a version change, take latest and update only that lockfile entry. NEVER touch lockfiles on unrelated work. NEVER hand-edit a lockfile.
 - ALWAYS use minimum permissions (e.g., `permissions: {}` in GitHub Actions). NEVER add manual version tracking artifacts.
+- ALWAYS pin third-party GitHub Actions to full 40-character commit SHAs with a trailing tag comment (e.g., `uses: bcgov/actions/workflow-results@<sha> # v0.7.0`). Official platform actions from `actions/*`, `github/*`, and `docker/*` may use version tags (e.g., `actions/checkout@v4`). All others (including `astral-sh/*`, `grafana/*`, and `bcgov/*`) must be SHA-pinned.
 
 ## Communication Style
 
@@ -72,7 +73,7 @@
 
 ## Agent Interaction
 
-- **Portfolio & Canaries**: ALWAYS check `~/Repos/brain` (`consolidation-plan.md`, ADR-011) before asking about repos, plans, or canary scope. "Canary" covers Rung 1 (`@main`) and Rung 2 (tags only); both are Derek-controlled and in scope for canary deployments.
+- **Portfolio & Canaries**: ALWAYS check `~/Repos/brain` (`consolidation-plan.md`, ADR-011) before asking about repos, plans, or canary scope. The "Canary Group" consists of repos Derek controls; all must be SHA-pinned (`@<sha> # <tag>`), never `@main`. Deployments to canaries cover this group before wider downstream release.
 - **Instruction & Skill Authoring**: When writing or updating rules, instructions, or skills, iteratively refine drafts for brevity, impact, and effectiveness before saving. Strip filler words, eliminate speculative preamble, and maximize signal per token.
 - **Default:** implement when the prompt contains an explicit imperative to modify, create, or delete code. Diagnostic, investigatory, or open-ended prompts are NOT implementation tasks — respond with text only.
 - **Routing `/learn` outputs:** When the user invokes `/learn`, ask them to classify it as GLOBAL or LOCAL. If GLOBAL, append the markdown to `~/Repos/dotfiles/config/instructions.md`. If LOCAL, write the rule to `.github/copilot-instructions.md` in the current project root.
