@@ -102,6 +102,23 @@ DESKTOP
         mkdir -p "$(dirname "$YAKUAKE_CONFIG")"
         kwriteconfig6 --file "$YAKUAKE_CONFIG" --group Window --key ShowSystrayIcon false
 
+        # Grant Flatpak sandbox access to ~/Repos so Konsole does not fall back to $HOME
+        mkdir -p "$HOME/Repos"
+        flatpak override --user --filesystem="$HOME/Repos" org.kde.yakuake
+
+        # Configure default profile to start in ~/Repos
+        local YAKUAKE_DATA="$HOME/.var/app/org.kde.yakuake/data/konsole"
+        local YAKUAKE_KONSOLERC="$HOME/.var/app/org.kde.yakuake/config/konsolerc"
+        mkdir -p "$YAKUAKE_DATA"
+        cat > "$YAKUAKE_DATA/Repos.profile" << EOF
+[General]
+Directory=$HOME/Repos
+Name=Repos
+Parent=FALLBACK/
+EOF
+        kwriteconfig6 --file "$YAKUAKE_CONFIG" --group "Desktop Entry" --key DefaultProfile "Repos.profile"
+        kwriteconfig6 --file "$YAKUAKE_KONSOLERC" --group "Desktop Entry" --key DefaultProfile "Repos.profile"
+
         kwin_reconfigure
     else
         warn "kwriteconfig6 not found — cannot set global shortcut automatically."
