@@ -24,8 +24,11 @@ install_ai_wiring() {
     info "Configuring Antigravity global instructions and skills..."
     mkdir -p "$HOME/.gemini/config" "$HOME/.gemini/antigravity" "$HOME/.agents/skills"
     if [[ -f "$INSTRUCTIONS_FILE" ]]; then
-        rm -f "$HOME/.gemini/GEMINI.md"
-        cp -f "$INSTRUCTIONS_FILE" "$HOME/.gemini/GEMINI.md"
+        local tmp_file
+        tmp_file="$(mktemp "$HOME/.gemini/GEMINI.md.XXXXXX")"
+        cp -f "$INSTRUCTIONS_FILE" "$tmp_file"
+        chmod 644 "$tmp_file"
+        mv -f "$tmp_file" "$HOME/.gemini/GEMINI.md"
         success "Installed ~/.gemini/GEMINI.md"
     fi
 
@@ -33,8 +36,12 @@ install_ai_wiring() {
         for skill_dir in "$DOTFILES_DIR/config/skills"/*; do
             [[ -d "$skill_dir" ]] || continue
             local skill_name; skill_name="$(basename "$skill_dir")"
-            rm -rf "$HOME/.agents/skills/$skill_name"
-            cp -rf "$skill_dir" "$HOME/.agents/skills/$skill_name"
+            local target_dir="$HOME/.agents/skills/$skill_name"
+            local tmp_dir
+            tmp_dir="$(mktemp -d "$HOME/.agents/skills/.${skill_name}.XXXXXX")"
+            cp -rf "$skill_dir"/* "$tmp_dir/"
+            rm -rf "$target_dir"
+            mv -f "$tmp_dir" "$target_dir"
         done
         success "AI skills installed"
     fi
@@ -107,16 +114,17 @@ with open(out_path, "w", encoding="utf-8") as f:
 install_ponytail() {
     section "Ponytail (Lazy Senior Dev)"
 
+    # Pinned to a commit: this file becomes standing instructions for every
+    # agent session, so it must not change under us when upstream moves main.
+    # Bump PONYTAIL_REF deliberately after reading the diff.
+    local PONYTAIL_REF="2ed6c52c9d7e5e56942508591085fd45dea277d3"
+
     info "Configuring Ponytail for Cursor..."
     local CURSOR_RULES_DIR="$HOME/.cursor/rules"
     mkdir -p "$CURSOR_RULES_DIR"
     if [[ -f "$CURSOR_RULES_DIR/ponytail.mdc" ]]; then
         success "Cursor rule already present"
     else
-        # Pinned to a commit: this file becomes standing instructions for every
-        # agent session, so it must not change under us when upstream moves main.
-        # Bump PONYTAIL_REF deliberately after reading the diff.
-        local PONYTAIL_REF="2ed6c52c9d7e5e56942508591085fd45dea277d3"
         local PONYTAIL_URL="https://raw.githubusercontent.com/DietrichGebert/ponytail/${PONYTAIL_REF}/.cursor/rules/ponytail.mdc"
         if curl -fsSL "$PONYTAIL_URL" -o "$CURSOR_RULES_DIR/ponytail.mdc.tmp" \
             && [[ -s "$CURSOR_RULES_DIR/ponytail.mdc.tmp" ]]; then
@@ -138,11 +146,16 @@ install_ponytail() {
         if [[ -d "$PLUGIN_DIR" ]] || "$AGY_BIN" plugin list 2>/dev/null | grep -q '"name": "ponytail"'; then
             success "Ponytail plugin already installed for agy"
         else
-            if "$AGY_BIN" plugin install https://github.com/DietrichGebert/ponytail 2>/dev/null; then
+            local tmp_clone
+            tmp_clone="$(mktemp -d "${TMPDIR:-/tmp}/ponytail.XXXXXX")"
+            if git clone --quiet https://github.com/DietrichGebert/ponytail "$tmp_clone" \
+                && git -C "$tmp_clone" checkout --quiet --detach "$PONYTAIL_REF" \
+                && "$AGY_BIN" plugin install "$tmp_clone" 2>/dev/null; then
                 success "agy plugin installed"
             else
                 warn "agy plugin install failed (network issue or repo error)"
             fi
+            rm -rf "$tmp_clone"
         fi
     fi
 }
@@ -152,6 +165,7 @@ install_ponytail() {
 write_github_mcp_config() {
     local config_file="$1"
     local gh_token="$2"
+    local mcp_pkg="@modelcontextprotocol/server-github@2025.4.8"
 
     mkdir -p "$(dirname "$config_file")"
     if [[ ! -s "$config_file" ]]; then
@@ -161,12 +175,15 @@ write_github_mcp_config() {
     local tmp_file
     tmp_file="$(mktemp "$(dirname "$config_file")/mcp.XXXXXX")"
 
-    if jq --arg token "$gh_token" '.mcpServers.github = {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-github"], "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": $token}}' "$config_file" > "$tmp_file"; then
+    if jq --arg token "$gh_token" --arg pkg "$mcp_pkg" \
+        '.mcpServers.github = {"command": "npx", "args": ["-y", $pkg], "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": $token}}' \
+        "$config_file" > "$tmp_file"; then
         chmod 600 "$tmp_file"
         mv -f "$tmp_file" "$config_file"
     else
         rm -f "$tmp_file"
         warn "Failed to write GitHub MCP config"
+        return 1
     fi
 }
 
@@ -190,8 +207,9 @@ setup_github_mcp() {
     fi
 
     mkdir -p "$config_dir"
-    write_github_mcp_config "$config_file" "$gh_token"
-    success "GitHub MCP Server configured at $config_file"
+    if write_github_mcp_config "$config_file" "$gh_token"; then
+        success "GitHub MCP Server configured at $config_file"
+    fi
 }
 
 # ── Main ─────────────────────────────────────────────────────────────────────
