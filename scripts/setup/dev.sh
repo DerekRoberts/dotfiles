@@ -486,7 +486,11 @@ install_grok_bot() {
     fi
 
     mkdir -p "$APPS_DIR" "$BIN_DIR"
-    # Same Kinoite flags as Cursor: no libfuse.so.2, no SUID Chromium sandbox.
+    install_appimage_extract_env
+    # Fallback launcher until Grok Bot's integrator rewrites this file.
+    # The rewritten Exec has no flags; APPIMAGE_EXTRACT_AND_RUN covers that.
+    # --no-sandbox: AppImage cannot use Chromium's SUID sandbox on Kinoite.
+    # Grok Bot's AppRun adds it itself when user namespaces are unavailable.
     cat > "$APPS_DIR/grok-bot.desktop" << DESKTOP
 [Desktop Entry]
 Name=Grok Bot

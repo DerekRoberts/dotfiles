@@ -177,6 +177,7 @@ warn()    { echo "[updown] ⚠ $*" >&2; }
 
     GROK_BIN="${HOME}/.local/bin/grok-bot.AppImage"
     if [[ -x "$GROK_BIN" ]]; then
+        install_appimage_extract_env || warn "Grok Bot session env failed — continuing"
         info "Checking Grok Bot AppImage from ~/Downloads..."
         if UPDATE=1 stage_grok_bot_appimage; then
             success "Grok Bot AppImage staged"

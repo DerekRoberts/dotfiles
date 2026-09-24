@@ -170,10 +170,20 @@ verified; the rest is documented here rather than left implicit.
 
 Two other deliberate trade-offs:
 
-* **Cursor and Grok Bot run with `--appimage-extract-and-run --no-sandbox`**.
-  Fedora 44 Atomic dropped FUSE 2 (`libfuse.so.2`), and the AppImage can't use
-  Chromium's SUID sandbox on Kinoite. That gives up renderer isolation; drop
-  `--no-sandbox` if a future build works without it.
+* **AppImages extract instead of mounting.** Fedora 44 Atomic dropped FUSE 2
+  (`libfuse.so.2`). Cursor's launcher passes `--appimage-extract-and-run`.
+  Grok Bot rewrites its desktop file on launch to exec
+  `~/.local/share/grok-bot/appimage` with no flags, and replaces that path
+  with a symlink to the AppImage, so the session sets
+  `APPIMAGE_EXTRACT_AND_RUN=1` in `~/.config/environment.d/appimage.conf`.
+  It takes effect on the next login. Cursor's launcher, the fallback
+  `grok-bot.desktop`, and the `grok-bot` terminal wrapper also pass
+  `--no-sandbox` because the AppImage cannot use Chromium's SUID sandbox
+  on Kinoite. That gives up renderer isolation: content rendered through
+  those launch paths is less contained if a renderer bug is exploited.
+  Grok Bot's own AppRun adds `--no-sandbox` only when user namespaces are
+  unavailable, so the integrator's menu launcher keeps the sandbox when
+  namespaces work.
 * **`tpm-enroll.sh` binds to PCR 7 by default**, which measures Secure Boot
   state only — unlocking requires no secret from you, so someone with physical
   access and a kernel Secure Boot already trusts can have the TPM release the

@@ -159,6 +159,27 @@ stage_grok_bot_appimage() {
     [[ -x "$dest" ]]
 }
 
+# Kinoite has no libfuse.so.2. Grok Bot's integrator rewrites
+# ~/.local/share/applications/grok-bot.desktop on launch so Exec is
+# ~/.local/share/grok-bot/appimage with no arguments, and replaces that path
+# with a symlink to the real AppImage. A wrapper or a copy at that path is
+# overwritten on the next launch. The runtime reads APPIMAGE_EXTRACT_AND_RUN
+# before it tries FUSE, and plasmashell is a systemd user service, so the
+# variable has to live in the user manager environment.
+install_appimage_extract_env() {
+    local env_dir="$HOME/.config/environment.d"
+    local dest tmp
+    mkdir -p "$env_dir"
+    dest="$env_dir/appimage.conf"
+    tmp="$(mktemp "${dest}.XXXXXX")"
+    if ! printf '%s\n' 'APPIMAGE_EXTRACT_AND_RUN=1' > "$tmp" \
+        || ! chmod 644 "$tmp" \
+        || ! mv -f "$tmp" "$dest"; then
+        rm -f "$tmp"
+        return 1
+    fi
+}
+
 # Load nvm, select default/LTS Node, and require npm from nvm's prefix under $HOME.
 load_nvm() {
     export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
