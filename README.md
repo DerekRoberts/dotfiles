@@ -176,10 +176,14 @@ Two other deliberate trade-offs:
   `~/.local/share/grok-bot/appimage` with no flags, and replaces that path
   with a symlink to the AppImage, so the session sets
   `APPIMAGE_EXTRACT_AND_RUN=1` in `~/.config/environment.d/appimage.conf`.
-  It takes effect on the next login. Cursor also passes `--no-sandbox`
-  (no SUID sandbox on Kinoite). The `grok-bot` terminal wrapper passes both
-  flags so it works outside the graphical session. Grok Bot's own AppRun
-  adds `--no-sandbox` only when user namespaces are unavailable.
+  It takes effect on the next login. Cursor's launcher, the fallback
+  `grok-bot.desktop`, and the `grok-bot` terminal wrapper also pass
+  `--no-sandbox` because the AppImage cannot use Chromium's SUID sandbox
+  on Kinoite. That gives up renderer isolation: content rendered through
+  those launch paths is less contained if a renderer bug is exploited.
+  Grok Bot's own AppRun adds `--no-sandbox` only when user namespaces are
+  unavailable, so the integrator's menu launcher keeps the sandbox when
+  namespaces work.
 * **`tpm-enroll.sh` binds to PCR 7 by default**, which measures Secure Boot
   state only — unlocking requires no secret from you, so someone with physical
   access and a kernel Secure Boot already trusts can have the TPM release the

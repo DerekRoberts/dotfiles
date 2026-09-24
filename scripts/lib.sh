@@ -168,10 +168,16 @@ stage_grok_bot_appimage() {
 # variable has to live in the user manager environment.
 install_appimage_extract_env() {
     local env_dir="$HOME/.config/environment.d"
+    local dest tmp
     mkdir -p "$env_dir"
-    cat > "$env_dir/appimage.conf" << 'EOF'
-APPIMAGE_EXTRACT_AND_RUN=1
-EOF
+    dest="$env_dir/appimage.conf"
+    tmp="$(mktemp "${dest}.XXXXXX")"
+    if ! printf '%s\n' 'APPIMAGE_EXTRACT_AND_RUN=1' > "$tmp" \
+        || ! chmod 644 "$tmp" \
+        || ! mv -f "$tmp" "$dest"; then
+        rm -f "$tmp"
+        return 1
+    fi
 }
 
 # Load nvm, select default/LTS Node, and require npm from nvm's prefix under $HOME.
