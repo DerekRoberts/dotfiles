@@ -19,7 +19,7 @@ else
     DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/DerekRoberts/dotfiles.git}"
     DOTFILES_BRANCH="${DOTFILES_BRANCH:-main}"
 
-    if ! git -C "$DOTFILES_DIR" rev-parse --is-inside-work-tree &>/dev/null; then
+    if [[ "$(git -C "$DOTFILES_DIR" rev-parse --show-toplevel 2>/dev/null)" != "$DOTFILES_DIR" ]]; then
         echo "Cloning dotfiles to $DOTFILES_DIR..."
         mkdir -p "$(dirname "$DOTFILES_DIR")"
         command git clone --recurse-submodules -b "$DOTFILES_BRANCH" "$DOTFILES_REPO" "$DOTFILES_DIR"

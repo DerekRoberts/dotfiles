@@ -33,7 +33,7 @@ install_ai_wiring() {
     fi
 
     if [[ -d "$DOTFILES_DIR/config/skills" ]]; then
-        if command -v git &>/dev/null && [[ -f "$DOTFILES_DIR/.gitmodules" ]] && git -C "$DOTFILES_DIR" rev-parse --is-inside-work-tree &>/dev/null; then
+        if command -v git &>/dev/null && [[ -f "$DOTFILES_DIR/.gitmodules" ]] && [[ "$(git -C "$DOTFILES_DIR" rev-parse --show-toplevel 2>/dev/null)" == "$DOTFILES_DIR" ]]; then
             git -C "$DOTFILES_DIR" submodule update --init --recursive 2>/dev/null || true
         fi
 
@@ -48,8 +48,17 @@ install_ai_wiring() {
             local tmp_dir
             tmp_dir="$(mktemp -d "$HOME/.agents/skills/.${skill_name}.XXXXXX")"
             if cp -aT "$skill_dir" "$tmp_dir"; then
-                rm -rf "$target_dir"
-                mv -f "$tmp_dir" "$target_dir"
+                local backup_dir="${tmp_dir}.old"
+                if [[ -e "$target_dir" || -L "$target_dir" ]]; then
+                    mv "$target_dir" "$backup_dir"
+                fi
+                if mv "$tmp_dir" "$target_dir"; then
+                    rm -rf "$backup_dir"
+                else
+                    [[ -e "$backup_dir" || -L "$backup_dir" ]] && mv "$backup_dir" "$target_dir"
+                    rm -rf "$tmp_dir"
+                    warn "Failed to install skill $skill_name"
+                fi
             else
                 rm -rf "$tmp_dir"
                 warn "Failed to copy skill $skill_name"
