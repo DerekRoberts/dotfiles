@@ -33,7 +33,7 @@ install_ai_wiring() {
     fi
 
     if [[ -d "$DOTFILES_DIR/config/skills" ]]; then
-        if command -v git &>/dev/null && [[ -d "$DOTFILES_DIR/.git" && -f "$DOTFILES_DIR/.gitmodules" ]]; then
+        if command -v git &>/dev/null && [[ -f "$DOTFILES_DIR/.gitmodules" ]] && git -C "$DOTFILES_DIR" rev-parse --is-inside-work-tree &>/dev/null; then
             git -C "$DOTFILES_DIR" submodule update --init --recursive 2>/dev/null || true
         fi
 
