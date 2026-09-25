@@ -22,10 +22,11 @@ else
     if [[ ! -d "$DOTFILES_DIR/.git" ]]; then
         echo "Cloning dotfiles to $DOTFILES_DIR..."
         mkdir -p "$(dirname "$DOTFILES_DIR")"
-        command git clone -b "$DOTFILES_BRANCH" "$DOTFILES_REPO" "$DOTFILES_DIR"
+        command git clone --recurse-submodules -b "$DOTFILES_BRANCH" "$DOTFILES_REPO" "$DOTFILES_DIR"
     else
         echo "Updating dotfiles ($DOTFILES_BRANCH)..."
         command git -C "$DOTFILES_DIR" pull --ff-only origin "$DOTFILES_BRANCH" 2>/dev/null || true
+        command git -C "$DOTFILES_DIR" submodule update --init --recursive 2>/dev/null || true
     fi
     exec bash "$DOTFILES_DIR/setup.sh" "$@"
 fi
