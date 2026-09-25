@@ -33,15 +33,36 @@ install_ai_wiring() {
     fi
 
     if [[ -d "$DOTFILES_DIR/config/skills" ]]; then
+        if command -v git &>/dev/null && [[ -f "$DOTFILES_DIR/.gitmodules" ]] && [[ "$(git -C "$DOTFILES_DIR" rev-parse --show-toplevel 2>/dev/null)" == "$DOTFILES_DIR" ]]; then
+            git -C "$DOTFILES_DIR" submodule update --init --recursive 2>/dev/null || true
+        fi
+
         for skill_dir in "$DOTFILES_DIR/config/skills"/*; do
             [[ -d "$skill_dir" ]] || continue
+            if [[ -z "$(ls -A "$skill_dir" 2>/dev/null)" ]]; then
+                warn "Skill directory $(basename "$skill_dir") is empty — skipping"
+                continue
+            fi
             local skill_name; skill_name="$(basename "$skill_dir")"
             local target_dir="$HOME/.agents/skills/$skill_name"
             local tmp_dir
             tmp_dir="$(mktemp -d "$HOME/.agents/skills/.${skill_name}.XXXXXX")"
-            cp -rf "$skill_dir"/* "$tmp_dir/"
-            rm -rf "$target_dir"
-            mv -f "$tmp_dir" "$target_dir"
+            if cp -aT "$skill_dir" "$tmp_dir"; then
+                local backup_dir="${tmp_dir}.old"
+                if [[ -e "$target_dir" || -L "$target_dir" ]]; then
+                    mv "$target_dir" "$backup_dir"
+                fi
+                if mv "$tmp_dir" "$target_dir"; then
+                    rm -rf "$backup_dir"
+                else
+                    [[ -e "$backup_dir" || -L "$backup_dir" ]] && mv "$backup_dir" "$target_dir"
+                    rm -rf "$tmp_dir"
+                    warn "Failed to install skill $skill_name"
+                fi
+            else
+                rm -rf "$tmp_dir"
+                warn "Failed to copy skill $skill_name"
+            fi
         done
         success "AI skills installed"
     fi
