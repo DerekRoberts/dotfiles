@@ -52,6 +52,15 @@ install_cursor_global_instructions() {
     } > "$tmp"
     chmod 644 "$tmp"
     mv -f "$tmp" "$dest"
+
+    # Cursor also injects this older prompt file. Keep it identical to the source
+    # or a stale copy overrides the plugin rule.
+    local prompts="${HOME}/.config/Cursor/User/prompts/global.instructions.md"
+    mkdir -p "$(dirname "$prompts")"
+    tmp="$(mktemp "${prompts}.XXXXXX")"
+    cat "$src" > "$tmp"
+    chmod 644 "$tmp"
+    mv -f "$tmp" "$prompts"
 }
 
 # ── Download guards ──────────────────────────────────────────────────────────
