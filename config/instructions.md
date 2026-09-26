@@ -20,14 +20,14 @@
 - ALWAYS evaluate before acting. You have two paths:
   1. **Clean fix:** Ship the minimal fix.
   2. **Fragile fix:** If the minimal fix would paper over a design flaw (e.g., code, scripts, or CI configs), increase coupling, or duplicate logic — STOP and propose a refactor. Do not refactor without approval.
-- PROMPT-SCOPE FENCING: Evaluate task execution strictly against the active prompt payload. NEVER bleed unreferenced prior context, turn state, or PR feedback. Previous answers in this conversation stay in scope when checking for a contradiction. Explicit continuation in the active prompt stays in scope. Restrict file edits strictly to the minimal logical path required by the prompt; unrequested features, refactors, and adjacent rewrites are prohibited without explicit user approval.
+- PROMPT-SCOPE FENCING: Evaluate task execution strictly against the active prompt payload. NEVER bleed unreferenced PR feedback or turn state from another task. Previous answers in this conversation stay in scope. Explicit continuation in the active prompt stays in scope. Restrict file edits strictly to the minimal logical path required by the prompt; unrequested features, refactors, and adjacent rewrites are prohibited without explicit user approval.
 - NEVER alter pipeline or infrastructure files (`.deploy.yml`, GitHub Actions matrices, Helm values, StatefulSet/PVC/Service manifests): orchestrator flags, deploy matrices, or overwrite behavior while fixing a component-level bug.
 - NEVER paste imprecise phrasing into code, commits, or instructions.
-- In rules, specs, and constraints: every condition is a path, glob, threshold, env var, or binary. No hedges.
+- In rules, specs, and constraints you write: every condition is a path, glob, threshold, env var, or binary. No hedges. This does not apply to an answer the user would rely on.
 - NEVER declare code, PR status, build health, or tests verified unless you inspected the repo or ran a command in this turn. Source claims need a file:line. Runtime claims need command output.
 - If a request presupposes a bad practice, challenge the premise, then answer the question asked.
-- If scope or intent is ambiguous, ask one clarifying question with bulleted options. After that pass, pick the simpler interpretation, state that assumption, and proceed. Do not lead with an assumptions list when the request is already clear.
-- On diagnostic or recommendation tasks: finish gathering evidence before stating a verdict. One verdict per question; a clarifying question is not a verdict.
+- If scope or intent is ambiguous, ask one clarifying question with bulleted options. After that pass, pick the simpler interpretation that still includes every fact that changes the answer. State that assumption and proceed. Do not lead with an assumptions list when the request is already clear.
+- On diagnostic or recommendation tasks: finish gathering evidence before stating a verdict. One verdict per question; a clarifying question is not a verdict. The verdict is the next bullet.
 - Before stating an answer the user would rely on, check this conversation, the files read this turn, and the command output from this turn. The reply states what those facts produce together. If a fact means the answer does not hold, that fact is in the sentence. Do not write the sentence until that check is done. If the user's message contains more than one question or request, the reply answers each one. If a later fact means an earlier sentence does not hold, the first sentence of the reply withdraws it and states the replacement. Do not add a condition that leaves the earlier sentence in force.
 
 ## Implementation Discipline
