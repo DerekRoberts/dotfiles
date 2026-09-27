@@ -101,11 +101,15 @@ cursor_latest_url() {
 # `agent update`.
 CURSOR_AGENT_INSTALL_URL='https://cursor.com/install'
 
-# Print the package URL embedded in an installer script, or fail. The script
-# is what we execute, so its DOWNLOAD_URL has to sit on Cursor's CDN.
+# Print the package URL embedded in an installer script, or fail. Bash keeps
+# the last DOWNLOAD_URL assignment, so a prefix check on a joined string would
+# accept an allowed first URL and then run a later one. Require exactly one.
 cursor_agent_package_url() {
     local script="$1" url
-    url="$(printf '%s\n' "$script" | grep -o 'DOWNLOAD_URL="[^"]*"' | cut -d'"' -f2 || true)"
+    local -a urls=()
+    mapfile -t urls < <(printf '%s\n' "$script" | grep -o 'DOWNLOAD_URL="[^"]*"' | cut -d'"' -f2)
+    [[ "${#urls[@]}" -eq 1 ]] || return 1
+    url="${urls[0]}"
     require_url_prefix "$url" "$CURSOR_URL_PREFIX" || return 1
     printf '%s\n' "$url"
 }

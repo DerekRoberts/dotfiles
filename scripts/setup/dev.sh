@@ -414,9 +414,21 @@ snapshot_file() {
 }
 
 # Put back a file the Cursor CLI installer is not allowed to replace.
+# An empty backup means dest did not exist; drop anything the installer created.
 restore_if_changed() {
     local bak="$1" dest="$2"
-    [[ -n "$bak" ]] || return 0
+    if [[ -z "$bak" ]]; then
+        if [[ ! -e "$dest" && ! -L "$dest" ]]; then
+            return 0
+        fi
+        warn "Removing ${dest} — the Cursor CLI installer must not create it"
+        if [[ -d "$dest" && ! -L "$dest" ]]; then
+            warn "Could not remove directory ${dest}"
+            return 0
+        fi
+        rm -f -- "$dest" || warn "Could not remove ${dest}"
+        return 0
+    fi
     if [[ -f "$dest" ]] && cmp -s "$bak" "$dest"; then
         rm -f "$bak"
         return 0
