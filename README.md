@@ -48,7 +48,7 @@ source ~/.bashrc
 | **Global Git Hooks (gitleaks secret scanning)** | ❌ | ✅ |
 | **Developer CLI Suite** (`gh`, `jq`, `gitleaks`, `shellcheck`, `actionlint`, `uv`, `docker-compose`, `oc`) | ❌ | ✅ |
 | **Node.js LTS** (via NVM) | ❌ | ✅ |
-| **AI Assistants & Prompt Rules** (Cursor, Grok Bot, Antigravity Hub, `agy`, Kilo CLI, Ponytail) | ❌ | ✅ |
+| **AI Assistants & Prompt Rules** (Cursor, Cursor CLI (`agent`), Grok Bot, Antigravity Hub, `agy`, Kilo CLI, Ponytail) | ❌ | ✅ |
 | **Drop-Down Terminal** (Yakuake) | ❌ | ✅ |
 | **GitHub Work Repositories** (`~/Repos`) | ❌ | ✅ |
 
@@ -160,6 +160,7 @@ verified; the rest is documented here rather than left implicit.
 | `oc` | **sha256 verified** | Red Hat publishes `sha256sum.txt` per release; a mismatch aborts the install. |
 | `jq`, `gh`, `gitleaks`, `docker-compose`, `shellcheck`, `actionlint`, `uv` | TLS only | GitHub release assets, resolved from the `/releases/latest` redirect. No upstream checksums. Archives are rejected if their members are absolute, traversing, or link outside the extraction directory. |
 | Cursor AppImage | TLS + URL anchored | The download URL comes from Cursor's API and must sit under `https://downloads.cursor.com/`. |
+| Cursor CLI (`agent`) | TLS + URL anchored | Official installer `https://cursor.com/install` runs only after its `DOWNLOAD_URL` is under `https://downloads.cursor.com/` (same prefix as the AppImage). Links `~/.local/bin/agent` and `cursor-agent`. Leaves the `cursor` AppImage wrapper and `cursor.desktop` in place. Later updates use `agent update`. No upstream checksum. |
 | Grok Bot AppImage | User-supplied file | Copied from `~/Downloads/Grok_Bot_*.AppImage` (browser download from `https://x.ai/bot` / `https://cursor.com/download/bot`). No unauthenticated AppImage URL to pin. `.deb`/`.rpm` are unused on Kinoite. |
 | Antigravity hub | TLS + URL anchored | URL scraped from the download page, must be under `storage.googleapis.com/antigravity-public/`; archive checked for path traversal. |
 | Insync | TLS + URL anchored + digest | URL anchored to `cdn.insynchq.com`. **Insync ships unsigned RPMs** (no `SIGPGP`/`RSAHEADER`), so there is nothing to verify against a key. `rpmkeys --checksig` confirms the package's own digests, and the installed hash is recorded to `~/.local/share/dotfiles/insync.sha256`. |

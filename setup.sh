@@ -43,7 +43,7 @@ Default (no flags): full dev stack, same as --dev.
 
 Options:
   --dev       Full developer stack: Node LTS, CLI tools, Chrome, VLC, Yakuake, Insync,
-              Antigravity hub, agy CLI, Kilo CLI, Cursor, Grok Bot, oc, Ponytail, GitHub MCP, and repositories
+              Antigravity hub, agy CLI, Kilo CLI, Cursor CLI (agent), Cursor, Grok Bot, oc, Ponytail, GitHub MCP, and repositories
   --desktop   Minimal desktop essentials: Chrome, VLC, and Insync
   --ai        Configure AI assistant environment only (~/.gemini, ~/.agents/skills, Cursor, Ponytail, GitHub MCP)
   --help, -h  Show this help

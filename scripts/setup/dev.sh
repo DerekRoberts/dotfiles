@@ -401,6 +401,113 @@ install_kilo() {
     success "Kilo CLI installed: $(kilo --version 2>/dev/null || echo ok)"
 }
 
+# Copy src aside. Prints the backup path. Missing src is not an error.
+snapshot_file() {
+    local src="$1" dest
+    [[ -f "$src" ]] || return 0
+    dest="$(mktemp)"
+    if ! cp -a "$src" "$dest"; then
+        rm -f "$dest"
+        return 1
+    fi
+    printf '%s\n' "$dest"
+}
+
+# Put back a file the Cursor CLI installer is not allowed to replace.
+restore_if_changed() {
+    local bak="$1" dest="$2"
+    [[ -n "$bak" ]] || return 0
+    if [[ -f "$dest" ]] && cmp -s "$bak" "$dest"; then
+        rm -f "$bak"
+        return 0
+    fi
+    warn "Restoring ${dest} — the Cursor CLI installer must leave it unchanged"
+    if ! mv -f "$bak" "$dest"; then
+        warn "Could not restore ${dest}"
+        return 0
+    fi
+    if [[ "$dest" == */cursor ]]; then
+        chmod +x "$dest"
+    fi
+}
+
+install_cursor_agent() {
+    section "Cursor CLI (agent)"
+    local bin_dir="$HOME/.local/bin"
+    local agent_bin="$bin_dir/agent"
+    local legacy_bin="$bin_dir/cursor-agent"
+    local wrapper="$bin_dir/cursor"
+    local desktop="${HOME}/.local/share/applications/cursor.desktop"
+    local update="${UPDATE:-0}"
+    local version_bin=""
+
+    if [[ -x "$agent_bin" ]]; then
+        version_bin="$agent_bin"
+    elif [[ -x "$legacy_bin" ]]; then
+        version_bin="$legacy_bin"
+    fi
+
+    if [[ -n "$version_bin" && "$update" -eq 0 ]]; then
+        success "Cursor CLI already installed: $("$version_bin" --version 2>/dev/null || echo 'unknown version')"
+        return 0
+    fi
+
+    if [[ -n "$version_bin" ]]; then
+        info "Updating Cursor CLI..."
+        if "$version_bin" update; then
+            success "Cursor CLI updated: $("$version_bin" --version 2>/dev/null || echo ok)"
+        else
+            warn "Cursor CLI update failed — continuing"
+        fi
+        return 0
+    fi
+
+    info "Installing Cursor CLI..."
+    local tmp wrapper_bak="" desktop_bak=""
+    tmp="$(mktemp)"
+    if ! wrapper_bak="$(snapshot_file "$wrapper")"; then
+        rm -f "$tmp"
+        warn "Could not snapshot ${wrapper} — skipping Cursor CLI"
+        return 0
+    fi
+    if ! desktop_bak="$(snapshot_file "$desktop")"; then
+        rm -f "$tmp" "$wrapper_bak"
+        warn "Could not snapshot ${desktop} — skipping Cursor CLI"
+        return 0
+    fi
+
+    local ok=0
+    if cursor_agent_installer >"$tmp" && bash "$tmp"; then
+        ok=1
+    fi
+    rm -f "$tmp"
+    restore_if_changed "$wrapper_bak" "$wrapper"
+    restore_if_changed "$desktop_bak" "$desktop"
+
+    if [[ "$ok" -ne 1 ]]; then
+        warn "Cursor CLI install failed or download URL outside ${CURSOR_URL_PREFIX} — continuing"
+        return 0
+    fi
+    if [[ ! -x "$agent_bin" && ! -x "$legacy_bin" ]]; then
+        warn "Cursor CLI install did not produce ${agent_bin} — continuing"
+        return 0
+    fi
+
+    if command -v restorecon &>/dev/null; then
+        if [[ -e "$agent_bin" ]]; then
+            restorecon "$agent_bin" 2>/dev/null || true
+        fi
+        if [[ -e "$legacy_bin" ]]; then
+            restorecon "$legacy_bin" 2>/dev/null || true
+        fi
+    fi
+    local installed="$agent_bin"
+    if [[ ! -x "$installed" ]]; then
+        installed="$legacy_bin"
+    fi
+    success "Cursor CLI installed: $("$installed" --version 2>/dev/null || echo ok)"
+}
+
 install_cursor() {
     section "Cursor (AppImage)"
     local BIN_DIR="$HOME/.local/bin"
@@ -532,7 +639,7 @@ Options:
   --help, -h   Show this help
 
 Environment:
-  UPDATE=1     Re-check upstream for newer CLI tool tags, Cursor, and Grok Bot even if binaries exist
+  UPDATE=1     Re-check upstream for newer CLI tool tags, Cursor, Cursor CLI (agent), and Grok Bot even if binaries exist
 EOF
 }
 
@@ -567,6 +674,7 @@ main() {
     install_antigravity
     install_agy
     install_kilo
+    install_cursor_agent
     install_cursor
     install_grok_bot
     install_ai

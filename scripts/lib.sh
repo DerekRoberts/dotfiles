@@ -94,6 +94,31 @@ cursor_latest_url() {
     printf '%s\n' "$url"
 }
 
+# Official CLI install (https://cursor.com/docs/cli/installation):
+#   curl https://cursor.com/install -fsS | bash
+# The script links ~/.local/bin/agent and ~/.local/bin/cursor-agent to the
+# versioned binary. It does not replace ~/.local/bin/cursor. Updates are
+# `agent update`.
+CURSOR_AGENT_INSTALL_URL='https://cursor.com/install'
+
+# Print the package URL embedded in an installer script, or fail. The script
+# is what we execute, so its DOWNLOAD_URL has to sit on Cursor's CDN.
+cursor_agent_package_url() {
+    local script="$1" url
+    url="$(printf '%s\n' "$script" | grep -o 'DOWNLOAD_URL="[^"]*"' | cut -d'"' -f2 || true)"
+    require_url_prefix "$url" "$CURSOR_URL_PREFIX" || return 1
+    printf '%s\n' "$url"
+}
+
+# Fetch the official installer and print it. Refuse when the package URL is
+# missing or outside $CURSOR_URL_PREFIX.
+cursor_agent_installer() {
+    local script
+    script="$(curl -fsSL --connect-timeout 10 --max-time 20 "$CURSOR_AGENT_INSTALL_URL")" || return 1
+    cursor_agent_package_url "$script" >/dev/null || return 1
+    printf '%s\n' "$script"
+}
+
 # Stop this user's processes whose command line contains one of the patterns.
 # Used before replacing a managed binary. Skips this shell and its parent so
 # `pkill -f` cannot match the updater's own argv. No match is not an error.

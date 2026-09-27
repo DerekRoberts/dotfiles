@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # updown — Workstation silent maintenance
 # Stages rpm-ostree upgrade, updates flatpaks, updates third-party binaries,
-# and updates Antigravity CLI + hub, Kilo CLI, Cursor, and Grok Bot.
+# and updates Antigravity CLI + hub, Kilo CLI, Cursor CLI, Cursor, and Grok Bot.
 #
 # Usage:
 #   updown                 — run updates then power off (default / interactive)
@@ -139,6 +139,28 @@ warn()    { echo "[updown] ⚠ $*" >&2; }
         fi
     else
         info "Kilo CLI not installed — skipping"
+    fi
+
+
+    # ── 5b. Cursor CLI (agent / cursor-agent) ────────────────────────────────
+    # Upstream update command: agent update
+    # https://cursor.com/docs/cli/installation
+
+    CURSOR_AGENT_BIN=""
+    if [[ -x "${HOME}/.local/bin/agent" ]]; then
+        CURSOR_AGENT_BIN="${HOME}/.local/bin/agent"
+    elif [[ -x "${HOME}/.local/bin/cursor-agent" ]]; then
+        CURSOR_AGENT_BIN="${HOME}/.local/bin/cursor-agent"
+    fi
+    if [[ -n "$CURSOR_AGENT_BIN" ]]; then
+        info "Updating Cursor CLI..."
+        if "$CURSOR_AGENT_BIN" update; then
+            success "Cursor CLI updated ($("$CURSOR_AGENT_BIN" --version 2>/dev/null || echo ok))"
+        else
+            warn "Cursor CLI update failed — continuing"
+        fi
+    else
+        info "Cursor CLI not installed — skipping"
     fi
 
 
