@@ -89,3 +89,5 @@
 - Fix a failing bot PR with a new PR from `origin/main`; NEVER push to the bot PR.
 - bcgov: NEVER use Cursor cloud agents. Work in existing dt14 `~/Repos/` checkouts via `cursor-agent` when installed, else direct `git`/`gh`.
 - NEVER pin `@main` or a SHA that is not a published release.
+- NEVER change repository or org settings by any route (UI, `gh api`, `gh repo edit`): rulesets, branch protection, environments and their reviewers, secrets and variables, Actions permissions, webhooks, collaborators. Give Derek step-by-step instructions; he makes the change.
+- NEVER merge PRs, `MinionTech/vexilon` included. Renovate automerge is the only exception.
