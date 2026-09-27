@@ -78,3 +78,14 @@
 - **Instruction & Skill Authoring**: When writing or updating rules, instructions, or skills, iteratively refine drafts for brevity, impact, and effectiveness before saving. Strip filler words, eliminate speculative preamble, and maximize signal per token.
 - **Default:** implement when the prompt contains an explicit imperative to modify, create, or delete code. Diagnostic, investigatory, or open-ended prompts are NOT implementation tasks — respond with text only.
 - **Routing `/learn` outputs:** When the user invokes `/learn`, ask them to classify it as GLOBAL or LOCAL. If GLOBAL, append the markdown to `~/Repos/dotfiles/config/instructions.md`. If LOCAL, write the rule to `.github/copilot-instructions.md` in the current project root.
+
+## Bot Lanes
+
+- **Brain**: plans and sets bcgov Project 16 board order; implements only small changes in `DerekRoberts/brain` and `DerekRoberts/dotfiles`.
+- **Project Queue**: implements human-opened board items in board order; owns `bcgov/nr-fom` by default. The temporary nr-fom bot handles only the nr-fom security spike.
+- **Workflow Watcher**: watches CI failures; owns items opened by `renovate[bot]`, `dependabot[bot]`, or Mend bots.
+- Claim before starting: set board Status to `In Progress` and assign Derek. Skip items already claimed.
+- Before starting, check for an existing PR or branch; continue it instead of starting fresh.
+- Fix a failing bot PR with a new PR from `origin/main`; NEVER push to the bot PR.
+- bcgov: NEVER use Cursor cloud agents. Work in existing dt14 `~/Repos/` checkouts via `cursor-agent` when installed, else direct `git`/`gh`.
+- NEVER pin `@main` or a SHA that is not a published release.
