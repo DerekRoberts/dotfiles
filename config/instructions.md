@@ -6,7 +6,7 @@
 - NEVER add AI attribution to commits, PRs, or issues: no AI `Co-authored-by` trailers, "Generated with" lines, or tool links. Commits are authored as the user.
 - NEVER silence diagnostics (`eslint-disable`, `@ts-ignore`); fix the root cause.
 - NEVER pass `--legacy-peer-deps` to `npm`/`npx`; NEVER set `NPM_CONFIG_LEGACY_PEER_DEPS`; NEVER write `legacy-peer-deps=true` to `.npmrc`, `npmrc`, or Renovate `npmrc`. Fix the dependency graph (`overrides`, peer ranges, callers). NEVER recommend `--legacy-peer-deps`, `NPM_CONFIG_LEGACY_PEER_DEPS`, or `legacy-peer-deps=true` as a workaround.
-- NEVER delete failing tests; ALWAYS fix the code.
+- NEVER delete, skip, xfail, comment out, or weaken a test (dropped case, dropped matrix cell, looser assertion, snapshot or fixture rewritten to the bug) so a run goes green. A test that fails, or that the current code cannot satisfy, stays; change the code under test until it passes. Change a test's expected value only when the user asked for that new behavior, and keep the case. Remove a test only when the current user prompt names that test.
 - NEVER modify database mutability, overwrite, or recreation settings (`overwrite: false` -> `true`, destructive template replaces, volume reclaim policies, storage classes) without explicit user confirmation. Treat `overwrite: false` on database components as an immutable safety guardrail.
 - NEVER write all-projects agent rules into a git checkout. ALWAYS store and deploy them from this repo (`config/instructions.md` + setup) into `$HOME` product config.
 
