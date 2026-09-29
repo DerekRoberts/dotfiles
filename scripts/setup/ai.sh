@@ -17,6 +17,35 @@ DOTFILES_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # ── AI Instructions & Skills ─────────────────────────────────────────────────
 
+# Write src to a file setup owns outright, with an optional header first.
+install_rules_file() {
+    local src="$1" dest="$2" header="${3:-}" tmp
+    mkdir -p "${dest%/*}"
+    tmp="$(mktemp "${dest}.XXXXXX")"
+    printf '%s' "$header" > "$tmp"
+    cat "$src" >> "$tmp"
+    chmod 644 "$tmp"
+    mv -f "$tmp" "$dest"
+    success "Installed ${dest/#$HOME/\~}"
+}
+
+# Put src between markers in a shared file, keeping anything else in it.
+install_managed_block() {
+    local src="$1" dest="$2" tmp
+    mkdir -p "${dest%/*}"
+    touch "$dest"
+    tmp="$(mktemp "${dest}.XXXXXX")"
+    {
+        sed '/^<!-- dotfiles:begin/,/^<!-- dotfiles:end -->/d' "$dest"
+        echo '<!-- dotfiles:begin (managed by dotfiles setup; edit config/instructions.md) -->'
+        cat "$src"
+        echo '<!-- dotfiles:end -->'
+    } > "$tmp"
+    chmod 644 "$tmp"
+    mv -f "$tmp" "$dest"
+    success "Updated managed block in ${dest/#$HOME/\~}"
+}
+
 install_ai_wiring() {
     section "AI Assistant Instructions & Skills"
 
@@ -93,6 +122,12 @@ install_ai_wiring() {
         install_cursor_global_instructions "$INSTRUCTIONS_FILE"
         success "Cursor instructions installed (~/.cursor/plugins/local/dotfiles)"
     fi
+
+    # Other tools' user-level rules locations (see README for doc links).
+    install_rules_file "$INSTRUCTIONS_FILE" "$HOME/.claude/rules/dotfiles.md"
+    install_rules_file "$INSTRUCTIONS_FILE" "$HOME/.copilot/instructions/dotfiles.instructions.md" \
+        $'---\napplyTo: \'**\'\n---\n'
+    install_managed_block "$INSTRUCTIONS_FILE" "$HOME/.config/kilo/AGENTS.md"
 
     info "Configuring Cursor default workspace paths and update settings..."
     local CURSOR_SETTINGS="$CURSOR_USER_DIR/settings.json"
