@@ -92,7 +92,7 @@
 - Claim before starting: set board Status to `In Progress` and assign the user. Skip items already claimed.
 - Before starting, check for an existing PR or branch; continue it instead of starting fresh.
 - Fix a failing bot PR with a new PR from `origin/main`; NEVER push to the bot PR.
-- bcgov: NEVER use cloud agents. Work in existing dt14 `~/Repos/` checkouts via `~/.local/bin/agent` when executable, else direct `git`/`gh`.
+- Changes that need a commit: a cloud agent does the work on a branch in the user's fork, a reviewing agent checks the diff and CI, and the workstation only publishes. Org repos (`bcgov`, `bcgov-c`): publish with `bcgov-push <user>/<repo> <fork-branch> --to <type>/<name> --title "<conventional title>" --body-file <file>` from the workstation. It writes one commit authored by the user, pushes a neutral branch, and opens a PR assigned to the user; re-run it after the fork branch changes to append a commit. NEVER push a cloud agent's commits or branch names to an org repo. Work directly in existing workstation `~/Repos/` checkouts only when the repo cannot be forked (private org repos).
 - NEVER pin `@main` or a SHA that is not a published release.
 - Crunchy (`bcgov/action-crunchy`, `crunchy/` paths): contributions are allowed, but `cberg-aot`, the crunchy subject-matter expert, must review and approve them before they release beyond the Canary Group.
 - NEVER change repository or org settings by any route (UI, `gh api`, `gh repo edit`): rulesets, branch protection, environments and their reviewers, secrets and variables, Actions permissions, webhooks, collaborators. Give the user step-by-step instructions; they make the change.

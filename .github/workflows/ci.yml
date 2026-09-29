@@ -61,3 +61,6 @@ jobs:
       - name: Test commit-msg hook
         run: bash scripts/test-commit-msg.sh
 
+      - name: Test bcgov-push
+        run: bash scripts/test-bcgov-push.sh
+

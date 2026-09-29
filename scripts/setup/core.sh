@@ -87,6 +87,10 @@ install_maintenance_tools() {
         install_copy "$DOTFILES_DIR/scripts/updown.sh" "$HOME/.local/bin/updown"
         success "Installed updown → $HOME/.local/bin/updown"
     fi
+    if [[ -f "$DOTFILES_DIR/scripts/bcgov-push.sh" ]]; then
+        install_copy "$DOTFILES_DIR/scripts/bcgov-push.sh" "$HOME/.local/bin/bcgov-push"
+        success "Installed bcgov-push → $HOME/.local/bin/bcgov-push"
+    fi
 
     if [[ -d "$DOTFILES_DIR/config/systemd" ]]; then
         info "Configuring systemd user services..."

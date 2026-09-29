@@ -151,6 +151,8 @@ This repository establishes a client-side safety net and policy framework that e
 5. **Agent Guard (`~/.local/bin/agent-guard`)**: `agent-guard shell "<command>" [cwd]` or `agent-guard mcp <tool> <args-json>`; exit 0 allows, exit 2 denies with the reason on stderr. Cursor is wired via `config/agent-guard/cursor-hooks.json`; other tools (Antigravity/`agy`, Kilo, Claude Code-style CLIs) can call it from their own pre-command hook. A reminder, not a sandbox: anything it doesn't recognize is allowed.
 6. **Shell & Agent Environment Isolation (`config/bashrc`)**: Copied to `~/.config/dotfiles/bashrc` on setup (not sourced from the git work tree). Detects AI agent execution (`ANTIGRAVITY_AGENT`) to strip prompt evaluation overhead and unset ambient `GITHUB_TOKEN` / `GH_TOKEN` environment variables so commands use authenticated local credentials.
 
+7. **Fork-to-org publisher (`~/.local/bin/bcgov-push`)**: `bcgov-push <user>/<repo> <fork-branch> --to <type>/<name> [--title "<conventional title>"] [--body-file <file>] [--draft] [--dry-run]`. A cloud agent prepares and tests a branch in the user's fork; this publishes it to the fork's parent repo (`bcgov` or `bcgov-c`) from the existing `~/Repos/<repo>` checkout. It writes one new commit whose tree equals the fork branch tip, authored by the local git identity, with the title as the whole message, so fork authors and trailers never reach the org repo. It refuses AI-tool branch names, tool-specific files (`.cursor/`, `.cursorrules`), and attribution text in the change or PR body. A first run pushes the branch and opens a PR assigned to the user (`--body-file` required); later runs append one fast-forward commit (never a force-push). Examples: `scripts/test-bcgov-push.sh`.
+
 ### Bypassing (Human Developers Only)
 
 * **Override Git Aliases / Wrappers**: Use the shell `command` builtin:
@@ -234,6 +236,7 @@ Two other deliberate trade-offs:
 │   │   └── dev.sh                     # Toolchains (jq, gh, uv, nvm; `--tools` for CLIs only), AI assistants, oc & repos
 │   ├── lib.sh                         # Shared helpers: output, install_copy, download guards
 │   ├── updown.sh                      # Workstation updater script (installed to ~/.local/bin/updown)
+│   ├── bcgov-push.sh                  # Publish a fork branch to its org repo as the user (installed to ~/.local/bin/bcgov-push)
 │   ├── clone-repos.sh                 # Idempotent repository cloner
 │   ├── tpm-enroll.sh                  # Optional TPM2 disk unlock helper (see Supply Chain below)
 │   ├── update-antigravity.sh          # Runtime updater for Antigravity Hub
