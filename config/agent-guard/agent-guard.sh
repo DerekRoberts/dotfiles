@@ -14,14 +14,13 @@ deny() {
 }
 
 if [ "$1" = mcp ]; then
-    tool="$2" args="$3"
+    tool="$2"
     case "$tool" in
         transfer_issue) ;;
         merge_pull_request)  deny "merging a PR" ;;
+        resolve_*|*resolve*thread*) ;;
         *comment*|*review*)  case "$tool" in list_*|get_*) ;; *) deny "commenting or reviewing" ;; esac ;;
         *secret*|update_repository*|delete_repository*) deny "changing repo settings" ;;
-        create_*|update_*|push_*|delete_*)
-            case "$args" in *action-crunchy*|*crunchy/*) deny "writing to crunchy" ;; esac ;;
     esac
     exit 0
 fi
@@ -58,14 +57,6 @@ while read -r c; do
         "git update-ref"*"refs/tags/"*)                   deny "creating a tag" ;;
         "git tag"|"git tag -l"*|"git tag --list"*)        ;;
         "git tag "*)                                      deny "creating a tag" ;;
-    esac
-
-    # Whole command, so "cd .../action-crunchy && git commit" counts too.
-    case "$cmd $dir" in
-        *action-crunchy*|*crunchy/*)
-            case "$c" in
-                "git commit"*|"git push"*|"gh pr create"*|"gh pr edit"*|"gh api -X"*) deny "writing to crunchy" ;;
-            esac ;;
     esac
 done
 exit 0
