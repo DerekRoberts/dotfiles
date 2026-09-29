@@ -64,6 +64,70 @@ gh_api() {
     method="$(printf '%s' "${method:-GET}" | tr '[:lower:]' '[:upper:]')"
 }
 
+# Prints a reason when the diff drops a test() / it() call, a workflow job
+# whose id contains "test", or a matrix row. Empty means allow.
+# ponytail: job ids that do not contain "test" are ignored; a matrix row is
+# only a "- key:" line (repo/package/image/os/node/node-version/app/service,
+# or name with no spaces). Step lines (- uses, - run, "- name: Has spaces")
+# are ignored. Upgrade path is a YAML parse of jobs: and strategy.matrix.
+test_removal_reason() {
+    git -C "$dir" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+    if [ "$1" = branch ]; then
+        base=''
+        if git -C "$dir" rev-parse --verify --quiet origin/main >/dev/null 2>&1; then
+            base=origin/main
+        elif git -C "$dir" rev-parse --verify --quiet main >/dev/null 2>&1; then
+            base=main
+        else
+            return 0
+        fi
+        # shellcheck disable=SC2086 # base is one ref
+        set -- "$base...HEAD"
+    fi
+    git -C "$dir" diff "$@" --unified=0 2>/dev/null | awk '
+        function tally(   rest, line, key, val) {
+            rest = body
+            while (match(rest, /(^|[^A-Za-z0-9_])(it|test)[[:space:]]*\(/)) {
+                if (side == "rem") crem++; else cadd++
+                rest = substr(rest, RSTART + RLENGTH)
+            }
+            if (!workflow) return
+            if (match(body, /^  [A-Za-z0-9_-]*[Tt]est[A-Za-z0-9_-]*:[[:space:]]*$/)) {
+                key = substr(body, 3)
+                sub(/:.*/, "", key)
+                if (side == "rem") jrem[key]++; else jadd[key]++
+            }
+            line = body
+            sub(/^[[:space:]]+/, "", line)
+            sub(/[[:space:]]+$/, "", line)
+            if (line !~ /^- [A-Za-z0-9_-]+:/) return
+            key = line
+            sub(/^- /, "", key)
+            sub(/:.*/, "", key)
+            if (key ~ /^(uses|run|id|if|with|env|shell|working-directory)$/) return
+            val = line
+            sub(/^- [A-Za-z0-9_-]+:[[:space:]]*/, "", val)
+            if (key == "name" && val ~ /[[:space:]]/) return
+            if (key != "name" && key !~ /^(repo|package|image|os|node|node-version|app|service)$/) return
+            if (side == "rem") mrem[line]++; else madd[line]++
+        }
+        /^diff --git / {
+            file = $4
+            sub(/^[abciw]\//, "", file)
+            workflow = index(file, ".github/workflows/") == 1
+            next
+        }
+        /^\+\+\+ / || /^--- / { next }
+        /^-/ { side = "rem"; body = substr($0, 2); tally(); next }
+        /^\+/ { side = "add"; body = substr($0, 2); tally(); next }
+        END {
+            if (crem > cadd) { print "removing a test()"; exit }
+            for (k in jrem) if (jrem[k] > jadd[k] + 0) { print "removing a test job"; exit }
+            for (k in mrem) if (mrem[k] > madd[k] + 0) { print "removing a matrix row"; exit }
+        }
+    '
+}
+
 cmd="$2" dir="${3:-$PWD}"
 
 # One simple command per line, so a commit message that mentions
@@ -72,6 +136,19 @@ printf '%s\n' "$cmd" | sed -E 's/(&&|\|\||;|\|)/\n/g' | {
 while read -r c; do
     case "$c" in
         "gh issue transfer"*) continue ;;
+
+        "git commit"*)
+            case "$c" in
+                *" -a"*|*" --all"*) range="HEAD" ;;
+                *) range="--cached" ;;
+            esac
+            reason=$(test_removal_reason $range)
+            [ -z "$reason" ] || deny "$reason"
+            ;;
+        "gh pr create"*)
+            reason=$(test_removal_reason branch)
+            [ -z "$reason" ] || deny "$reason"
+            ;;
 
         "gh pr merge"*)                                   deny "merging a PR" ;;
         "gh pr comment"*|"gh pr review"*|"gh pr close"*)  deny "commenting on, reviewing, or closing a PR" ;;
