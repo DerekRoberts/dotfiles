@@ -75,8 +75,9 @@
 
 ## Agent Interaction
 
-- **Portfolio & Canaries**: ALWAYS check `~/Repos/brain` (`consolidation-plan.md`, ADR-011) before asking about repos, plans, or canary scope. The "Canary Group" consists of repos Derek controls; all must be SHA-pinned (`@<sha> # <tag>`), never `@main`. Deployments to canaries cover this group before wider downstream release.
+- **Portfolio & Canaries**: ALWAYS check `~/Repos/brain` (`consolidation-plan.md`, ADR-011) before asking about repos, plans, or canary scope. The "Canary Group" consists of repos the user controls; all must be SHA-pinned (`@<sha> # <tag>`), never `@main`. Deployments to canaries cover this group before wider downstream release.
 - **Instruction & Skill Authoring**: When writing or updating rules, instructions, or skills, iteratively refine drafts for brevity, impact, and effectiveness before saving. Strip filler words, eliminate speculative preamble, and maximize signal per token.
+- **Be generic**: In shared rules, scripts, and docs, refer to "the user", never a personal name, and do not name specific AI tools or vendors. Tool-specific wiring (e.g., a single adapter file for one tool's hook format) is the only exception.
 - **Default:** implement when the prompt contains an explicit imperative to modify, create, or delete code. Diagnostic, investigatory, or open-ended prompts are NOT implementation tasks — respond with text only.
 - **Routing `/learn` outputs:** When the user invokes `/learn`, ask them to classify it as GLOBAL or LOCAL. If GLOBAL, append the markdown to `~/Repos/dotfiles/config/instructions.md`. If LOCAL, write the rule to `.github/copilot-instructions.md` in the current project root.
 
@@ -85,10 +86,10 @@
 - **Brain**: plans and sets bcgov Project 16 board order; implements only small changes in `DerekRoberts/brain` and `DerekRoberts/dotfiles`.
 - **Project Queue**: implements human-opened board items in board order; owns `bcgov/nr-fom` by default. The temporary nr-fom bot handles only the nr-fom security spike.
 - **Workflow Watcher**: watches CI failures; owns items opened by `renovate[bot]`, `dependabot[bot]`, or Mend bots.
-- Claim before starting: set board Status to `In Progress` and assign Derek. Skip items already claimed.
+- Claim before starting: set board Status to `In Progress` and assign the user. Skip items already claimed.
 - Before starting, check for an existing PR or branch; continue it instead of starting fresh.
 - Fix a failing bot PR with a new PR from `origin/main`; NEVER push to the bot PR.
-- bcgov: NEVER use Cursor cloud agents. Work in existing dt14 `~/Repos/` checkouts via `cursor-agent` when installed, else direct `git`/`gh`.
+- bcgov: NEVER use cloud agents. Work in existing dt14 `~/Repos/` checkouts via the local agent CLI when installed, else direct `git`/`gh`.
 - NEVER pin `@main` or a SHA that is not a published release.
-- NEVER change repository or org settings by any route (UI, `gh api`, `gh repo edit`): rulesets, branch protection, environments and their reviewers, secrets and variables, Actions permissions, webhooks, collaborators. Give Derek step-by-step instructions; he makes the change.
+- NEVER change repository or org settings by any route (UI, `gh api`, `gh repo edit`): rulesets, branch protection, environments and their reviewers, secrets and variables, Actions permissions, webhooks, collaborators. Give the user step-by-step instructions; they make the change.
 - NEVER merge PRs, `MinionTech/vexilon` included. Renovate automerge is the only exception.
