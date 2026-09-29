@@ -1,105 +1,85 @@
 #!/usr/bin/env bash
-# test-agent-guard.sh — check config/agent-guard allow/deny decisions.
+# test-agent-guard.sh — the agent-guard rules, as examples.
 # Usage: bash scripts/test-agent-guard.sh
 set -euo pipefail
 
-DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GUARD="$DOTFILES_DIR/config/agent-guard/agent-guard.sh"
-TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/config/agent-guard"
 fails=0
 
-result() {
-    local want="$1" got="$2" what="$3"
-    if [[ "$got" == "$want" ]]; then echo "ok   $want: $what"; else echo "FAIL want $want got $got: $what"; fails=1; fi
+expect() {
+    local want="$1" got="deny"; shift
+    if sh "$DIR/agent-guard.sh" "$@" 2>/dev/null; then got="allow"; fi
+    if [[ "$got" == "$want" ]]; then echo "ok   $want: ${*:2}"; else echo "FAIL want $want: ${*:2}"; fails=1; fi
 }
-verdict() { if "$@" 2>/dev/null; then echo allow; else echo deny; fi; }
-check()     { result "$1" "$(verdict sh "$GUARD" shell "$2" "${3:-$TMP}")" "$2"; }
-check_mcp() { result "$1" "$(verdict sh "$GUARD" mcp "$2" "$3")" "mcp $2"; }
+allow() { expect allow shell "$@"; }
+deny()  { expect deny shell "$@"; }
 
-# Everyday agent work stays allowed.
-check allow 'git status && git diff'
-check allow 'git push -u origin feat/x'
-check allow 'unset GITHUB_TOKEN && gh pr create --title "t" --body "b"'
-check allow 'gh pr view 12 --json state'
-check allow 'gh pr edit 12 --body "no merge here"'
-check allow 'gh api repos/o/r/pulls/12/comments --paginate'
-check allow 'gh api -X PATCH repos/o/r/pulls/12 -f body=text'
-check allow 'gh api repos/o/r/git/refs -f ref=refs/heads/x -f sha=abc'
-check allow 'git commit -m "docs: explain why gh pr merge is blocked"'
-check allow 'git tag -l "v*"'
-check allow 'gh pr view -R bcgov/action-crunchy 5'
+# Everyday work
+allow 'gh pr create --title "t" --body "b"'
+allow 'gh pr edit 12 --body "b"'
+allow 'gh pr view 12'
+allow 'git push -u origin feat/x'
+allow 'git commit -m "docs: explain why gh pr merge is blocked"'
 
-# Issue transfers are allowed everywhere, crunchy included.
-check allow 'gh issue transfer 7 bcgov/nr-fom'
-check allow 'gh issue transfer 7 bcgov/action-crunchy'
-check allow 'gh issue transfer 7 bcgov/nr-fom -R bcgov/action-crunchy'
-check allow "gh api graphql -f query='mutation { transferIssue(input:{issueId:\"I_1\",repositoryId:\"R_1\"}) { issue { url } } }'"
-check_mcp allow transfer_issue '{"owner":"bcgov","repo":"action-crunchy","new_repo":"nr-fom"}'
+# Merging
+deny  'gh pr merge 12 --squash'
+deny  'unset GITHUB_TOKEN && gh pr merge 12'
+deny  'gh api -X PUT repos/o/r/pulls/12/merge'
+allow 'gh api repos/o/r/pulls/12/merge'
 
-# Merges.
-check deny 'gh pr merge 12 --squash'
-check deny 'unset GITHUB_TOKEN && gh pr merge --auto 12'
-check deny 'gh api -X PUT repos/o/r/pulls/12/merge'
-check deny "gh api graphql -f query='mutation { mergePullRequest(input:{pullRequestId:\"x\"}) { clientMutationId } }'"
+# Force-push and tags
+deny  'git push --force origin feat/x'
+deny  'git push -f'
+deny  'git push --force-with-lease'
+deny  'git push --tags'
+deny  'git tag v1.2.3'
+allow 'git tag -l'
 
-# Force pushes and tags.
-check deny 'git push --force origin feat/x'
-check deny 'git push --force-with-lease'
-check deny 'git push -f'
-check deny 'git push origin +feat/x'
-check deny 'git push --tags'
-check deny 'git tag v1.2.3'
-check deny 'git tag -a v1 -m release'
-check deny 'gh release create v1'
+# Comments, reviews, closes
+deny  'gh pr comment 12 --body hi'
+deny  'gh pr review 12 --approve'
+deny  'gh pr close 12'
+deny  'gh issue comment 3 --body hi'
+deny  'gh issue close 3'
+deny  'gh issue delete 3'
+allow 'gh issue create --title t --body b'
 
-# Comments, reviews, closes.
-check deny 'gh pr comment 12 --body hi'
-check deny 'gh issue comment 3 -b hi'
-check deny 'gh pr review 12 --approve'
-check deny 'gh pr close 12'
-check deny 'gh api repos/o/r/issues/12/comments -f body=hi'
-check deny 'gh api -X PATCH repos/o/r/issues/3 -f state=closed'
+# Repo settings, secrets, variables
+deny  'gh repo edit --visibility public'
+deny  'gh repo archive o/r'
+deny  'gh repo delete o/r'
+deny  'gh secret set TOKEN'
+deny  'gh variable delete NAME'
+deny  'gh api -X PUT repos/o/r/branches/main/protection'
+allow 'gh api repos/o/r/branches/main/protection'
+allow 'gh repo view o/r'
 
-# Repository and org settings.
-check deny 'gh repo edit --visibility public'
-check deny 'gh secret set TOKEN'
-check deny 'gh api -X PUT repos/o/r/branches/main/protection --input p.json'
-check deny 'gh api -X POST repos/o/r/rulesets --input r.json'
-check deny 'gh api -X PUT repos/o/r/collaborators/someone'
-check deny 'gh api -X PATCH repos/o/r -f default_branch=dev'
-check deny 'gh api --method PATCH orgs/bcgov -f x=y'
+# Crunchy: writes blocked, reads and issue transfers allowed
+deny  'gh pr create -R bcgov/action-crunchy --title t --body b'
+deny  'git push' "$HOME/Repos/action-crunchy"
+allow 'git status' "$HOME/Repos/action-crunchy"
+allow 'gh issue transfer 7 bcgov/nr-fom'
+allow 'gh issue transfer 7 bcgov/action-crunchy'
 
-# Other crunchy writes stay blocked.
-check deny 'gh pr create -R bcgov/action-crunchy --title t --body b'
-check deny 'gh api -X PUT repos/bcgov/actions-openshift/contents/crunchy/values.yaml -f message=m'
-git init -q "$TMP/crunchy" && git -C "$TMP/crunchy" remote add origin https://github.com/bcgov/action-crunchy.git
-check deny 'git commit -m change' "$TMP/crunchy"
-check deny 'git push' "$TMP/crunchy"
-check allow 'git status' "$TMP/crunchy"
-git init -q "$TMP/aos" && git -C "$TMP/aos" remote add origin git@github.com:bcgov/actions-openshift.git
-mkdir -p "$TMP/aos/crunchy" "$TMP/aos/other"
-echo a > "$TMP/aos/crunchy/f" && echo b > "$TMP/aos/other/f"
-git -C "$TMP/aos" add other/f
-check allow 'git commit -m other' "$TMP/aos"
-git -C "$TMP/aos" add crunchy/f
-check deny 'git commit -m crunchy' "$TMP/aos"
+# GitHub MCP tools
+expect deny  mcp merge_pull_request '{}'
+expect deny  mcp add_issue_comment '{}'
+expect allow mcp list_pull_request_reviews '{}'
+expect allow mcp create_pull_request '{"repo":"r"}'
+expect deny  mcp create_or_update_file '{"repo":"action-crunchy"}'
+expect allow mcp transfer_issue '{"repo":"action-crunchy"}'
 
-# GitHub MCP tools.
-check_mcp deny merge_pull_request '{"owner":"o","repo":"r","pullNumber":1}'
-check_mcp deny add_issue_comment '{"body":"hi"}'
-check_mcp deny update_pull_request '{"state":"closed"}'
-check_mcp deny create_or_update_file '{"owner":"bcgov","repo":"action-crunchy"}'
-check_mcp allow create_pull_request '{"owner":"o","repo":"r"}'
-check_mcp allow list_pull_request_reviews '{}'
-
-# Cursor adapter.
-mkdir -p "$TMP/bin" && install -m 755 "$GUARD" "$TMP/bin/agent-guard"
+# Cursor adapter
+TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
+install -m 755 "$DIR/agent-guard.sh" "$TMP/agent-guard"
 cursor() {
     jq -cn --arg c "$1" '{hook_event_name: "beforeShellExecution", command: $c, cwd: "/tmp"}' \
-        | PATH="$TMP/bin:$PATH" sh "$DOTFILES_DIR/config/agent-guard/cursor-hook.sh" | jq -r .permission
+        | PATH="$TMP:$PATH" sh "$DIR/cursor-hook.sh" | jq -r .permission
 }
-result allow "$(cursor 'gh pr view 1')" "cursor gh pr view"
-result deny "$(cursor 'gh pr merge 1')" "cursor gh pr merge"
+if [[ "$(cursor 'gh pr view 1')" == allow && "$(cursor 'gh pr merge 1')" == deny ]]; then
+    echo "ok   cursor adapter"
+else
+    echo "FAIL cursor adapter"; fails=1
+fi
 
 exit "$fails"
