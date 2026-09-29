@@ -86,7 +86,7 @@ This repository establishes a client-side safety net and policy framework that e
 | Tool / Domain | Permitted Actions | Rationale & Context |
 | :--- | :--- | :--- |
 | **`git`** | `commit`, `push` (non-force), branch creation, `fetch`, `merge origin/main` | Standard feature branch development. |
-| **`gh`** | `pr create`, `pr edit`, `pr view`, `pr diff`, read-only `api GET` | Opening and updating pull requests, inspecting review feedback. |
+| **`gh`** | `pr create`, `pr edit`, `pr view`, `pr diff`, `api` reads, GraphQL `resolveReviewThread`; `api -X` writes in any repository or path unless `agent-guard` blocks the pattern (`PUT …/merge`, `…/protection`, `…/rulesets`, `…/collaborators`) | Opening and updating pull requests, inspecting review feedback, resolving addressed review threads. `agent-guard` does not inspect other `api -X` writes; the Blocked rows below still apply as policy. |
 | **Package Managers** (`npm`, `uv`, `pip`, etc.) | Standard package install, build, test, and typecheck commands | Regular dependency resolution without peer dependency bypasses. |
 | **Diagnostics & Tests** | Running test suites, linters (`shellcheck`, `actionlint`, `eslint`), and build checks | Verifying code quality and runtime correctness prior to completion. |
 
