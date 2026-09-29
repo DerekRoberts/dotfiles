@@ -77,7 +77,7 @@ This repository establishes a client-side safety net and policy framework that e
 - **Soft Policy vs. Hard Checks**:
   - *Soft Policy (Behavioral Guidelines)*: Structured behavioral constraints, communication standards, and planning expectations live in [`config/instructions.md`](config/instructions.md) and deploy directly to agent prompts (e.g., Cursor, Antigravity).
   - *Hard Checks (Hooks & Guardians)*: Automated verification runs locally via global Git hooks (`~/.githooks/pre-commit`, `~/.githooks/pre-push`) to block secret leakage and version regressions before commits are recorded.
-  - *Agent Hook*: `config/cursor/hooks/agent-guard.sh` runs as a Cursor `beforeShellExecution` / `beforeMCPExecution` hook (installed to `~/.cursor/hooks/` by `scripts/setup/ai.sh`) and denies merges, force-pushes, tag creation/pushes, comments/reviews/closes, repo/org settings changes, and crunchy writes. It only sees agent commands; human terminals are untouched. Test: `scripts/test-agent-guard.sh`.
+  - *Agent Hook*: `config/cursor/hooks/agent-guard.sh` runs as a Cursor `beforeShellExecution` / `beforeMCPExecution` hook (installed to `~/.cursor/hooks/` by `scripts/setup/ai.sh`) and denies merges, force-pushes, tag creation/pushes, comments/reviews/closes, repo/org settings changes, and crunchy writes. It only sees agent commands; human terminals are untouched. Test: `bash scripts/test-agent-guard.sh`.
 
 ### Allowed vs. Blocked Matrix
 
