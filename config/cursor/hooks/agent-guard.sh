@@ -90,7 +90,7 @@ for seg in $segs; do
     # ── gh ───────────────────────────────────────────────────────────────────
     if has "$seg" "$GH"; then
         has "$seg" "${GH}pr[[:space:]]+(merge|comment|review|close)([[:space:]]|$)" && deny "gh pr merge/comment/review/close"
-        has "$seg" "${GH}issue[[:space:]]+(comment|close|delete|transfer)([[:space:]]|$)" && deny "gh issue comment/close"
+        has "$seg" "${GH}issue[[:space:]]+(comment|close|delete)([[:space:]]|$)" && deny "gh issue comment/close/delete"
         has "$seg" "${GH}release[[:space:]]+(create|delete|edit|upload)([[:space:]]|$)" && deny "gh release (creates tags)"
         has "$seg" "${GH}repo[[:space:]]+(edit|archive|unarchive|delete|rename|deploy-key)([[:space:]]|$)" && deny "repository settings change"
         has "$seg" "${GH}(secret|variable)[[:space:]]+(set|delete|remove)([[:space:]]|$)" && deny "secret/variable change"
