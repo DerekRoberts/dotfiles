@@ -1,0 +1,12 @@
+#!/bin/sh
+# commit-msg hook - drop Co-authored-by trailers that credit an AI tool, so
+# commits stay authored by the user. Human co-authors are kept.
+
+# AI-tool co-author addresses, as regex alternatives.
+ai='cursoragent@cursor[.]com|noreply@anthropic[.]com'
+
+awk -v ai="$ai" '
+    tolower($0) ~ "^co-authored-by:.*<(" ai ")>" { next }
+    /^$/ { blank++; next }                      # hold blank lines...
+    { while (blank) { print ""; blank-- } print } # ...until text follows
+' "$1" > "$1.tmp" && mv "$1.tmp" "$1"

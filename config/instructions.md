@@ -3,6 +3,7 @@
 - NEVER comment on, review, close, or merge PRs/issues under user credentials; NEVER create releases/tags, force-push, manage secrets, modify repository settings (via `gh api` or `gh repo edit`), or run `oc`/`kubectl`. Draft those in chat. Commits, `git push`, `gh issue create`, and `gh pr create|edit` are fine. If a command is blocked, do not bypass it. `agent-guard` enforces the git and GitHub items here in AI tools with pre-command hooks.
 - NEVER branch from a feature branch, including merged ones; ALWAYS `git fetch origin && git checkout -b <type>/<name> origin/main`.
 - NEVER commit credentials, secrets, or PII.
+- NEVER add AI attribution to commits, PRs, or issues: no AI `Co-authored-by` trailers, "Generated with" lines, or tool links. Commits are authored as the user.
 - NEVER silence diagnostics (`eslint-disable`, `@ts-ignore`); fix the root cause.
 - NEVER pass `--legacy-peer-deps` to `npm`/`npx`; NEVER set `NPM_CONFIG_LEGACY_PEER_DEPS`; NEVER write `legacy-peer-deps=true` to `.npmrc`, `npmrc`, or Renovate `npmrc`. Fix the dependency graph (`overrides`, peer ranges, callers). NEVER recommend `--legacy-peer-deps`, `NPM_CONFIG_LEGACY_PEER_DEPS`, or `legacy-peer-deps=true` as a workaround.
 - NEVER delete failing tests; ALWAYS fix the code.
