@@ -58,6 +58,11 @@ allow "gh api graphql -f query='mutation { resolveReviewThread(input: {threadId:
 
 # Raw gh api writes: -X, --method, or -f/-F with no -X (implies POST)
 deny  'gh api repos/o/r/issues/3/comments -f body=hi'
+deny  'gh api repos/o/r/issues/3/comments -fbody=hi'
+deny  'gh api repos/o/r/pulls/12/reviews --raw-field=event=APPROVE'
+deny  'gh api repos/o/r/issues/3/comments --input=payload.json'
+deny  'gh api repos/o/r/issues/3 -fstate=closed'
+deny  'gh api --method=PATCH repos/o/r/pulls/12 --field=state=closed'
 deny  'gh api -X POST repos/o/r/issues/3/comments -f body=hi'
 deny  'gh api --method POST repos/o/r/pulls/12/comments -f body=hi'
 deny  'gh api repos/o/r/pulls/12/comments/99/replies -F body=hi'
@@ -92,6 +97,8 @@ deny  "gh api graphql -f query='mutation { closeIssue(input: {issueId: \"I_x\"})
 deny  "gh api graphql -f query='mutation { closePullRequest(input: {pullRequestId: \"PR_x\"}) { clientMutationId } }'"
 deny  "gh api graphql -f query='mutation { reopenIssue(input: {issueId: \"I_x\"}) { clientMutationId } }'"
 deny  "gh api graphql -f query='mutation { updatePullRequest(input: {pullRequestId: \"PR_x\", state: CLOSED}) { clientMutationId } }'"
+deny  "gh api graphql -f query='mutation { updatePullRequest(input: {pullRequestId: \"PR_x\", state : CLOSED}) { clientMutationId } }'"
+deny  "gh api graphql -f query='mutation { updateIssue(input: {id: \"I_x\", state : CLOSED}) { clientMutationId } }'"
 deny  "gh api graphql -f query='mutation { mergePullRequest(input: {pullRequestId: \"PR_x\"}) { clientMutationId } }'"
 deny  "gh api graphql -f query='mutation { enablePullRequestAutoMerge(input: {pullRequestId: \"PR_x\"}) { clientMutationId } }'"
 deny  "gh api graphql -f query='mutation { unresolveReviewThread(input: {threadId: \"PRRT_x\"}) { thread { isResolved } } }'"

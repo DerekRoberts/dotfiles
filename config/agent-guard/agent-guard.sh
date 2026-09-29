@@ -45,7 +45,15 @@ gh_api() {
             --method=*)                method="${1#*=}" ;;
             -f|-F|--field|--raw-field) fields=1
                                        case "$2" in state=*|[\"\']state=*) state=1 ;; esac; shift ;;
-            --input)                   fields=1; shift ;;
+            -f*|-F*|--field=*|--raw-field=*)
+                                       fields=1
+                                       case "$1" in
+                                           -f*) v="${1#-f}" ;;
+                                           -F*) v="${1#-F}" ;;
+                                           *)   v="${1#*=}" ;;
+                                       esac
+                                       case "$v" in state=*|[\"\']state=*) state=1 ;; esac ;;
+            --input|--input=*)         fields=1; [ "$1" = --input ] && shift ;;
             -H|--header|-q|--jq|-t|--template|--hostname|--cache|-p|--preview) shift ;;
             -*) ;;
             *)                         [ -n "$path" ] || path="$1" ;;
@@ -75,7 +83,9 @@ while read -r c; do
             case "$path" in
                 graphql|[\"\']graphql[\"\'])
                     # Mutations by name; resolveReviewThread is allowed.
-                    case "$c" in
+                    # GraphQL ignores whitespace around ":", so "state :" is "state:".
+                    graphql_cmd="$(printf '%s' "$c" | sed -E 's/state[[:space:]]*:[[:space:]]*/state:/g')"
+                    case "$graphql_cmd" in
                         *unresolveReviewThread*) deny "unresolving a review thread" ;;
                         *mergePullRequest*|*enablePullRequestAutoMerge*) deny "merging a PR" ;;
                         *addComment*|*updateIssueComment*|*deleteIssueComment*|*minimizeComment*) deny "commenting" ;;
