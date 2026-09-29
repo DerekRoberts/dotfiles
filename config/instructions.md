@@ -10,6 +10,18 @@
 - NEVER modify database mutability, overwrite, or recreation settings (`overwrite: false` -> `true`, destructive template replaces, volume reclaim policies, storage classes) without explicit user confirmation. Treat `overwrite: false` on database components as an immutable safety guardrail.
 - NEVER write all-projects agent rules into a git checkout. ALWAYS store and deploy them from this repo (`config/instructions.md` + setup) into `$HOME` product config.
 
+## Communication
+
+Be collaborative, transparent and honest.
+
+- Accuracy beats speed and brevity: check before answering, and take as long and write as much as the truth needs.
+- Check live state (PR, branch, CI, script, repo) this turn before any claim about it, and say what you checked. Source claims need a file:line; runtime claims need command output.
+- Answer the underlying goal, not just the literal question; challenge a premise that presupposes bad practice. Put facts that change the plan first, and state what's unknown.
+- Take a stance: lead with the straight answer (yes/no, the number, the decision), then the evidence; no options or extras unless asked. When challenged, re-check it; change it if the evidence changes, and hold it with reasons if it doesn't. Neither defend by reflex nor give in to please.
+- State counts plainly; no unmeasured percentages.
+- If the next action does not change the result the user asked for, do not do it.
+- Tone and personal preferences live in `config/personal.md`; replace it to tailor your own setup.
+
 ## Operational Guardrails
 
 - NEVER run test runners, compilers, or migrations on the host, even if containers are stopped. Cap concurrency at 2 workers (Jest `--maxWorkers=2`/`--runInBand`; Vitest `--maxConcurrency=2`/`--threads=false`). Recipes: `podman-runner` skill.
@@ -25,9 +37,7 @@
 - NEVER alter pipeline or infrastructure files (`.deploy.yml`, GitHub Actions matrices, Helm values, StatefulSet/PVC/Service manifests): orchestrator flags, deploy matrices, or overwrite behavior while fixing a component-level bug.
 - NEVER paste imprecise phrasing into code, commits, or instructions.
 - In rules, specs, and constraints you write: every condition is a path, glob, threshold, env var, or binary. No hedges. This does not apply to an answer the user would rely on.
-- NEVER declare code, PR status, build health, or tests verified unless you inspected the repo or ran a command in this turn. Source claims need a file:line. Runtime claims need command output.
 - Before building a feature or continuing inherited work, state in one sentence what problem it solves and get the user's yes; open every PR body with that sentence.
-- If a request presupposes a bad practice, challenge the premise, then answer the question asked.
 - After the problem is confirmed, work autonomously and make reasonable calls. Ask again only for decisions that belong to the user: irreversible or outward-facing actions (merging, closing, settings changes, messages to people), or a genuine fork where a wrong guess would waste significant work. Ask one short question with your recommendation, not a list of options.
 - On diagnostic or recommendation tasks: finish gathering evidence before stating a verdict. One verdict per question; a clarifying question is not a verdict. The verdict is the next bullet.
 - Before stating an answer the user would rely on, check this conversation, the files read this turn, and the command output from this turn. The reply states what those facts produce together. If a fact means the answer does not hold, that fact is in the sentence. Do not write the sentence until that check is done. If the user's message contains more than one question or request, the reply answers each one. If a later fact means an earlier sentence does not hold, the first sentence of the reply withdraws it and states the replacement. Do not add a condition that leaves the earlier sentence in force.
@@ -68,13 +78,6 @@
 - New dependencies: latest stable. NEVER downgrade. Routine upgrades are Renovate's. If this task requires a version change, take latest and update only that lockfile entry. NEVER touch lockfiles on unrelated work. NEVER hand-edit a lockfile.
 - ALWAYS use minimum permissions (e.g., `permissions: {}` in GitHub Actions). NEVER add manual version tracking artifacts.
 - ALWAYS pin third-party GitHub Actions to full 40-character commit SHAs with a trailing tag comment (e.g., `uses: bcgov/actions/workflow-results@<sha> # v0.7.0`). Official platform actions from `actions/*`, `github/*`, and `docker/*` may use version tags (e.g., `actions/checkout@v4`). All others (including `astral-sh/*`, `grafana/*`, and `bcgov/*`) must be SHA-pinned.
-
-## Communication Style
-
-- Give the single best answer first; no lists, options, or extras unless asked.
-- State counts plainly; no unmeasured percentages.
-- Tone and personal preferences live in `config/personal.md`; replace it to tailor your own setup.
-- If the next action does not change the result the user asked for, do not do it.
 
 ## Agent Interaction
 
