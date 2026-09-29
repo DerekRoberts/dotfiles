@@ -30,6 +30,8 @@
 set -euo pipefail
 
 REF_NS="refs/bcgov-push"
+# AI tools, as regex alternatives: refused in branch names and attribution.
+AI_TOOLS='cursor|claude|copilot|codex|grok|devin|anthropic|openai|gemini|chatgpt'
 
 die()  { echo "bcgov-push: $*" >&2; exit 1; }
 info() { echo "  → $*"; }
@@ -41,7 +43,7 @@ check_branch_name() {
     local name="$1"
     [[ "$name" =~ ^[a-z]+/[A-Za-z0-9._/-]+$ ]] \
         || die "--to '$name' must look like <type>/<name>, e.g. fix/codeowners"
-    if [[ "${name,,}" =~ (^|[/._-])(cursor|claude|copilot|codex|grok|devin|anthropic|openai|gemini)([/._-]|$) ]]; then
+    if [[ "${name,,}" =~ (^|[/._-])($AI_TOOLS)([/._-]|$) ]]; then
         die "--to '$name' names an AI tool; pick a neutral branch name"
     fi
 }
@@ -59,8 +61,8 @@ check_text_clean() {
     hits="$(grep -n -i -E \
         -e 'cursoragent@cursor[.]com' \
         -e 'noreply@anthropic[.]com' \
-        -e 'co-authored-by:.*(cursor|claude|copilot|anthropic|openai|codex|grok)' \
-        -e 'generated (with|by) .*(cursor|claude|copilot|chatgpt|codex|grok)' \
+        -e "co-authored-by:.*($AI_TOOLS)" \
+        -e "generated (with|by) .*($AI_TOOLS)" \
         -e 'cursor[.]com' \
         -e 'cursor agent' || true)"
     [[ -z "$hits" ]] || die "$what carries AI attribution:"$'\n'"$hits"
@@ -115,7 +117,10 @@ main() {
     [[ -n "$to" ]] || die "--to <type>/<name> is required"
     check_branch_name "$to"
     [[ -z "$body_file" || -f "$body_file" ]] || die "--body-file '$body_file' not found"
-    [[ -z "$body_file" ]] || check_text_clean "PR body" < "$body_file"
+    if [[ -n "$body_file" ]]; then
+        body_file="$(realpath "$body_file")"
+        check_text_clean "PR body" < "$body_file"
+    fi
     command -v git >/dev/null || die "git not found"
     command -v gh >/dev/null || die "gh not found"
     unset GITHUB_TOKEN
@@ -173,7 +178,8 @@ main() {
     fi
 
     local pr_url=""
-    pr_url="$(gh pr list -R "$upstream" --head "$to" --state open --json url --jq '.[0].url // empty')"
+    pr_url="$(gh pr list -R "$upstream" --head "$to" --state open \
+        --json url,headRepositoryOwner --jq "[.[] | select(.headRepositoryOwner.login == \"$org\")][0].url // empty")"
     [[ -n "$pr_url" || -n "$body_file" ]] || die "no open PR for $to; --body-file is required to open one"
 
     if [[ -n "$parent" ]]; then

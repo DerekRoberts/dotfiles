@@ -20,6 +20,7 @@ expect "branch: no type"              fail check_branch_name codeowners
 expect "branch: tool prefix"          fail check_branch_name cursor/codeowners-1a2b
 expect "branch: tool word"            fail check_branch_name chore/claude-cleanup
 expect "branch: tool-like substring"  pass check_branch_name fix/cursorless-paging
+expect "branch: every tool word"      fail check_branch_name fix/chatgpt-output
 expect "title: conventional"          pass check_title "fix(codeowners): drop departed owners"
 expect "title: breaking"              pass check_title "feat!: new preset"
 expect "title: not conventional"      fail check_title "Update CODEOWNERS"
@@ -27,6 +28,7 @@ expect "title: attribution"           fail check_title "fix: thing (Cursor Agent
 expect "text: plain"                  pass check_text_clean t <<< $'Removes two owners.\n\nCloses #12'
 expect "text: AI trailer"             fail check_text_clean t <<< 'Co-authored-by: Cursor Agent <cursoragent@cursor.com>'
 expect "text: generated line"         fail check_text_clean t <<< 'Generated with Claude Code'
+expect "text: tool trailer"           fail check_text_clean t <<< 'Co-authored-by: Gemini <gemini@example.com>'
 expect "text: human trailer"          pass check_text_clean t <<< 'Co-authored-by: Jane Doe <jane@example.com>'
 
 # A fork branch with an AI-authored commit becomes one commit by the local user.
