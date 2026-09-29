@@ -77,6 +77,7 @@ This repository establishes a client-side safety net and policy framework that e
 - **Soft Policy vs. Hard Checks**:
   - *Soft Policy (Behavioral Guidelines)*: Structured behavioral constraints, communication standards, and planning expectations live in [`config/instructions.md`](config/instructions.md) and deploy directly to agent prompts (e.g., Cursor, Antigravity).
   - *Hard Checks (Hooks & Guardians)*: Automated verification runs locally via global Git hooks (`~/.githooks/pre-commit`, `~/.githooks/pre-push`) to block secret leakage and version regressions before commits are recorded.
+  - *Agent Guard*: `config/agent-guard/agent-guard.sh` (installed as `~/.local/bin/agent-guard`) is a short, readable reminder for a helpful agent that forgot a rule, not security. It knows only the plain forms: `gh pr merge`, force-push, tag push/creation, PR/issue comments, reviews, and closes, repo settings, secrets and variables, and crunchy writes (issue transfers are allowed). It tells the agent to ask the user. The rules read best as examples in `scripts/test-agent-guard.sh`.
 
 ### Allowed vs. Blocked Matrix
 
@@ -146,7 +147,8 @@ This repository establishes a client-side safety net and policy framework that e
    Not covered: there is no global `AGENTS.md` that every tool reads (`~/.agents/AGENTS.md` is only a proposal), and tools without a documented user-level rules file are not wired. VS Code also reads `~/.claude/rules`, so it may load these rules twice.
 
    **Customizing:** `config/instructions.md` holds generic rules; `config/personal.md` holds one user's tone and taste. To tailor your own setup, replace `config/personal.md` (or delete it for none) and run `setup.sh --ai`.
-4. **Shell & Agent Environment Isolation (`config/bashrc`)**: Copied to `~/.config/dotfiles/bashrc` on setup (not sourced from the git work tree). Detects AI agent execution (`ANTIGRAVITY_AGENT`) to strip prompt evaluation overhead and unset ambient `GITHUB_TOKEN` / `GH_TOKEN` environment variables so commands use authenticated local credentials.
+4. **Agent Guard (`~/.local/bin/agent-guard`)**: `agent-guard shell "<command>" [cwd]` or `agent-guard mcp <tool> <args-json>`; exit 0 allows, exit 2 denies with the reason on stderr. Cursor is wired via `config/agent-guard/cursor-hooks.json`; other tools (Antigravity/`agy`, Kilo, Claude Code-style CLIs) can call it from their own pre-command hook. A reminder, not a sandbox: anything it doesn't recognize is allowed.
+5. **Shell & Agent Environment Isolation (`config/bashrc`)**: Copied to `~/.config/dotfiles/bashrc` on setup (not sourced from the git work tree). Detects AI agent execution (`ANTIGRAVITY_AGENT`) to strip prompt evaluation overhead and unset ambient `GITHUB_TOKEN` / `GH_TOKEN` environment variables so commands use authenticated local credentials.
 
 ### Bypassing (Human Developers Only)
 
