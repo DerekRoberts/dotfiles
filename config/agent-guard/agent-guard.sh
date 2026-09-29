@@ -18,6 +18,7 @@ if [ "$1" = mcp ]; then
     case "$tool" in
         transfer_issue) ;;
         merge_pull_request)  deny "merging a PR" ;;
+        *unresolve*)         deny "unresolving a review thread" ;;
         resolve_*|*resolve*thread*) ;;
         *comment*|*review*)  case "$tool" in list_*|get_*) ;; *) deny "commenting or reviewing" ;; esac ;;
         *secret*|update_repository*|delete_repository*) deny "changing repo settings" ;;
