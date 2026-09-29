@@ -77,7 +77,7 @@ This repository establishes a client-side safety net and policy framework that e
 - **Soft Policy vs. Hard Checks**:
   - *Soft Policy (Behavioral Guidelines)*: Structured behavioral constraints, communication standards, and planning expectations live in [`config/instructions.md`](config/instructions.md) and deploy directly to agent prompts (e.g., Cursor, Antigravity).
   - *Hard Checks (Hooks & Guardians)*: Automated verification runs locally via global Git hooks (`~/.githooks/pre-commit`, `~/.githooks/pre-push`) to block secret leakage and version regressions before commits are recorded.
-  - *Agent Guard*: `config/agent-guard/agent-guard.sh` (installed as `~/.local/bin/agent-guard`) is a short, readable reminder for a helpful agent that forgot a rule, not security. It knows only the plain forms: `gh pr merge`, force-push, tag push/creation, PR/issue comments, reviews, and closes, repo settings, secrets and variables, and crunchy writes (issue transfers are allowed). It tells the agent to ask the user. The rules read best as examples in `scripts/test-agent-guard.sh`.
+  - *Agent Guard*: `config/agent-guard/agent-guard.sh` (installed as `~/.local/bin/agent-guard`) is a short, readable reminder for a helpful agent that forgot a rule, not security. It knows only the plain forms: `gh pr merge`, force-push, tag push/creation, PR/issue comments, reviews, and closes, repo settings, and secrets and variables (issue transfers and resolving review threads are allowed). It tells the agent to ask the user. The rules read best as examples in `scripts/test-agent-guard.sh`.
 
 ### Allowed vs. Blocked Matrix
 
@@ -86,7 +86,7 @@ This repository establishes a client-side safety net and policy framework that e
 | Tool / Domain | Permitted Actions | Rationale & Context |
 | :--- | :--- | :--- |
 | **`git`** | `commit`, `push` (non-force), branch creation, `fetch`, `merge origin/main` | Standard feature branch development. |
-| **`gh`** | `pr create`, `pr edit`, `pr view`, `pr diff`, read-only `api GET` | Opening and updating pull requests, inspecting review feedback. |
+| **`gh`** | `pr create`, `pr edit`, `pr view`, `pr diff`, `api` reads, GraphQL `resolveReviewThread`; `api -X` writes in any repository or path unless `agent-guard` blocks the pattern (`PUT …/merge`, `…/protection`, `…/rulesets`, `…/collaborators`) | Opening and updating pull requests, inspecting review feedback, resolving addressed review threads. `agent-guard` does not inspect other `api -X` writes; the Blocked rows below still apply as policy. |
 | **Package Managers** (`npm`, `uv`, `pip`, etc.) | Standard package install, build, test, and typecheck commands | Regular dependency resolution without peer dependency bypasses. |
 | **Diagnostics & Tests** | Running test suites, linters (`shellcheck`, `actionlint`, `eslint`), and build checks | Verifying code quality and runtime correctness prior to completion. |
 

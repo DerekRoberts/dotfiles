@@ -54,6 +54,7 @@ deny  'gh issue comment 3 --body hi'
 deny  'gh issue close 3'
 deny  'gh issue delete 3'
 allow 'gh issue create --title t --body b'
+allow "gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: \"PRRT_x\"}) { thread { isResolved } } }'"
 
 # Repo settings, secrets, variables
 deny  'gh repo edit --visibility public'
@@ -65,23 +66,25 @@ deny  'gh api -X PUT repos/o/r/branches/main/protection'
 allow 'gh api repos/o/r/branches/main/protection'
 allow 'gh repo view o/r'
 
-# Crunchy: writes blocked, reads and issue transfers allowed
-deny  'gh pr create -R bcgov/action-crunchy --title t --body b'
-deny  'git push' "$HOME/Repos/action-crunchy"
-deny  'cd ~/Repos/action-crunchy && git commit -m x'
-deny  '(cd ~/Repos/action-crunchy && git commit -m x)'
-allow 'cd ~/Repos/other && git commit -m x'
-deny  'git commit -m x -- crunchy/file' "$HOME/Repos/actions-openshift"
-allow 'git status' "$HOME/Repos/action-crunchy"
+# Crunchy: contributions and issue transfers allowed (cberg-aot reviews, see instructions.md)
+allow 'gh pr create -R bcgov/action-crunchy --title t --body b'
+allow 'git push' "$HOME/Repos/action-crunchy"
+allow 'cd ~/Repos/action-crunchy && git commit -m x'
+allow 'git commit -m x -- crunchy/file' "$HOME/Repos/actions-openshift"
+deny  'gh pr merge 12 -R bcgov/action-crunchy'
 allow 'gh issue transfer 7 bcgov/nr-fom'
 allow 'gh issue transfer 7 bcgov/action-crunchy'
 
 # GitHub MCP tools
 expect deny  mcp merge_pull_request '{}'
 expect deny  mcp add_issue_comment '{}'
+expect deny  mcp add_comment_to_pending_review '{}'
+expect deny  mcp create_pull_request_review '{}'
 expect allow mcp list_pull_request_reviews '{}'
+expect allow mcp resolve_review_thread '{"threadId":"PRRT_x"}'
+expect deny  mcp unresolve_review_thread '{"threadId":"PRRT_x"}'
 expect allow mcp create_pull_request '{"repo":"r"}'
-expect deny  mcp create_or_update_file '{"repo":"action-crunchy"}'
+expect allow mcp create_or_update_file '{"repo":"action-crunchy"}'
 expect allow mcp transfer_issue '{"repo":"action-crunchy"}'
 
 # Cursor adapter
