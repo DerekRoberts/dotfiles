@@ -6,7 +6,8 @@
 # tree equals the fork branch tip, authored and committed by the local git
 # identity, with a message built from --title only. Fork commit authors,
 # messages, and trailers never reach upstream. Updates to an existing upstream
-# branch are appended as another commit (fast-forward, never a force-push).
+# branch are appended as another commit (fast-forward, never a force-push);
+# the upstream branch must only carry changes that came from the fork branch.
 #
 # Usage:
 #   bcgov-push <fork-owner/repo> <fork-branch> --to <type>/<name> [options]
@@ -73,6 +74,16 @@ check_diff_clean() {
     [[ -z "$paths" ]] || die "change adds tool-specific files:"$'\n'"$paths"
     git diff --no-color --no-ext-diff -U0 "$from" "$to" \
         | awk '/^\+\+\+ /{next} /^\+/{print}' | check_text_clean "change"
+}
+
+# Fails unless <target>'s tree equals a commit on <base>..<fork>, i.e. every
+# change on the upstream branch came from the fork branch. A commit made
+# directly on the upstream branch would be dropped by the next publish.
+check_target_from_fork() {
+    local base="$1" target="$2" fork="$3" trees
+    trees="$(git log --format=%T "$base..$fork")"
+    grep -qxF "$(git rev-parse "$target^{tree}")" <<< "$trees" \
+        || die "upstream branch has changes that are not on the fork branch; put them on the fork branch first"
 }
 
 # Prints a new commit: tree of <tree_ref>, parent <parent>, local identity.
@@ -148,6 +159,7 @@ main() {
         git fetch -q --no-tags origin "+refs/heads/$to:$REF_NS/target"
         [[ "$(git merge-base "$REF_NS/base" "$REF_NS/target")" == "$base" ]] \
             || die "$to and the fork branch sit on different $default_branch commits; rebase one of them first"
+        check_target_from_fork "$base" "$REF_NS/target" "$REF_NS/fork"
         if [[ "$(git rev-parse "$REF_NS/target^{tree}")" == "$(git rev-parse "$REF_NS/fork^{tree}")" ]]; then
             info "$upstream $to already matches $fork $fork_branch; nothing to push"
             parent=""

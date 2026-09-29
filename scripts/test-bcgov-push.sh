@@ -48,6 +48,13 @@ check "commit: parent is base"        "$(git rev-parse "$commit^")" "$base"
 check "commit: local author"          "$(git log -1 --format='%an <%ae>|%cn <%ce>' "$commit")" "Test User <test@example.com>|Test User <test@example.com>"
 check "commit: message is title only" "$(git log -1 --format=%B "$commit")" "chore(codeowners): drop b"
 
+# Updates: the upstream branch must only carry trees published from the fork.
+git branch -q target "$commit"
+expect "update: target came from fork" pass check_target_from_fork "$base" target fork
+git checkout -q target; echo c >> CODEOWNERS; git commit -q -a -m "fix: direct edit"
+expect "update: direct upstream edit" fail check_target_from_fork "$base" target fork
+git checkout -q fork
+
 mkdir .cursor; echo x > .cursor/rules; git add .cursor
 git commit -q -m "chore: add rules"
 expect "diff: tool-specific file"     fail check_diff_clean "$base" HEAD
