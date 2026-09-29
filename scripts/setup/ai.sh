@@ -130,6 +130,42 @@ with open(out_path, "w", encoding="utf-8") as f:
     fi
 }
 
+# ── Agent Guard ──────────────────────────────────────────────────────────────
+
+# Tool-neutral Hard Stops check (~/.local/bin/agent-guard) plus the Cursor
+# adapter. Merges our entries into ~/.cursor/hooks.json so other hooks survive.
+install_agent_guard() {
+    section "Agent Guard"
+
+    local src="$DOTFILES_DIR/config/agent-guard"
+    install_copy "$src/agent-guard.sh" "$HOME/.local/bin/agent-guard"
+    success "Installed agent-guard → $HOME/.local/bin/agent-guard"
+
+    if ! command -v jq &>/dev/null; then
+        warn "jq not found — skipping the Cursor adapter"
+        return 0
+    fi
+    local dest_json="$HOME/.cursor/hooks.json"
+    install_copy "$src/cursor-hook.sh" "$HOME/.cursor/hooks/agent-guard.sh"
+    [[ -s "$dest_json" ]] || echo '{"version": 1, "hooks": {}}' > "$dest_json"
+
+    local tmp_file
+    tmp_file="$(mktemp "$HOME/.cursor/hooks.XXXXXX")"
+    if jq --slurpfile ours "$src/cursor-hooks.json" '
+        .version = 1
+        | .hooks = reduce ($ours[0].hooks | to_entries[]) as $e ((.hooks // {});
+            .[$e.key] = (((.[$e.key] // []) | map(select(.command != $e.value[0].command))) + $e.value))
+        ' "$dest_json" > "$tmp_file"; then
+        chmod 644 "$tmp_file"
+        mv -f "$tmp_file" "$dest_json"
+        success "Cursor adapter installed → $dest_json"
+    else
+        rm -f "$tmp_file"
+        warn "Failed to merge Cursor hooks into $dest_json"
+        return 1
+    fi
+}
+
 # ── Ponytail Plugin & Rules ──────────────────────────────────────────────────
 
 install_ponytail() {
@@ -241,7 +277,7 @@ Usage:
   scripts/setup/ai.sh [OPTIONS]
 
 Configures AI assistant environments, prompt instructions, agent skills,
-Ponytail plugin/rules, and GitHub MCP server.
+agent-guard, Ponytail plugin/rules, and GitHub MCP server.
 
 Options:
   --help, -h   Show this help
@@ -265,6 +301,7 @@ main() {
 
     echo "=== Configuring AI Assistant Environment ==="
     install_ai_wiring
+    install_agent_guard
     install_ponytail
     setup_github_mcp
     success "AI assistant configuration complete"

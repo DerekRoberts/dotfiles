@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      { "command": "./hooks/agent-guard.sh", "timeout": 10, "failClosed": true }
+    ],
+    "beforeMCPExecution": [
+      { "command": "./hooks/agent-guard.sh", "timeout": 10, "failClosed": true }
+    ]
+  }
+}
