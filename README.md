@@ -77,7 +77,7 @@ This repository establishes a client-side safety net and policy framework that e
 - **Soft Policy vs. Hard Checks**:
   - *Soft Policy (Behavioral Guidelines)*: Structured behavioral constraints, communication standards, and planning expectations live in [`config/instructions.md`](config/instructions.md) and deploy directly to agent prompts (e.g., Cursor, Antigravity).
   - *Hard Checks (Hooks & Guardians)*: Automated verification runs locally via global Git hooks (`~/.githooks/pre-commit`, `~/.githooks/pre-push`) to block secret leakage and version regressions before commits are recorded.
-  - *Agent Hook*: `config/cursor/hooks/agent-guard.sh` runs as a Cursor `beforeShellExecution` / `beforeMCPExecution` hook (installed to `~/.cursor/hooks/` by `scripts/setup/ai.sh`) and denies merges, force-pushes, tag creation/pushes, comments/reviews/closes, repo/org settings changes, and crunchy writes. It only sees agent commands; human terminals are untouched. Test: `bash scripts/test-agent-guard.sh`.
+  - *Agent Guard*: `config/agent-guard/agent-guard.sh` (installed as `~/.local/bin/agent-guard`) checks an agent's shell command or GitHub tool call and denies merges, force-pushes, tag creation/pushes, comments/reviews/closes, repo/org settings changes, and crunchy writes (issue transfers are allowed). Each AI tool calls it from a thin pre-command hook adapter; human terminals are untouched. Test: `bash scripts/test-agent-guard.sh`.
 
 ### Allowed vs. Blocked Matrix
 
@@ -135,7 +135,7 @@ This repository establishes a client-side safety net and policy framework that e
 1. **Global Git Pre-Commit Hook (`~/.githooks/pre-commit`)**: Configured globally via `git config --global core.hooksPath ~/.githooks`. Executes `gitleaks protect --staged --redact --no-banner` on every commit.
 2. **Global Git Pre-Push Hook (`~/.githooks/pre-push`)**: Blocks accidental direct pushes to `main` or `master` across all repositories unless explicitly bypassed by a human developer.
 3. **Prompt-Scope Fencing & Behavioral Instructions (`config/instructions.md`)**: Copied to `~/.gemini/GEMINI.md` and a user-scoped local Cursor plugin at `~/.cursor/plugins/local/dotfiles` (always-apply `.mdc`). Not written into other repositories.
-4. **Cursor Agent Guard (`~/.cursor/hooks/agent-guard.sh`)**: Denies merges, force-pushes, tags, comments/reviews/closes, settings changes, and crunchy writes for Cursor agent shell and GitHub MCP calls. Commands hidden in `bash -c`, scripts, or variables are not parsed; it is a safety belt, not a sandbox.
+4. **Agent Guard (`~/.local/bin/agent-guard`)**: Tool-neutral: `agent-guard shell "<command>" [cwd]` or `agent-guard mcp <tool> <args-json>`; exit 0 allows, exit 2 denies with the reason on stderr. Cursor is wired via `config/agent-guard/cursor-hooks.json` (`beforeShellExecution` / `beforeMCPExecution`). Other tools (Antigravity/`agy`, Kilo, Claude Code-style CLIs) can call it from their own pre-command hook; none are wired here yet. It guides a helpful agent that forgot a rule; it is not a sandbox.
 5. **Shell & Agent Environment Isolation (`config/bashrc`)**: Copied to `~/.config/dotfiles/bashrc` on setup (not sourced from the git work tree). Detects AI agent execution (`ANTIGRAVITY_AGENT`) to strip prompt evaluation overhead and unset ambient `GITHUB_TOKEN` / `GH_TOKEN` environment variables so commands use authenticated local credentials.
 
 ### Bypassing (Human Developers Only)
