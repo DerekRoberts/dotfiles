@@ -9,7 +9,7 @@
 # Exit 0 = allow. Exit 2 = deny, reason on stderr.
 
 deny() {
-    echo "agent-guard: $1 is Derek's call. Stop and ask Derek instead." >&2
+    echo "agent-guard: $1 needs the user's approval. Stop and ask the user instead." >&2
     exit 2
 }
 
