@@ -68,6 +68,9 @@ allow 'gh repo view o/r'
 # Crunchy: writes blocked, reads and issue transfers allowed
 deny  'gh pr create -R bcgov/action-crunchy --title t --body b'
 deny  'git push' "$HOME/Repos/action-crunchy"
+deny  'cd ~/Repos/action-crunchy && git commit -m x'
+deny  '(cd ~/Repos/action-crunchy && git commit -m x)'
+allow 'cd ~/Repos/other && git commit -m x'
 deny  'git commit -m x -- crunchy/file' "$HOME/Repos/actions-openshift"
 allow 'git status' "$HOME/Repos/action-crunchy"
 allow 'gh issue transfer 7 bcgov/nr-fom'

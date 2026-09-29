@@ -60,7 +60,8 @@ while read -r c; do
         "git tag "*)                                      deny "creating a tag" ;;
     esac
 
-    case "$c $dir" in
+    # Whole command, so "cd .../action-crunchy && git commit" counts too.
+    case "$cmd $dir" in
         *action-crunchy*|*crunchy/*)
             case "$c" in
                 "git commit"*|"git push"*|"gh pr create"*|"gh pr edit"*|"gh api -X"*) deny "writing to crunchy" ;;
