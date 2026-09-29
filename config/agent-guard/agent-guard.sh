@@ -22,9 +22,47 @@ if [ "$1" = mcp ]; then
         resolve_*|*resolve*thread*) ;;
         *comment*|*review*)  case "$tool" in list_*|get_*) ;; *) deny "commenting or reviewing" ;; esac ;;
         *secret*|update_repository*|delete_repository*) deny "changing repo settings" ;;
+        update_issue|update_pull_request|issue_write|pull_request_write)
+            case "$3" in *'"state"'*) deny "closing or reopening an issue or PR" ;; esac ;;
     esac
     exit 0
 fi
+
+# Reads a "gh api" command into: path (the endpoint), method (-X/--method,
+# or POST when it sends fields with -f/-F/--input), and state (a field sets
+# "state", i.e. closes or reopens).
+gh_api() {
+    path='' method='' fields='' state=''
+    set -f
+    # shellcheck disable=SC2086 # split into words on purpose
+    set -- $1
+    set +f
+    shift 2
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -X|--method)               method="$2"; shift ;;
+            -X*)                       method="${1#-X}" ;;
+            --method=*)                method="${1#*=}" ;;
+            -f|-F|--field|--raw-field) fields=1
+                                       case "$2" in state=*|[\"\']state=*) state=1 ;; esac; shift ;;
+            -f*|-F*|--field=*|--raw-field=*)
+                                       fields=1
+                                       case "$1" in
+                                           -f*) v="${1#-f}" ;;
+                                           -F*) v="${1#-F}" ;;
+                                           *)   v="${1#*=}" ;;
+                                       esac
+                                       case "$v" in state=*|[\"\']state=*) state=1 ;; esac ;;
+            --input|--input=*)         fields=1; [ "$1" = --input ] && shift ;;
+            -H|--header|-q|--jq|-t|--template|--hostname|--cache|-p|--preview) shift ;;
+            -*) ;;
+            *)                         [ -n "$path" ] || path="$1" ;;
+        esac
+        shift
+    done
+    [ -n "$method" ] || { [ -n "$fields" ] && method=POST; }
+    method="$(printf '%s' "${method:-GET}" | tr '[:lower:]' '[:upper:]')"
+}
 
 cmd="$2" dir="${3:-$PWD}"
 
@@ -40,8 +78,32 @@ while read -r c; do
         "gh issue comment"*|"gh issue close"*|"gh issue delete"*) deny "commenting on, closing, or deleting an issue" ;;
         "gh repo edit"*|"gh repo archive"*|"gh repo delete"*)     deny "changing repo settings" ;;
         "gh secret set"*|"gh secret delete"*|"gh variable set"*|"gh variable delete"*) deny "changing secrets or variables" ;;
-        "gh api -X PUT"*"/merge"*)                        deny "merging a PR" ;;
-        "gh api -X "*/protection*|"gh api -X "*/rulesets*|"gh api -X "*/collaborators*) deny "changing repo settings" ;;
+        "gh api "*)
+            gh_api "$c"
+            case "$path" in
+                graphql|[\"\']graphql[\"\'])
+                    # Mutations by name; resolveReviewThread is allowed.
+                    # GraphQL ignores whitespace around ":", so "state :" is "state:".
+                    graphql_cmd="$(printf '%s' "$c" | sed -E 's/state[[:space:]]*:[[:space:]]*/state:/g')"
+                    case "$graphql_cmd" in
+                        *unresolveReviewThread*) deny "unresolving a review thread" ;;
+                        *mergePullRequest*|*enablePullRequestAutoMerge*) deny "merging a PR" ;;
+                        *addComment*|*updateIssueComment*|*deleteIssueComment*|*minimizeComment*) deny "commenting" ;;
+                        *addPullRequestReview*|*submitPullRequestReview*|*dismissPullRequestReview*) deny "reviewing" ;;
+                        *updatePullRequestReview*|*deletePullRequestReview*) deny "reviewing" ;;
+                        *closeIssue*|*reopenIssue*|*deleteIssue*|*closePullRequest*|*reopenPullRequest*) deny "closing or reopening an issue or PR" ;;
+                        *updateIssue*state:*|*updatePullRequest*state:*) deny "closing or reopening an issue or PR" ;;
+                    esac
+                    continue ;;
+            esac
+            [ "$method" = GET ] && continue
+            case "$path" in
+                */pulls/*/merge*)                          deny "merging a PR" ;;
+                */comments*|*/reviews*)                    deny "commenting or reviewing" ;;
+                */protection*|*/rulesets*|*/collaborators*) deny "changing repo settings" ;;
+                */secrets*|*/variables*)                   deny "changing secrets or variables" ;;
+                */issues/[0-9]*|*/pulls/[0-9]*)            [ -z "$state" ] || deny "closing or reopening an issue or PR" ;;
+            esac ;;
 
         "git push"*" -f"|"git push"*" -f "*|"git push"*" --force"*) deny "force-pushing" ;;
         "git push"*" --tags"*)                            deny "pushing tags" ;;
