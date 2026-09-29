@@ -77,7 +77,7 @@ This repository establishes a client-side safety net and policy framework that e
 - **Soft Policy vs. Hard Checks**:
   - *Soft Policy (Behavioral Guidelines)*: Structured behavioral constraints, communication standards, and planning expectations live in [`config/instructions.md`](config/instructions.md) and deploy directly to agent prompts (e.g., Cursor, Antigravity).
   - *Hard Checks (Hooks & Guardians)*: Automated verification runs locally via global Git hooks (`~/.githooks/pre-commit`, `~/.githooks/pre-push`) to block secret leakage and version regressions before commits are recorded.
-  - *Agent Guard*: `config/agent-guard/agent-guard.sh` (installed as `~/.local/bin/agent-guard`) is a short, readable reminder for a helpful agent that forgot a rule, not security. It knows only the plain forms: `gh pr merge`, force-push, tag push/creation, PR/issue comments, reviews, and closes, repo settings, and secrets and variables, whether via `gh` subcommands, raw `gh api` writes, GraphQL mutations, or GitHub MCP tools (issue transfers and resolving review threads are allowed). On `git commit` and `gh pr create` it also diffs the change and denies a removed `test(` / `it(`, a workflow job whose id contains `test`, or a matrix row. It tells the agent to ask the user. The rules read best as examples in `scripts/test-agent-guard.sh`.
+  - *Agent Guard*: `config/agent-guard/agent-guard.sh` (installed as `~/.local/bin/agent-guard`) is a short, readable reminder for a helpful agent that forgot a rule, not security. It knows only the plain forms: `gh pr merge`, force-push, tag push/creation, PR/issue comments, reviews, and closes, repo settings, and secrets and variables, whether via `gh` subcommands, raw `gh api` writes, GraphQL mutations, or GitHub MCP tools (issue transfers and resolving review threads are allowed). It tells the agent to ask the user. The rules read best as examples in `scripts/test-agent-guard.sh`.
 
 ### Allowed vs. Blocked Matrix
 
@@ -96,7 +96,6 @@ This repository establishes a client-side safety net and policy framework that e
 | :--- | :--- | :--- |
 | **`oc` / `kubectl`** | All commands and subcommands | Prevents automated cluster access, data leakage, and unintended modifications to live OpenShift/Kubernetes environments. |
 | **`git`** | `commit --no-verify`, `push --no-verify`, `commit -n` | Prohibits agents from bypassing local pre-commit hooks and secret scanning. |
-| **`git` / `gh`** | `commit` or `pr create` whose diff removes a `test(` / `it(`, a workflow job id containing `test`, or a matrix row | A failing check stays. The user commits a removal they asked for. |
 | **`git`** | `commit --amend` | Prevents history rewrites on shared or existing commit chains. |
 | **`git`** | `config` subcommand | Prevents agents from altering global/local git configurations or disabling safety hooks. |
 | **`git`** | write `tag`, `push --tags` | Restricts release tagging to human maintainers. |
