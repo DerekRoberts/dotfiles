@@ -134,7 +134,19 @@ This repository establishes a client-side safety net and policy framework that e
 
 1. **Global Git Pre-Commit Hook (`~/.githooks/pre-commit`)**: Configured globally via `git config --global core.hooksPath ~/.githooks`. Executes `gitleaks protect --staged --redact --no-banner` on every commit.
 2. **Global Git Pre-Push Hook (`~/.githooks/pre-push`)**: Blocks accidental direct pushes to `main` or `master` across all repositories unless explicitly bypassed by a human developer.
-3. **Prompt-Scope Fencing & Behavioral Instructions (`config/instructions.md`)**: Copied to `~/.gemini/GEMINI.md` and a user-scoped local Cursor plugin at `~/.cursor/plugins/local/dotfiles` (always-apply `.mdc`). Not written into other repositories.
+3. **Prompt-Scope Fencing & Behavioral Instructions (`config/instructions.md` + `config/personal.md`)**: Concatenated into `~/.local/share/dotfiles/instructions.md`, then installed into each AI tool's user-level rules location by `scripts/setup/ai.sh`. Not written into other repositories.
+
+   | Tool | Installed to | Docs |
+   | :--- | :--- | :--- |
+   | Antigravity / `agy` | `~/.gemini/GEMINI.md` | |
+   | Cursor | `~/.cursor/plugins/local/dotfiles/rules/instructions.mdc` (always-apply plugin rule) | |
+   | Claude Code | `~/.claude/rules/dotfiles.md` | [User-level rules](https://code.claude.com/docs/en/memory) |
+   | GitHub Copilot (CLI and VS Code) | `~/.copilot/instructions/dotfiles.instructions.md` (`applyTo: '**'`) | [CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions), [VS Code](https://code.visualstudio.com/docs/agent-customization/custom-instructions) |
+   | Kilo | managed block in `~/.config/kilo/AGENTS.md` (other content kept) | [Global instructions](https://kilo.ai/docs/customize/custom-instructions) |
+
+   Not covered: there is no global `AGENTS.md` that every tool reads (`~/.agents/AGENTS.md` is only a proposal), and tools without a documented user-level rules file are not wired. VS Code also reads `~/.claude/rules`, so it may load these rules twice.
+
+   **Customizing:** `config/instructions.md` holds generic rules; `config/personal.md` holds one user's tone and taste. To tailor your own setup, replace `config/personal.md` (or delete it for none) and run `setup.sh --ai`.
 4. **Agent Guard (`~/.local/bin/agent-guard`)**: `agent-guard shell "<command>" [cwd]` or `agent-guard mcp <tool> <args-json>`; exit 0 allows, exit 2 denies with the reason on stderr. Cursor is wired via `config/agent-guard/cursor-hooks.json`; other tools (Antigravity/`agy`, Kilo, Claude Code-style CLIs) can call it from their own pre-command hook. A reminder, not a sandbox: anything it doesn't recognize is allowed.
 5. **Shell & Agent Environment Isolation (`config/bashrc`)**: Copied to `~/.config/dotfiles/bashrc` on setup (not sourced from the git work tree). Detects AI agent execution (`ANTIGRAVITY_AGENT`) to strip prompt evaluation overhead and unset ambient `GITHUB_TOKEN` / `GH_TOKEN` environment variables so commands use authenticated local credentials.
 
@@ -203,6 +215,7 @@ Two other deliberate trade-offs:
 │   ├── gitconfig                      # Global git include (copied to ~/.config/dotfiles/gitconfig)
 │   ├── hooks/                         # Global git hooks (copied to ~/.githooks)
 │   ├── instructions.md                # Unified AI agent instructions & guardrails
+│   ├── personal.md                    # Personal tone & taste, appended to instructions.md
 │   ├── skills/
 │   │   ├── podman-runner/             # Containerized execution & resource limits
 │   │   ├── preflight/                 # Ground external prompts against reality
