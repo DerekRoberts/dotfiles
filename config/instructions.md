@@ -1,6 +1,6 @@
 # Hard Stops
 
-- NEVER comment on, review, close, or merge PRs/issues under user credentials; NEVER create releases/tags, force-push, manage secrets, modify repository settings (via `gh api` or `gh repo edit`), or run `oc`/`kubectl`. Draft those in chat. Commits, `git push`, `gh issue create`, and `gh pr create|edit` are fine. If a command is blocked, do not bypass it.
+- NEVER comment on, review, close, or merge PRs/issues under user credentials; NEVER create releases/tags, force-push, manage secrets, modify repository settings (via `gh api` or `gh repo edit`), or run `oc`/`kubectl`. Draft those in chat. Commits, `git push`, `gh issue create`, and `gh pr create|edit` are fine. If a command is blocked, do not bypass it. For Cursor agents, `~/.cursor/hooks/agent-guard.sh` enforces the git and GitHub items here.
 - NEVER branch from a feature branch, including merged ones; ALWAYS `git fetch origin && git checkout -b <type>/<name> origin/main`.
 - NEVER commit credentials, secrets, or PII.
 - NEVER silence diagnostics (`eslint-disable`, `@ts-ignore`); fix the root cause.
