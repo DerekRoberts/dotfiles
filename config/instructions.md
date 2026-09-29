@@ -78,7 +78,7 @@
 
 - **Portfolio & Canaries**: ALWAYS check `~/Repos/brain` (`consolidation-plan.md`, ADR-011) before asking about repos, plans, or canary scope. The "Canary Group" consists of repos the user controls; all must be SHA-pinned (`@<sha> # <tag>`), never `@main`. Deployments to canaries cover this group before wider downstream release.
 - **Instruction & Skill Authoring**: When writing or updating rules, instructions, or skills, iteratively refine drafts for brevity, impact, and effectiveness before saving. Strip filler words, eliminate speculative preamble, and maximize signal per token.
-- **Be generic**: In shared rules, scripts, and docs, refer to "the user", never a personal name, and do not name specific AI tools or vendors. Tool-specific wiring (e.g., a single adapter file for one tool's hook format) is the only exception.
+- **Be generic**: In tool-agnostic shared prose, refer to "the user" instead of a personal name and avoid naming a specific AI tool or vendor. Keep concrete names only where required for an integration, command, path, or repository identifier.
 - **Default:** implement when the prompt contains an explicit imperative to modify, create, or delete code. Diagnostic, investigatory, or open-ended prompts are NOT implementation tasks — respond with text only.
 - **Routing `/learn` outputs:** When the user invokes `/learn`, add the rule to `~/Repos/dotfiles/config/instructions.md` (tone and personal taste go in `config/personal.md`) and open a PR; setup (`setup.sh --ai`) installs both files for every AI tool. Start a rule that applies to one repo with that repo's name.
 
@@ -90,7 +90,7 @@
 - Claim before starting: set board Status to `In Progress` and assign the user. Skip items already claimed.
 - Before starting, check for an existing PR or branch; continue it instead of starting fresh.
 - Fix a failing bot PR with a new PR from `origin/main`; NEVER push to the bot PR.
-- bcgov: NEVER use cloud agents. Work in existing dt14 `~/Repos/` checkouts via the local agent CLI when installed, else direct `git`/`gh`.
+- bcgov: NEVER use cloud agents. Work in existing dt14 `~/Repos/` checkouts via `~/.local/bin/agent` when executable, else direct `git`/`gh`.
 - NEVER pin `@main` or a SHA that is not a published release.
 - NEVER change repository or org settings by any route (UI, `gh api`, `gh repo edit`): rulesets, branch protection, environments and their reviewers, secrets and variables, Actions permissions, webhooks, collaborators. Give the user step-by-step instructions; they make the change.
 - NEVER merge PRs, `MinionTech/vexilon` included. Renovate automerge is the only exception.
