@@ -20,7 +20,15 @@ DOTFILES_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 install_ai_wiring() {
     section "AI Assistant Instructions & Skills"
 
-    local INSTRUCTIONS_FILE="$DOTFILES_DIR/config/instructions.md"
+    # Shared rules plus the personal layer (config/personal.md), as one file
+    # that every AI tool below receives.
+    local INSTRUCTIONS_FILE="$HOME/.local/share/dotfiles/instructions.md"
+    mkdir -p "${INSTRUCTIONS_FILE%/*}"
+    cat "$DOTFILES_DIR/config/instructions.md" > "$INSTRUCTIONS_FILE"
+    if [[ -f "$DOTFILES_DIR/config/personal.md" ]]; then
+        printf '\n' >> "$INSTRUCTIONS_FILE"
+        cat "$DOTFILES_DIR/config/personal.md" >> "$INSTRUCTIONS_FILE"
+    fi
     info "Configuring Antigravity global instructions and skills..."
     mkdir -p "$HOME/.gemini/config" "$HOME/.gemini/antigravity" "$HOME/.agents/skills"
     if [[ -f "$INSTRUCTIONS_FILE" ]]; then
