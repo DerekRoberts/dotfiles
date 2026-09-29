@@ -39,6 +39,8 @@ check allow 'gh api repos/o/r/git/refs -f ref=refs/heads/x -f sha=abc'
 check allow 'git commit -m "docs: explain why gh pr merge is blocked"'
 check allow 'git tag -l "v*"'
 check allow 'gh pr view -R bcgov/action-crunchy 5'
+check allow 'gh issue transfer 7 bcgov/nr-fom'
+check allow "gh api graphql -f query='mutation { transferIssue(input:{issueId:\"I_1\",repositoryId:\"R_1\"}) { issue { url } } }'"
 
 # Merges.
 check deny 'gh pr merge 12 --squash'
@@ -81,6 +83,8 @@ check deny 'gh api --method PATCH orgs/bcgov -f x=y'
 
 # Crunchy.
 check deny 'gh pr create -R bcgov/action-crunchy --title t --body b'
+check deny 'gh issue transfer 7 bcgov/action-crunchy'
+check deny 'gh issue transfer 7 bcgov/nr-fom -R bcgov/action-crunchy'
 check deny 'gh api -X PUT repos/bcgov/actions-openshift/contents/crunchy/values.yaml -f message=m'
 git init -q "$TMP/crunchy" && git -C "$TMP/crunchy" remote add origin https://github.com/bcgov/action-crunchy.git
 check deny 'git commit -m change' "$TMP/crunchy"
@@ -100,6 +104,8 @@ check_mcp deny add_issue_comment '{"body":"hi"}'
 check_mcp deny update_pull_request '{"state":"closed"}'
 check_mcp deny create_or_update_file '{"owner":"bcgov","repo":"action-crunchy"}'
 check_mcp allow create_pull_request '{"owner":"o","repo":"r"}'
+check_mcp allow transfer_issue '{"owner":"o","repo":"r","new_repo":"r2"}'
+check_mcp deny transfer_issue '{"owner":"bcgov","repo":"r","new_repo":"action-crunchy"}'
 check_mcp allow list_pull_request_reviews '{}'
 
 exit "$fails"
