@@ -45,6 +45,17 @@ while read -r c; do
 
         "git push"*" -f"|"git push"*" -f "*|"git push"*" --force"*) deny "force-pushing" ;;
         "git push"*" --tags"*)                            deny "pushing tags" ;;
+        "git push"*)
+            # A tag pushed by name, e.g. "git push origin v1.2.3" or "+v1:v1".
+            for a in ${c#git push}; do
+                a="${a#+}" a="${a%%:*}"
+                case "$a" in
+                    -*) ;;
+                    refs/tags/*) deny "pushing tags" ;;
+                    *) git -C "$dir" show-ref --verify --quiet "refs/tags/$a" 2>/dev/null && deny "pushing tags" ;;
+                esac
+            done ;;
+        "git update-ref"*"refs/tags/"*)                   deny "creating a tag" ;;
         "git tag"|"git tag -l"*|"git tag --list"*)        ;;
         "git tag "*)                                      deny "creating a tag" ;;
     esac

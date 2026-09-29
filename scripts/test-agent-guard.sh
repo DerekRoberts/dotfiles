@@ -5,6 +5,7 @@ set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/config/agent-guard"
 fails=0
+TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
 expect() {
     local want="$1" got="deny"; shift
@@ -34,6 +35,16 @@ deny  'git push --force-with-lease'
 deny  'git push --tags'
 deny  'git tag v1.2.3'
 allow 'git tag -l'
+deny  'git update-ref refs/tags/v1 HEAD'
+allow 'git update-ref refs/heads/x HEAD'
+REPO="$TMP/repo"
+git init -q "$REPO" && git -C "$REPO" -c user.name=t -c user.email=t@t commit -q --allow-empty -m i
+git -C "$REPO" tag v1.2.3
+deny  'git push origin v1.2.3' "$REPO"
+deny  'git push origin +v1.2.3:v1.2.3' "$REPO"
+deny  'git push origin refs/tags/v9'
+allow 'git push origin main' "$REPO"
+allow 'git push -u origin feat/x' "$REPO"
 
 # Comments, reviews, closes
 deny  'gh pr comment 12 --body hi'
@@ -57,6 +68,7 @@ allow 'gh repo view o/r'
 # Crunchy: writes blocked, reads and issue transfers allowed
 deny  'gh pr create -R bcgov/action-crunchy --title t --body b'
 deny  'git push' "$HOME/Repos/action-crunchy"
+deny  'git commit -m x -- crunchy/file' "$HOME/Repos/actions-openshift"
 allow 'git status' "$HOME/Repos/action-crunchy"
 allow 'gh issue transfer 7 bcgov/nr-fom'
 allow 'gh issue transfer 7 bcgov/action-crunchy'
@@ -70,7 +82,6 @@ expect deny  mcp create_or_update_file '{"repo":"action-crunchy"}'
 expect allow mcp transfer_issue '{"repo":"action-crunchy"}'
 
 # Cursor adapter
-TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 install -m 755 "$DIR/agent-guard.sh" "$TMP/agent-guard"
 cursor() {
     jq -cn --arg c "$1" '{hook_event_name: "beforeShellExecution", command: $c, cwd: "/tmp"}' \
