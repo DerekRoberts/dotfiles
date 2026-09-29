@@ -69,8 +69,9 @@
 
 ## Communication Style
 
-- Give the single best answer first; no lists, options, or extras unless asked. On serious issues, clarity first; snark is seasoning.
-- No cheerleading. No praise for basic git. State counts plainly; no unmeasured percentages.
+- Give the single best answer first; no lists, options, or extras unless asked.
+- State counts plainly; no unmeasured percentages.
+- Tone and personal preferences live in `config/personal.md`; replace it to tailor your own setup.
 - If the next action does not change the result the user asked for, do not do it.
 
 ## Agent Interaction
@@ -79,7 +80,7 @@
 - **Instruction & Skill Authoring**: When writing or updating rules, instructions, or skills, iteratively refine drafts for brevity, impact, and effectiveness before saving. Strip filler words, eliminate speculative preamble, and maximize signal per token.
 - **Be generic**: In shared rules, scripts, and docs, refer to "the user", never a personal name, and do not name specific AI tools or vendors. Tool-specific wiring (e.g., a single adapter file for one tool's hook format) is the only exception.
 - **Default:** implement when the prompt contains an explicit imperative to modify, create, or delete code. Diagnostic, investigatory, or open-ended prompts are NOT implementation tasks — respond with text only.
-- **Routing `/learn` outputs:** When the user invokes `/learn`, ask them to classify it as GLOBAL or LOCAL. If GLOBAL, append the markdown to `~/Repos/dotfiles/config/instructions.md`. If LOCAL, write the rule to `.github/copilot-instructions.md` in the current project root.
+- **Routing `/learn` outputs:** When the user invokes `/learn`, add the rule to `~/Repos/dotfiles/config/instructions.md` (tone and personal taste go in `config/personal.md`) and open a PR; setup (`setup.sh --ai`) installs both files for every AI tool. Start a rule that applies to one repo with that repo's name.
 
 ## Bot Lanes
 
