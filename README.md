@@ -133,7 +133,9 @@ This repository establishes a client-side safety net and policy framework that e
 
 1. **Global Git Pre-Commit Hook (`~/.githooks/pre-commit`)**: Configured globally via `git config --global core.hooksPath ~/.githooks`. Executes `gitleaks protect --staged --redact --no-banner` on every commit.
 2. **Global Git Pre-Push Hook (`~/.githooks/pre-push`)**: Blocks accidental direct pushes to `main` or `master` across all repositories unless explicitly bypassed by a human developer.
-3. **Prompt-Scope Fencing & Behavioral Instructions (`config/instructions.md`)**: Copied to `~/.gemini/GEMINI.md` and a user-scoped local Cursor plugin at `~/.cursor/plugins/local/dotfiles` (always-apply `.mdc`). Not written into other repositories.
+3. **Prompt-Scope Fencing & Behavioral Instructions (`config/instructions.md` + `config/personal.md`)**: Concatenated into `~/.local/share/dotfiles/instructions.md`, then copied to `~/.gemini/GEMINI.md` and a user-scoped local Cursor plugin at `~/.cursor/plugins/local/dotfiles` (always-apply `.mdc`). Not written into other repositories.
+
+   **Customizing:** `config/instructions.md` holds generic rules; `config/personal.md` holds one user's tone and taste. To tailor your own setup, replace `config/personal.md` (or delete it for none) and run `setup.sh --ai`.
 4. **Shell & Agent Environment Isolation (`config/bashrc`)**: Copied to `~/.config/dotfiles/bashrc` on setup (not sourced from the git work tree). Detects AI agent execution (`ANTIGRAVITY_AGENT`) to strip prompt evaluation overhead and unset ambient `GITHUB_TOKEN` / `GH_TOKEN` environment variables so commands use authenticated local credentials.
 
 ### Bypassing (Human Developers Only)
@@ -201,6 +203,7 @@ Two other deliberate trade-offs:
 │   ├── gitconfig                      # Global git include (copied to ~/.config/dotfiles/gitconfig)
 │   ├── hooks/                         # Global git hooks (copied to ~/.githooks)
 │   ├── instructions.md                # Unified AI agent instructions & guardrails
+│   ├── personal.md                    # Personal tone & taste, appended to instructions.md
 │   ├── skills/
 │   │   ├── podman-runner/             # Containerized execution & resource limits
 │   │   ├── preflight/                 # Ground external prompts against reality
