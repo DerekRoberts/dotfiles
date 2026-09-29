@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Run ShellCheck
-        run: shellcheck setup.sh scripts/*.sh scripts/setup/*.sh config/agent-guard/*.sh
+        run: shellcheck setup.sh scripts/*.sh scripts/setup/*.sh config/agent-guard/*.sh config/hooks/commit-msg
 
   actionlint:
     name: Actionlint
@@ -57,4 +57,7 @@ jobs:
 
       - name: Test agent-guard
         run: bash scripts/test-agent-guard.sh
+
+      - name: Test commit-msg hook
+        run: bash scripts/test-commit-msg.sh
 
