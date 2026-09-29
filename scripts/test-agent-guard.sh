@@ -94,7 +94,7 @@ check_mcp allow create_pull_request '{"owner":"o","repo":"r"}'
 check_mcp allow list_pull_request_reviews '{}'
 
 # Cursor adapter.
-mkdir -p "$TMP/bin" && ln -s "$GUARD" "$TMP/bin/agent-guard"
+mkdir -p "$TMP/bin" && install -m 755 "$GUARD" "$TMP/bin/agent-guard"
 cursor() {
     jq -cn --arg c "$1" '{hook_event_name: "beforeShellExecution", command: $c, cwd: "/tmp"}' \
         | PATH="$TMP/bin:$PATH" sh "$DOTFILES_DIR/config/agent-guard/cursor-hook.sh" | jq -r .permission
