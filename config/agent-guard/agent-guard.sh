@@ -82,14 +82,15 @@ while read -r c; do
             gh_api "$c"
             case "$path" in
                 graphql|[\"\']graphql[\"\'])
-                    # Mutations by name; resolveReviewThread is allowed.
+                    # Mutations by name. resolveReviewThread and
+                    # dismissPullRequestReview are allowed.
                     # GraphQL ignores whitespace around ":", so "state :" is "state:".
                     graphql_cmd="$(printf '%s' "$c" | sed -E 's/state[[:space:]]*:[[:space:]]*/state:/g')"
                     case "$graphql_cmd" in
                         *unresolveReviewThread*) deny "unresolving a review thread" ;;
                         *mergePullRequest*|*enablePullRequestAutoMerge*) deny "merging a PR" ;;
                         *addComment*|*updateIssueComment*|*deleteIssueComment*|*minimizeComment*) deny "commenting" ;;
-                        *addPullRequestReview*|*submitPullRequestReview*|*dismissPullRequestReview*) deny "reviewing" ;;
+                        *addPullRequestReview*|*submitPullRequestReview*) deny "reviewing" ;;
                         *updatePullRequestReview*|*deletePullRequestReview*) deny "reviewing" ;;
                         *closeIssue*|*reopenIssue*|*deleteIssue*|*closePullRequest*|*reopenPullRequest*) deny "closing or reopening an issue or PR" ;;
                         *updateIssue*state:*|*updatePullRequest*state:*) deny "closing or reopening an issue or PR" ;;
