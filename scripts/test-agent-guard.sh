@@ -56,6 +56,7 @@ deny  'gh issue delete 3'
 allow 'gh issue create --title t --body b'
 allow "gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: \"PRRT_x\"}) { thread { isResolved } } }'"
 allow "gh api graphql -f query='mutation { dismissPullRequestReview(input: {pullRequestReviewId: \"PRR_x\", message: \"Not applicable.\"}) { pullRequestReview { state } } }'"
+deny  "gh api graphql -f query='mutation { submitPullRequestReview(input: {pullRequestReviewId: \"PRR_x\", event: APPROVE}) { pullRequestReview { state } } }'"
 
 # Raw gh api writes: -X, --method, or -f/-F with no -X (implies POST)
 deny  'gh api repos/o/r/issues/3/comments -f body=hi'
