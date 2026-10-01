@@ -52,7 +52,7 @@ jobs:
       - name: Test Core Config Wiring
         run: |
           bash -n setup.sh
-          bash -n scripts/*.sh scripts/setup/*.sh
+          bash -n scripts/*.sh scripts/setup/*.sh config/bashrc
           ./setup.sh --help
 
       - name: Test agent-guard
@@ -60,4 +60,7 @@ jobs:
 
       - name: Test commit-msg hook
         run: bash scripts/test-commit-msg.sh
+
+      - name: Test git identity
+        run: bash scripts/test-git-identity.sh
 

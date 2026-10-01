@@ -117,6 +117,94 @@ pub() {
     podman compose up --build
 }
 
+# Cursor cloud VMs rewrite ~/.gitconfig at boot (Cursor Agent,
+# cursoragent@cursor.com, commit.gpgsign with Cursor's key). An install-time
+# write does not survive the next boot, so reassert on every shell.
+# ponytail: Cursor's key is a signingkey value or public key file containing
+# "cursoragent@cursor.com" or "Cursor Agent". Anything else stays enabled.
+# Upgrade path: compare the key blob to Cursor's published signing key.
+reassert_git_identity() {
+    command -v git >/dev/null 2>&1 || return 0
+
+    local name email keep want_name want_email sign key git_dir active
+    name="$(command git config --global --get user.name 2>/dev/null || true)"
+    email="$(command git config --global --get user.email 2>/dev/null || true)"
+    keep=0
+    case "$name" in
+        [Dd]erek*)
+            case "$email" in
+                ''|cursoragent@cursor.com) ;;
+                *) keep=1 ;;
+            esac
+            ;;
+    esac
+    if [[ "$keep" -eq 1 ]]; then
+        want_name="$name"
+        want_email="$email"
+    else
+        want_name="Derek Roberts"
+        want_email="DerekRoberts@users.noreply.github.com"
+        [[ "$name" == "$want_name" ]] || command git config --global user.name "$want_name"
+        [[ "$email" == "$want_email" ]] || command git config --global user.email "$want_email"
+    fi
+
+    # Env overrides config. Replace only a Cursor author or committer, so a
+    # later rewrite of ~/.gitconfig cannot put Cursor Agent back in this shell.
+    if [[ "${GIT_AUTHOR_NAME:-}" == "Cursor Agent" || "${GIT_AUTHOR_EMAIL:-}" == "cursoragent@cursor.com" ]]; then
+        export GIT_AUTHOR_NAME="$want_name"
+        export GIT_AUTHOR_EMAIL="$want_email"
+    fi
+    if [[ "${GIT_COMMITTER_NAME:-}" == "Cursor Agent" || "${GIT_COMMITTER_EMAIL:-}" == "cursoragent@cursor.com" ]]; then
+        export GIT_COMMITTER_NAME="$want_name"
+        export GIT_COMMITTER_EMAIL="$want_email"
+    fi
+
+    sign="$(command git config --global --get commit.gpgsign 2>/dev/null || true)"
+    key="$(command git config --global --get user.signingkey 2>/dev/null || true)"
+    if [[ "$sign" == "true" ]] && cursor_signing_key "$key"; then
+        command git config --global commit.gpgsign false
+    fi
+
+    # Dispatcher skips non-executable hooks. Leave commit-msg.cursor and
+    # pre-commit.cursor (the secrets scanner) executable.
+    git_dir="$(command git rev-parse --absolute-git-dir 2>/dev/null || true)"
+    active="$(command git rev-parse --git-path hooks 2>/dev/null || true)"
+    [[ -z "$git_dir" ]] || disable_cursor_coauthor "$git_dir/hooks"
+    [[ -z "$active" ]] || disable_cursor_coauthor "$active"
+}
+
+# chmod -x only the co-author hook. The secrets scanner stays executable.
+disable_cursor_coauthor() {
+    local dir="${1/#\~/$HOME}" file
+    file="$dir/commit-msg.cursor.co-author"
+    if [[ -x "$file" ]]; then
+        chmod -x "$file"
+    fi
+}
+
+# True when this signing key is Cursor's, not a key the user already configured.
+cursor_signing_key() {
+    local key="$1" file content
+    [[ -n "$key" ]] || return 1
+    case "$key" in
+        *cursoragent@cursor.com*|*"Cursor Agent"*) return 0 ;;
+    esac
+    file="${key/#\~/$HOME}"
+    if [[ -f "$file" ]]; then
+        content="$(cat "$file" 2>/dev/null || true)"
+    elif [[ -f "${file}.pub" ]]; then
+        content="$(cat "${file}.pub" 2>/dev/null || true)"
+    else
+        return 1
+    fi
+    case "$content" in
+        *cursoragent@cursor.com*|*"Cursor Agent"*) return 0 ;;
+    esac
+    return 1
+}
+
+reassert_git_identity
+
 # ── NVM ────────────────────────────────────────────────────────────────────
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
