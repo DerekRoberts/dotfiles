@@ -169,6 +169,9 @@ reassert_git_identity() {
     # pre-commit.cursor (the secrets scanner) executable.
     git_dir="$(command git rev-parse --absolute-git-dir 2>/dev/null || true)"
     active="$(command git rev-parse --git-path hooks 2>/dev/null || true)"
+    if [[ -z "$active" ]]; then
+        active="$(command git config --global --path --get core.hooksPath 2>/dev/null || true)"
+    fi
     [[ -z "$git_dir" ]] || disable_cursor_coauthor "$git_dir/hooks"
     [[ -z "$active" ]] || disable_cursor_coauthor "$active"
 }
@@ -190,16 +193,13 @@ cursor_signing_key() {
         *cursoragent@cursor.com*|*"Cursor Agent"*) return 0 ;;
     esac
     file="${key/#\~/$HOME}"
-    if [[ -f "$file" ]]; then
-        content="$(cat "$file" 2>/dev/null || true)"
-    elif [[ -f "${file}.pub" ]]; then
-        content="$(cat "${file}.pub" 2>/dev/null || true)"
-    else
-        return 1
-    fi
-    case "$content" in
-        *cursoragent@cursor.com*|*"Cursor Agent"*) return 0 ;;
-    esac
+    for f in "$file" "${file}.pub"; do
+        [[ -f "$f" ]] || continue
+        content="$(cat "$f" 2>/dev/null || true)"
+        case "$content" in
+            *cursoragent@cursor.com*|*"Cursor Agent"*) return 0 ;;
+        esac
+    done
     return 1
 }
 
