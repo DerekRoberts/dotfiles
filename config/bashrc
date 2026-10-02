@@ -80,6 +80,7 @@ alias gd='git diff'
 alias gpu='git push -u origin $(git branch --show-current)'
 alias grm='git fetch origin main && git pull origin main --rebase'
 alias gbc='git branch --merged | grep -v "\*" | xargs -n 1 git branch -d'
+alias gwprune='git worktree list | awk "NR>1 {print \$1}" | xargs -r -I{} git worktree remove {} && git branch -a'
 alias gprune='git switch main && git pull --ff-only --no-tags && git fetch --prune --no-tags && git branch -vv | grep ": gone]" | grep -v "^+" | awk "{sub(/^[+* ]+/, \"\"); print \$1}" | xargs -r git branch -D && git branch -a'
 
 # Aliases - Podman Containers
