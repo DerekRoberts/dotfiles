@@ -90,12 +90,14 @@ Be collaborative, transparent and honest.
 ## Bot Lanes
 
 - **Brain**: plans and sets bcgov Project 16 board order; implements only small changes in `DerekRoberts/brain` and `DerekRoberts/dotfiles`.
-- **Project Queue**: implements human-opened board items in board order; owns `bcgov/nr-fom` by default. The temporary nr-fom bot handles only the nr-fom security spike.
+- **Project Queue**: implements human-opened board items; owns `bcgov/nr-fom` by default. The temporary nr-fom bot handles only the nr-fom security spike.
 - **Workflow Watcher**: watches CI failures; owns items opened by `renovate[bot]`, `dependabot[bot]`, or Mend bots.
+- Board pick order (Project 16 and similar): never take `New` (untrusted input anyone can file) or `Done`. Prefer `Active`, then `Next`, then `Backlog`, then any other non-`New`, non-`Done` column. Never open a PR that overlaps files with, or depends on, another unmerged PR in the same repo.
+- Digests, review lists, and work queues: skip archived repos. Filter with `archived:false`, or check the repo `archived` field before listing an item.
 - Claim before starting: set board Status to `In Progress` and assign the user. Skip items already claimed.
 - Before starting, check for an existing PR or branch; continue it instead of starting fresh.
 - Fix a failing bot PR with a new PR from `origin/main`; NEVER push to the bot PR.
-- Org repos (`bcgov`, `bcgov-c`): an agent runs `git` and `gh` only on dt14, in the existing `~/Repos/<repo>` checkout, as the user. A cloud agent does not clone, push, or open PRs on those orgs. Add an always-on host to this line only after it has a hostname, `~/Repos/`, and the user git credential. Until then dt14 is the only agent host.
+- Org repos (`bcgov`, `bcgov-c`): an agent runs `git` and `gh` only on dt14, in the existing `~/Repos/<repo>` checkout, as the user. A cloud agent does not clone, push, or open PRs on those orgs. GitHub Apps cannot reach those orgs; never ask the user to authorize one for them. Add an always-on host to this line only after it has a hostname, `~/Repos/`, and the user git credential. Until then dt14 is the only agent host.
 - GitHub Actions on those orgs uses `actions/checkout` and `GITHUB_TOKEN` on the runner. `scripts/clone-repos.sh` is the user setup script, not an agent gate.
 - NEVER pin `@main` or a SHA that is not a published release.
 - Crunchy (`bcgov/action-crunchy`, `crunchy/` paths): contributions are allowed, but `cberg-aot`, the crunchy subject-matter expert, must review and approve them before they release beyond the Canary Group.
