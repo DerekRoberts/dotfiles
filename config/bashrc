@@ -80,7 +80,6 @@ alias gd='git diff'
 alias gpu='git push -u origin $(git branch --show-current)'
 alias grm='git fetch origin main && git pull origin main --rebase'
 alias gbc='git branch --merged | grep -v "\*" | xargs -n 1 git branch -d'
-alias gwprune='git worktree list | awk "NR>1 {print \$1}" | xargs -r -I{} git worktree remove {} && git branch -a'
 alias gprune='git switch main && git pull --ff-only --no-tags && git fetch --prune --no-tags && git branch -vv | grep ": gone]" | grep -v "^+" | awk "{sub(/^[+* ]+/, \"\"); print \$1}" | xargs -r git branch -D && git branch -a'
 
 # Aliases - Podman Containers
@@ -95,6 +94,26 @@ alias docker='podman'
 alias docker-compose='podman compose'
 
 # Functions
+gwprune() {
+    local first=1 path
+    while IFS= read -r -d '' line || [ -n "${line:-}" ]; do
+        case $line in
+            worktree\ *)
+                path=${line#worktree }
+                ;;
+            '')
+                if [ "$first" -eq 1 ]; then
+                    first=0
+                elif [ -n "$path" ]; then
+                    git worktree remove "$path" || return
+                fi
+                path=
+                ;;
+        esac
+    done < <(git worktree list --porcelain -z)
+    git branch -a
+}
+
 ga() {
     if [ -n "${1:-}" ]; then
         git add -A
