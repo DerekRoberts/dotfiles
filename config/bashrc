@@ -94,6 +94,26 @@ alias docker='podman'
 alias docker-compose='podman compose'
 
 # Functions
+gwprune() {
+    local first=1 path
+    while IFS= read -r -d '' line || [ -n "${line:-}" ]; do
+        case $line in
+            worktree\ *)
+                path=${line#worktree }
+                ;;
+            '')
+                if [ "$first" -eq 1 ]; then
+                    first=0
+                elif [ -n "$path" ]; then
+                    git worktree remove "$path" || return
+                fi
+                path=
+                ;;
+        esac
+    done < <(git worktree list --porcelain -z)
+    git branch -a
+}
+
 ga() {
     if [ -n "${1:-}" ]; then
         git add -A
