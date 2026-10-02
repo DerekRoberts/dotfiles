@@ -80,7 +80,9 @@ reload_zram() {
         return 0
     fi
     systemctl restart systemd-zram-setup@zram0.service
-    swapon /dev/zram0
+    if ! swapon --show | grep -qF '/dev/zram0'; then
+        swapon --priority 100 /dev/zram0
+    fi
     success "zram0 recreated from new config"
 }
 
@@ -89,7 +91,9 @@ verify() {
     swapon --show
     free -h | head -2
     local zram_size
-    zram_size="$(swapon --noheading --show=SIZE --bytes /dev/zram0 2>/dev/null || echo 0)"
+    zram_size="$(swapon --show --noheadings --bytes --columns=SIZE,NAME 2>/dev/null \
+        | awk '$2 == "/dev/zram0" { print $1; exit }')"
+    zram_size="${zram_size:-0}"
     if [[ "$zram_size" -lt 10000000000 ]]; then
         warn "zram0 is still under ~10GiB; reboot if you expected 12GiB cap."
     fi
