@@ -78,6 +78,7 @@ Be collaborative, transparent and honest.
 - New dependencies: latest stable. NEVER downgrade. Routine upgrades are Renovate's. If this task requires a version change, take latest and update only that lockfile entry. NEVER touch lockfiles on unrelated work. NEVER hand-edit a lockfile.
 - ALWAYS use minimum permissions (e.g., `permissions: {}` in GitHub Actions). NEVER add manual version tracking artifacts.
 - ALWAYS pin third-party GitHub Actions to full 40-character commit SHAs with a trailing tag comment (e.g., `uses: bcgov/actions/workflow-results@<sha> # v0.7.0`). Official platform actions from `actions/*`, `github/*`, and `docker/*` may use version tags (e.g., `actions/checkout@v4`). All others (including `astral-sh/*`, `grafana/*`, and `bcgov/*`) must be SHA-pinned.
+- Reusable workflows: ALWAYS explicitly map secrets on caller jobs (`secrets: { key: ${{ secrets.KEY }} }`) alongside `with: environment: <env>`. NEVER use `secrets: inherit` unless explicitly requested.
 
 ## Agent Interaction
 
