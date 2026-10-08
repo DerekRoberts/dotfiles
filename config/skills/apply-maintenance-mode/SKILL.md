@@ -24,14 +24,14 @@ Automate the scaffolding and configuration required to put a mature BC Gov repos
 
 An acceptable maturity-audit result is all of the following. Anything less is not hands-off. Merely finding a test suite is not enough, including at the branch-protection and deploy steps below.
 
-1. The `github-repo-setup` maturity audit has been run, and its `MATURITY_REPORT.md` has **no Tier-1 blockers** (that skill's blocking remediation tier). The skill is [`bcgov/agent-marketplace` `skills/community/github-repo-setup`](https://github.com/bcgov/agent-marketplace/blob/main/skills/community/github-repo-setup/SKILL.md). Do not depend on the copy in `bcgov/agent-skills`; that repo is being archived.
+1. The `github-repo-setup` maturity audit has been run against the repository state being transitioned, and its `MATURITY_REPORT.md` has **no Tier-1 blockers** (that skill's blocking remediation tier). If the report is stale (it does not cover the current tree, or the repo has changed since it was written), rerun the audit and confirm the new report has no Tier-1 blockers. A historical report is not an acceptable result. The skill is [`bcgov/agent-marketplace` `skills/community/github-repo-setup`](https://github.com/bcgov/agent-marketplace/blob/main/skills/community/github-repo-setup/SKILL.md). Do not depend on the copy in `bcgov/agent-skills`; that repo is being archived.
 2. An automated CI test suite exists (`.github/workflows/` test workflows, or test scripts in `package.json` that those workflows actually run).
 3. Every Renovate PR actually runs **all** required checks. Confirm this on recent Renovate pull requests, not just on the workflow file:
    - Each required status check completed with `success`, not `skipped` and not `neutral`.
    - No job-level `if:` (or equivalent) lets a required test skip and still count as a pass. A wrapper job that succeeds when its tests were skipped does not qualify.
    - Branch protection requires those checks before merge. Auto-merge must be unable to land a Renovate PR whose required checks did not run.
 
-- **IF THE AUDIT IS MISSING, HAS A TIER-1 BLOCKER, THERE IS NO TEST SUITE, OR REQUIRED CHECKS CAN SKIP AND STILL PASS**: **HARD-STOP**. Tell the user. Do not change the repo. An automated test suite that actually runs, on a repo with no Tier-1 blockers, is a hard prerequisite for safe auto-merge. Point them at building the tests or running the `github-repo-setup` audit (marketplace path above) before trying again.
+- **IF THE AUDIT IS MISSING, STALE, HAS A TIER-1 BLOCKER, THERE IS NO TEST SUITE, OR REQUIRED CHECKS CAN SKIP AND STILL PASS**: **HARD-STOP**. Tell the user. Do not change the repo. An automated test suite that actually runs, on a repo with no Tier-1 blockers, is a hard prerequisite for safe auto-merge. Point them at building the tests or running the `github-repo-setup` audit (marketplace path above) before trying again.
 - **IF ALL THREE HOLD**: Proceed with the steps below.
 
 ## Workflow
