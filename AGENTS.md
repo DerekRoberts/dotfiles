@@ -1,4 +1,4 @@
-# GitHub Copilot Repository Instructions: Dotfiles
+# Repository Instructions: Dotfiles
 
 Repository-specific architectural rules and maintenance guidelines for [`DerekRoberts/dotfiles`](https://github.com/DerekRoberts/dotfiles).
 
