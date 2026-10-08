@@ -142,7 +142,6 @@ This repository establishes a client-side safety net and policy framework that e
    | Antigravity / `agy` | `~/.gemini/GEMINI.md` | |
    | Cursor | `~/.cursor/plugins/local/dotfiles/rules/instructions.mdc` (always-apply plugin rule) | |
    | Claude Code | `~/.claude/rules/dotfiles.md` | [User-level rules](https://code.claude.com/docs/en/memory) |
-   | GitHub Copilot (CLI and VS Code) | `~/.copilot/instructions/dotfiles.instructions.md` (`applyTo: '**'`) | [CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions), [VS Code](https://code.visualstudio.com/docs/agent-customization/custom-instructions) |
    | Kilo | managed block in `~/.config/kilo/AGENTS.md` (other content kept) | [Global instructions](https://kilo.ai/docs/customize/custom-instructions) |
 
    Not covered: there is no global `AGENTS.md` that every tool reads (`~/.agents/AGENTS.md` is only a proposal), and tools without a documented user-level rules file are not wired. VS Code also reads `~/.claude/rules`, so it may load these rules twice.

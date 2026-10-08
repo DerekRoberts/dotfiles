@@ -125,8 +125,6 @@ install_ai_wiring() {
 
     # Other tools' user-level rules locations (see README for doc links).
     install_rules_file "$INSTRUCTIONS_FILE" "$HOME/.claude/rules/dotfiles.md"
-    install_rules_file "$INSTRUCTIONS_FILE" "$HOME/.copilot/instructions/dotfiles.instructions.md" \
-        $'---\napplyTo: \'**\'\n---\n'
     install_managed_block "$INSTRUCTIONS_FILE" "$HOME/.config/kilo/AGENTS.md"
 
     info "Configuring Cursor default workspace paths and update settings..."
