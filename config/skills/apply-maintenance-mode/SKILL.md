@@ -39,20 +39,20 @@ Any one of these is a hard stop. Report each one with evidence (file, workflow, 
 
 Run every item. Write nothing to the repository while doing so.
 
-1. **Maturity audit.** Run the `github-repo-setup` audit ([`bcgov/agent-marketplace` `skills/community/github-repo-setup`](https://github.com/bcgov/agent-marketplace/blob/main/skills/community/github-repo-setup/SKILL.md)) against the current default branch. If that skill writes `MATURITY_REPORT.md` into the repo root, run it against a throwaway copy or move the report out before doing anything else. The report must have no Tier-1 items. Do not depend on the copy in `bcgov/agent-skills`; that repo is being archived.
+1. **Maturity audit.** Run the `github-repo-setup` audit ([`bcgov/agent-marketplace` `skills/community/github-repo-setup`](https://github.com/bcgov/agent-marketplace/blob/main/skills/community/github-repo-setup/SKILL.md)) against the current default branch. That skill writes `MATURITY_REPORT.md` into the root of the repo it audits, so run it only against a throwaway copy outside the working checkout (for example a fresh clone in a scratch directory), never the real checkout. The report must have no Tier-1 items. Do not depend on the copy in `bcgov/agent-skills`; that repo is being archived.
 2. **Test suite exists and runs in CI** (`.github/workflows/` jobs that execute the tests, not just scripts on disk).
 3. **Required checks cover everything Renovate updates.** It is not enough that some required checks exist.
    - List what Renovate updates: run through `renovate.json`'s managers and recent Renovate PRs (`gh pr list --author app/renovate --state all --limit 20 --json number,files`).
    - For each manifest or path, name the required check that builds and tests it. Anything without one is Tier-1 item 1.
    - On recent Renovate PRs, every required check completed `success`, not `skipped` or `neutral`.
-   - Recommended pattern, from `bcgov/quickstart-openshift`: each workflow ends with a distinctly named results job (for example `PR Results`, `Analysis Results`) that `needs:` every other job in that workflow, runs with `if: always()`, and fails when any needed job's result is `failure` or `cancelled`, or `skipped` when that job was not expected to skip. The ruleset then requires those results checks, one per workflow, so new jobs are gated automatically. If the repo lacks this, propose it as a code PR (a human still adds the checks to the ruleset).
+   - Recommended pattern, from `bcgov/quickstart-openshift`: each workflow ends with a distinctly named results job (for example `PR Results`, `Analysis Results`) that `needs:` every other job in that workflow, runs with `if: always()`, and fails when any needed job's result is `failure` or `cancelled`, or `skipped` when that job was not expected to skip. The ruleset then requires those results checks, one per workflow. A results job only gates the jobs listed in its `needs:`, so every new job must be added there; check that no job is missing. Test steps must fail normally: a step with `continue-on-error: true` leaves its job `success` even when tests fail, so the results job cannot see it. If the repo lacks this, propose it as a code PR (a human still adds the checks to the ruleset).
 4. **Approving reviews do not block Renovate.** Native auto-merge still honors required approving reviews. Read branch protection and rulesets on the branch Renovate targets, for example `gh api repos/{owner}/{repo}/branches/{branch}/protection` and `gh api repos/{owner}/{repo}/rulesets --paginate`. If approving reviews are required, Renovate needs an exemption the human has approved. Acceptable forms:
    - a ruleset bypass for `renovate[bot]`;
    - an auto-approve app or workflow (for example a `renovate-approve` GitHub App) that approves Renovate PRs. This only counts if the human decides it does. Ask, and have them record the decision in the tracking issue;
    - another documented policy the human has signed off on.
 
    Without one, hard stop. Never suggest disabling required reviews for all pull requests.
-5. **Environment secrets.** List repository-level and environment-level secret names (`gh secret list`, `gh secret list --env <env>`). Credentials used by more than one of PR, TEST, and PROD at repository level are Tier-1 item 2.
+5. **Environment secrets.** Secret values are write-only, so names alone cannot prove separation. List repository-level and environment-level secret names (`gh secret list`, `gh secret list --env <env>`), then map which secrets each PR, TEST, and PROD job references and which `environment:` it runs in. A credential read from repository level by more than one of those is Tier-1 item 2. Where names differ but the values might be the same credential, ask the human to confirm they are distinct; until they do, treat it as Tier-1.
 6. **Local Renovate overrides.** Read `renovate.json` / `renovate.json5` (and `package.json` `renovate` blocks). Flag any local setting that weakens the preset, such as `minimumReleaseAge: "0 days"`, `automerge` on major updates, broader `automergeType`, `ignoreTests: true`, or disabled vulnerability alerts. Each must be removed in the follow-up PR or explicitly signed off by the human in the tracking issue.
 
 - **IF ANY TIER-1 BLOCKER MATCHES, OR ITEM 4 OR 6 IS UNRESOLVED**: **HARD-STOP**. Change nothing. Report each blocker with evidence, the code PRs that would fix it, and click-by-click settings steps for the human.
@@ -104,7 +104,7 @@ If the existing pipeline already meets a target pattern, leave it alone and say 
 
 ## Edge Cases
 - **Monorepos**: map each Renovate-updated directory to a required check; one green check for one app does not cover the others.
-- **Path-filtered workflows**: if a required workflow does not run on a Renovate PR, the check must still report and must not pass vacuously; the results-job pattern handles this when its skip handling is explicit.
+- **Path-filtered workflows**: an event-level `paths` / `paths-ignore` filter means the workflow never starts, so its required results check never reports and the PR waits forever. Required workflows must trigger on every PR and apply path conditions at the job level, with the results job treating those skips as expected.
 
 ## References
 - `bcgov/quickstart-openshift` workflows: results-job pattern (`PR Results`, `Analysis Results`).
