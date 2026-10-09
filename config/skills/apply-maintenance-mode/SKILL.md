@@ -17,7 +17,7 @@ Automate the scaffolding and configuration required to put a mature BC Gov repos
 
 ## Don't Use When
 - The pre-flight finds any Tier-1 blocker (defined below), or there is no automated test suite.
-- Branch protection or rulesets require human approving review on the merge target, and there is no human-approved exemption for Renovate.
+- Branch protection or rulesets require approving review on the merge target, and nothing (such as the `renovate-approve` app) auto-approves Renovate PRs.
 - The user explicitly asks for manual deployment gates.
 
 ## Ground Rules
@@ -46,12 +46,10 @@ Run every item. Write nothing to the repository while doing so.
    - For each manifest or path, name the required check that builds and tests it. Anything without one is Tier-1 item 1.
    - On recent Renovate PRs, every required check completed `success`, not `skipped` or `neutral`.
    - Recommended pattern, from `bcgov/quickstart-openshift`: each workflow ends with a distinctly named results job (for example `PR Results`, `Analysis Results`) that `needs:` every other job in that workflow, runs with `if: always()`, and fails when any needed job's result is `failure` or `cancelled`, or `skipped` when that job was not expected to skip. The ruleset then requires those results checks, one per workflow. A results job only gates the jobs listed in its `needs:`, so every new job must be added there; check that no job is missing. Test steps must fail normally: a step with `continue-on-error: true` leaves its job `success` even when tests fail, so the results job cannot see it. If the repo lacks this, propose it as a code PR (a human still adds the checks to the ruleset).
-4. **Approving reviews do not block Renovate.** Native auto-merge still honors required approving reviews. Read branch protection and rulesets on the branch Renovate targets, for example `gh api repos/{owner}/{repo}/branches/{branch}/protection` and `gh api repos/{owner}/{repo}/rulesets --paginate`. If approving reviews are required, Renovate needs an exemption the human has approved. Acceptable forms:
-   - a ruleset bypass for `renovate[bot]`;
-   - an auto-approve app or workflow (for example a `renovate-approve` GitHub App) that approves Renovate PRs. This only counts if the human decides it does. Ask, and have them record the decision in the tracking issue;
-   - another documented policy the human has signed off on.
-
-   Without one, hard stop. Never suggest disabling required reviews for all pull requests.
+4. **Renovate PRs get their required review automatically.** Maintenance mode runs without humans; they step in only when something breaks or needs judgement. The standard setup is the [`renovate-approve`](https://github.com/apps/renovate-approve) GitHub App, which approves Renovate PRs and counts as the required review for them. Native auto-merge still honors required approving reviews, so check:
+   - Read branch protection and rulesets on the branch Renovate targets, for example `gh api repos/{owner}/{repo}/branches/{branch}/protection` and `gh api repos/{owner}/{repo}/rulesets --paginate`.
+   - If approving reviews are required, confirm recent Renovate PRs carry an approval from `renovate-approve[bot]` and that it satisfies every review rule (for example required code-owner review or "approval of the most recent push" can still block it).
+   - If required reviews would block Renovate PRs and nothing auto-approves them, hard stop and give the human the steps to install `renovate-approve` (Settings step 3). Never suggest disabling required reviews for all pull requests.
 5. **Environment secrets.** Secret values are write-only, so names alone cannot prove separation. List repository-level and environment-level secret names (`gh secret list`, `gh secret list --env <env>`), then map which secrets each PR, TEST, and PROD job references and which `environment:` it runs in. A credential read from repository level by more than one of those is Tier-1 item 2. Where names differ but the values might be the same credential, ask the human to confirm they are distinct; until they do, treat it as Tier-1.
 6. **Local Renovate overrides.** Read `renovate.json` / `renovate.json5` (and `package.json` `renovate` blocks). Flag any local setting that weakens the preset, such as `minimumReleaseAge: "0 days"`, `automerge` on major updates, broader `automergeType`, `ignoreTests: true`, or disabled vulnerability alerts. Each must be removed in the follow-up PR or explicitly signed off by the human in the tracking issue.
 
@@ -65,7 +63,7 @@ You do not change settings. Read the current values and give the human only the 
 
 1. Settings → General → Pull Requests → tick **Allow auto-merge**. (Check with `gh api repos/{owner}/{repo} --jq .allow_auto_merge`.)
 2. Settings → Rules → Rulesets → *(ruleset for the default branch)* → **Require status checks to pass** → add each workflow's results check.
-3. If an exemption for Renovate was approved in pre-flight item 4, add it as recorded (for example a bypass for `renovate[bot]`). Do not loosen reviews for anyone else.
+3. If pre-flight item 4 found no auto-approval, install the [`renovate-approve`](https://github.com/apps/renovate-approve) app on the repository (the app page → **Configure** → select the org → **Only select repositories** → add the repo → **Save**). Do not loosen reviews for anyone else.
 4. Settings → Environments → *(each environment)* → add per-environment secrets, then delete the shared repository-level copies and rotate PROD values. Some services (databases in particular) only read a password when first initialised, so rotating may need a real credential change, not just a new secret.
 
 ### 2. Renovate Configuration
