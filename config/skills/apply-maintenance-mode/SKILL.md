@@ -18,6 +18,7 @@ Automate the scaffolding and configuration required to put a mature BC Gov repos
 ## Don't Use When
 - The maturity audit has any Tier-1 blocker, or there is no automated test suite.
 - Required CI checks can be skipped and still report success.
+- Branch protection or rulesets require human approving review on the merge target, and there is no explicitly approved repository policy that exempts Renovate.
 - The user explicitly asks for manual deployment gates.
 
 ## Pre-flight Checklist (CRITICAL)
@@ -30,15 +31,17 @@ An acceptable maturity-audit result is all of the following. Anything less is no
    - Each required status check completed with `success`, not `skipped` and not `neutral`.
    - No job-level `if:` (or equivalent) lets a required test skip and still count as a pass. A wrapper job that succeeds when its tests were skipped does not qualify.
    - Branch protection requires those checks before merge. Auto-merge must be unable to land a Renovate PR whose required checks did not run.
+4. **Approving-review requirements** do not leave Renovate PRs waiting forever on the branch Renovate targets (usually `main`). Native auto-merge still honors required approving reviews; passing status checks alone is not zero-review maintenance mode. Inspect branch protection and repository rulesets, for example `gh api repos/{owner}/{repo}/branches/{branch}/protection` and `gh api repos/{owner}/{repo}/rulesets --paginate`. If protection or an active ruleset requires approving review(s) and Renovate is not covered by an **explicitly approved** repository policy (documented exemption, ruleset bypass for `renovate[bot]`, or equivalent the user has signed off on), **HARD-STOP**. Do not disable or loosen required reviews for all pull requests. If an exemption is needed, give the user exact settings to apply; only mutate `/protection` or `/rulesets` when the user's instructions and local guardrails allow it.
 
-- **IF THE AUDIT IS MISSING, STALE, HAS A TIER-1 BLOCKER, THERE IS NO TEST SUITE, OR REQUIRED CHECKS CAN SKIP AND STILL PASS**: **HARD-STOP**. Tell the user. Do not change the repo. An automated test suite that actually runs, on a repo with no Tier-1 blockers, is a hard prerequisite for safe auto-merge. Point them at building the tests or running the `github-repo-setup` audit (marketplace path above) before trying again.
-- **IF ALL THREE HOLD**: Proceed with the steps below.
+- **IF THE AUDIT IS MISSING, STALE, HAS A TIER-1 BLOCKER, THERE IS NO TEST SUITE, REQUIRED CHECKS CAN SKIP AND STILL PASS, OR REQUIRED APPROVING REVIEWS BLOCK RENOVATE WITHOUT AN APPROVED EXEMPTION**: **HARD-STOP**. Tell the user. Do not change the repo. An automated test suite that actually runs, on a repo with no Tier-1 blockers, is a hard prerequisite for safe auto-merge. Point them at building the tests or running the `github-repo-setup` audit (marketplace path above) before trying again.
+- **IF ALL FOUR HOLD**: Proceed with the steps below.
 
 ## Workflow
 
 ### 1. Repository API Configuration (GitHub Settings)
-Use the `gh` CLI to enable native auto-merge and status checks on the repository:
+Use the `gh` CLI to enable native auto-merge and validate merge requirements on the repository:
 - Enable Auto-Merge: `gh api -X PATCH repos/{owner}/{repo} -F allow_auto_merge=true`
+- **Inspect approving-review rules** on the default branch (branch protection and repository rulesets; pre-flight item 4). Required approving reviews block native auto-merge even when CI is green. Either confirm Renovate is exempt per an explicitly approved repository policy, or hard-stop and tell the user what must change. Never silently remove or weaken required reviews for all pull requests.
 - Ensure branch protections require the test suite status checks to pass before merging. Those checks must be the jobs that run the tests (pre-flight item 3). A required check that can be skipped and still report success does not qualify. Re-check recent Renovate PRs: every required check completed `success`, not `skipped`.
 
 ### 2. Renovate Configuration
@@ -67,7 +70,7 @@ Migrate the pipeline to the appropriate target pattern based on the repo's exist
 - **Checks must actually run**: Do not treat a test suite that exists on disk, or a required check that skipped, as a pass.
 
 ## Examples
-- The user asks: "Enable maintenance mode for this repo". You run the pre-flight (no Tier-1 blockers, tests that cannot skip, Renovate PRs actually running those checks), then pin the preset to a `YYYY.M.Patch` release and apply the deploy pattern. If any pre-flight item fails, you stop.
+- The user asks: "Enable maintenance mode for this repo". You run the pre-flight (no Tier-1 blockers, tests that cannot skip, Renovate PRs actually running those checks, and no approving-review blockers without an approved Renovate exemption), then pin the preset to a `YYYY.M.Patch` release and apply the deploy pattern. If any pre-flight item fails, you stop.
 
 ## Edge Cases
 - If the repository has a complex mono-repo setup, ensure branch protections cover all critical path tests, and that none of those jobs can skip and still report success.
