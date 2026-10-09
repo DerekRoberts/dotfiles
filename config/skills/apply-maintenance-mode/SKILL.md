@@ -102,7 +102,7 @@ Analyze `.github/workflows/` and bring the deploy path to one of the target patt
 If the existing pipeline already meets a target pattern, leave it alone and say so.
 
 ### 4. Stuck Renovate PRs
-Renovate PRs can sit open because a required check was cancelled (for example by a concurrency group) and never reported success. Do not re-run them while the gates are fake or incomplete, or they will auto-merge untested changes. Re-run them only after the real gates (results checks that cover every Renovate path) are required in the ruleset; then re-run the cancelled checks or let Renovate rebase the PR.
+Renovate PRs can sit open because a required check was cancelled (for example by a concurrency group) and never reported success. Do not re-run them while the gates are fake or incomplete, or they will auto-merge untested changes. Act only after the real gates (results checks that cover every Renovate path) are merged and required in the ruleset. Then get a fresh run: have Renovate rebase the PR (its rebase checkbox) so the PR picks up the new workflows. A plain re-run reuses the original commit and workflow files, so only re-run when that commit already contains the final gates.
 
 ## Tracking Issue
 Some repos carry an older maintenance-mode checklist issue. Where it conflicts with this skill, this skill wins. In particular, ignore any item asking for `paths-ignore` filters on the merge workflow: use job-level path conditions instead (see Path filters above). A suitable checklist for the issue is:
