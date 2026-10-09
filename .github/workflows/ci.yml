@@ -37,7 +37,7 @@ jobs:
 
   test-ubuntu:
     name: Ubuntu Validation Test
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     needs: [shellcheck, actionlint]
     steps:
