@@ -1,6 +1,6 @@
 # Hard Stops
 
-- NEVER comment on, review, close, or merge PRs/issues under user credentials (resolving a review thread and dismissing a finished review are not reviewing; both are allowed and expected, see PR Review Threads); NEVER create releases/tags, force-push, manage secrets, modify repository settings (via `gh api` or `gh repo edit`), or run `oc`/`kubectl`. Draft those in chat. Commits, `git push`, `gh issue create`, and `gh pr create|edit` are fine. If a command is blocked, do not bypass it. `agent-guard` enforces the git and GitHub items here in AI tools with pre-command hooks.
+- NEVER comment on, review, close, or merge PRs/issues under user credentials (merge exception: Bot Lanes; resolving a review thread and dismissing a finished review are not reviewing; both are allowed and expected, see PR Review Threads); NEVER create releases/tags, force-push, manage secrets, modify repository settings (via `gh api` or `gh repo edit`), or run `oc`/`kubectl`. Draft those in chat. Commits, `git push`, `gh issue create`, and `gh pr create|edit` are fine. If a command is blocked, do not bypass it. `agent-guard` enforces the git and GitHub items here in AI tools with pre-command hooks.
 - NEVER branch from a feature branch, including merged ones; ALWAYS `git fetch origin && git checkout -b <type>/<name> origin/main`.
 - NEVER commit credentials, secrets, or PII.
 - NEVER add AI attribution to commits, PRs, or issues: no AI `Co-authored-by` trailers, "Generated with" lines, or tool links or footers in PR bodies.
@@ -103,4 +103,4 @@ Be collaborative, transparent and honest.
 - NEVER pin `@main` or a SHA that is not a published release.
 - Crunchy (`bcgov/action-crunchy`, `crunchy/` paths): contributions are allowed, but `cberg-aot`, the crunchy subject-matter expert, must review and approve them before they release beyond the Canary Group.
 - NEVER change repository or org settings by any route (UI, `gh api`, `gh repo edit`): rulesets, branch protection, environments and their reviewers, secrets and variables, Actions permissions, webhooks, collaborators. Give the user step-by-step instructions; they make the change.
-- NEVER merge PRs, `MinionTech/vexilon` included. Renovate automerge is the only exception.
+- NEVER merge PRs, `MinionTech/vexilon` included. Exceptions: Renovate automerge; a bot squash-merges its own `DerekRoberts/brain` PR once all checks pass, with no `Co-authored-by` line.
