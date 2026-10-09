@@ -34,15 +34,15 @@ This list is authoritative. The `github-repo-setup` audit has no fixed Tier-1 li
 2. **Fake gates.** A required check can pass when its tests did not run: it reports `skipped` or `neutral`, uses `continue-on-error`, or is a results job that ignores skipped or missing jobs. A results job with `needs: []` (or one that does not list the test jobs) gates nothing and is a fake gate.
 3. **No test suite.** No automated tests run in CI for the code being kept up to date.
 4. **Broken release pipeline.** The merge/release pipeline on the default branch has not succeeded recently: its latest completed run failed, or its last success is more than about a month old. A pipeline that has been failing for months means auto-merged updates would pile up undeployed and untested in TEST.
-5. **Renovate PRs blocked on review.** Required approving reviews would block Renovate PRs and nothing auto-approves them (pre-flight item 4).
-6. **Unapproved weakening overrides.** Local Renovate settings that weaken the preset (pre-flight item 6) without human sign-off in the tracking issue.
+5. **renovate-approve not installed.** The [`renovate-approve`](https://github.com/apps/renovate-approve) app is missing from the repo (pre-flight item 4). The fix is a settings step for the human (Workflow step 1, item 3), not a code PR or a question.
+6. **Unapproved weakening overrides.** Local Renovate settings that weaken the preset (pre-flight item 6) that the user has not approved. To get approval, ask the user in chat; record the answer in the issue.
 
 Not blockers: secrets or credentials shared across PR, TEST, and PROD (repository-level or hardcoded), and shared internal services (for example a shared forms or email service) used by every environment. Do not recommend per-environment secrets as part of maintenance mode.
 
 ### What tested means
 - **Application dependencies** (package manifests, lockfiles, base images): a required check builds that component and runs its tests on the PR.
 - **GitHub Actions workflow updates** (`uses:` bumps in `.github/workflows/`): a required check runs `actionlint` (or equivalent) on the PR, and the updated workflow itself actually runs on the PR and is gated by a required results check. Workflows that only run after merge (deploy, release, schedule) are covered by `actionlint` plus Tier-1 item 4: watch the next run on the default branch.
-- **Code nothing runs any more** (dead apps, scripts, old directories): the default is to add tests. Excluding it from Renovate with `ignorePaths` is a weakening override and needs human sign-off in the tracking issue; deleting it is a separate code change for the human to decide.
+- **Code nothing runs any more** (dead apps, scripts, old directories): the default is to add tests. Excluding it from Renovate with `ignorePaths` is a weakening override and needs the user's approval: ask the user in chat; record the answer in the issue. Deleting it is a separate code change; ask the user in chat too.
 
 ## Pre-flight Checklist (CRITICAL)
 
@@ -55,13 +55,11 @@ Run every item. Write nothing to the repository while doing so.
    - For each manifest or path, name the required check that builds and tests it. Anything without one is Tier-1 item 1.
    - On recent Renovate PRs, every required check completed `success` after its tests actually ran.
    - Recommended pattern, from `bcgov/quickstart-openshift`: each workflow ends with a distinctly named results job (for example `PR Results`, `Analysis Results`) that `needs:` every other job in that workflow, runs with `if: always()`, and fails when any needed job's result is `failure` or `cancelled`, or `skipped` when that job was not expected to skip. The ruleset then requires those results checks, one per workflow. A results job only gates the jobs listed in its `needs:`, so every new job must be added there; check that no job is missing. Test steps must fail normally: a step with `continue-on-error: true` leaves its job `success` even when tests fail, so the results job cannot see it. If the repo lacks this, propose it as a code PR (a human still adds the checks to the ruleset).
-4. **Renovate PRs get their required review automatically.** Maintenance mode runs without humans; they step in only when something breaks or needs judgement. The standard setup is the [`renovate-approve`](https://github.com/apps/renovate-approve) GitHub App, which approves Renovate PRs and counts as the required review for them. Native auto-merge still honors required approving reviews, so check:
-   - Read branch protection and rulesets on the branch Renovate targets, for example `gh api repos/{owner}/{repo}/branches/{branch}/protection` and `gh api repos/{owner}/{repo}/rulesets --paginate`.
-   - If approving reviews are required, confirm recent Renovate PRs carry an approval from `renovate-approve[bot]` and that it satisfies every review rule (for example required code-owner review or "approval of the most recent push" can still block it).
-   - If a ruleset sets `require_extra_approval_for_unattributed_changes`, its effect on bot approvals is unverified. Do not assume either way: confirm that recent Renovate PRs actually merged with the `renovate-approve` approval alone.
-   - If required reviews would block Renovate PRs and nothing auto-approves them, hard stop and give the human the steps to install `renovate-approve` (Settings step 3). Never suggest disabling required reviews for all pull requests.
+4. **renovate-approve is installed.** Fixed policy, everywhere: the [`renovate-approve`](https://github.com/apps/renovate-approve) GitHub App's approval is the required review for Renovate PRs (ADR-020, "Maintenance-Mode Review, Secrets and CHEFS", in `DerekRoberts/brain`). Do not evaluate or question it. The only check is mechanical:
+   - Is the app installed on the repo? Recent Renovate PRs carry an approval from `renovate-approve[bot]` (`gh pr list --author app/renovate --state all --limit 10 --json number,reviews`).
+   - If it is not installed, that is a settings step for the human (Workflow step 1, item 3). Never suggest disabling required reviews.
 5. **Release pipeline health.** Find the merge/release workflow(s) on the default branch (`gh run list --branch <default> --workflow <file> --limit 10`). The latest completed run must have succeeded, and there must be a success within about the last month. Otherwise it is Tier-1 item 4.
-6. **Local Renovate overrides.** Read `renovate.json` / `renovate.json5` (and `package.json` `renovate` blocks). Flag any local setting that weakens the preset, such as `minimumReleaseAge: "0 days"`, `ignorePaths` / `ignoreDeps` that hide code from updates, `ignoreTests: true`, or disabled vulnerability alerts. Each must be removed in the follow-up PR or explicitly signed off by the human in the tracking issue.
+6. **Local Renovate overrides.** Read `renovate.json` / `renovate.json5` (and `package.json` `renovate` blocks). Flag any local setting that weakens the preset, such as `minimumReleaseAge: "0 days"`, `ignorePaths` / `ignoreDeps` that hide code from updates, `ignoreTests: true`, or disabled vulnerability alerts. Each must be removed in the follow-up PR unless the user approves keeping it: ask the user in chat; record the answer in the issue.
 
 - **IF ANY TIER-1 BLOCKER MATCHES**: **HARD-STOP**. Change nothing. Report each blocker with evidence, the code PRs that would fix it, and click-by-click settings steps for the human.
 - **IF ALL ITEMS PASS**: Proceed with the steps below.
@@ -73,7 +71,7 @@ You do not change settings. Read the current values and give the human only the 
 
 1. Settings → General → Pull Requests → tick **Allow auto-merge**. (Check with `gh api repos/{owner}/{repo} --jq .allow_auto_merge`.)
 2. Settings → Rules → Rulesets → *(ruleset for the default branch)* → **Require status checks to pass** → add each workflow's results check.
-3. If pre-flight item 4 found no auto-approval, get the [`renovate-approve`](https://github.com/apps/renovate-approve) app installed on the repository. Installing an app on an org repo needs an org owner: open the app page → **Configure** → choose the org → **Only select repositories** → add the repo, which submits a request for owners to approve if you are not one; or ask an org owner to add it. Do not loosen reviews for anyone else.
+3. If pre-flight item 4 found `renovate-approve` not installed, get the [`renovate-approve`](https://github.com/apps/renovate-approve) app installed on the repository. Installing an app on an org repo needs an org owner: open the app page → **Configure** → choose the org → **Only select repositories** → add the repo, which submits a request for owners to approve if you are not one; or ask an org owner to add it. Do not loosen reviews for anyone else.
 
 ### 2. Renovate Configuration
 Modify or create `renovate.json` (or `renovate.json5`) at the repository root.
@@ -81,7 +79,7 @@ Modify or create `renovate.json` (or `renovate.json5`) at the repository root.
 - Renovate can still propose pin updates. Leave the pin where its pin manager can see it. Do not add a local rule that freezes the preset forever.
 - Know what the preset auto-merges before relying on it. As of release `2026.9.26`, its `default.json` sets `automerge: true` for **every** update type, majors included, after a 7-day `minimumReleaseAge` (3 days for vulnerability fixes). Major updates to database images (postgres, mysql, mariadb, mongo, redis) are disabled, so no PR opens for them, and package-manager overrides/resolutions are only bumped for security advisories. Re-read the pinned release's `default.json` each run, since this can change. That is why required checks must cover everything Renovate touches.
 - Do not add custom local auto-merge rules.
-- Remove the weakening overrides flagged in pre-flight item 6 unless the human signed them off.
+- Remove the weakening overrides flagged in pre-flight item 6 unless the user approved keeping them (asked in chat, answer recorded in the issue).
 - If the repo already pins the latest release and has no weakening overrides, make no Renovate change.
 
 ### 3. CI/CD Deployment Pipeline
@@ -109,8 +107,8 @@ Some repos carry an older maintenance-mode checklist issue. Where it conflicts w
 
 - [ ] Pre-flight passed (no Tier-1 blockers), report linked or summarized here
 - [ ] Required results checks cover every path Renovate updates
-- [ ] `renovate-approve` installed and recent Renovate PRs merged with it alone
-- [ ] `bcgov/renovate-config` pinned to a release; weakening overrides removed or signed off below
+- [ ] `renovate-approve` installed on the repo
+- [ ] `bcgov/renovate-config` pinned to a release; weakening overrides removed, or kept with the user's answer recorded here
 - [ ] Release pipeline green on the default branch
 - [ ] PROD promotes the tested digest (PROD approval gate optional)
 
@@ -121,6 +119,8 @@ Some repos carry an older maintenance-mode checklist issue. Where it conflicts w
 - **Same digest to PROD**: PROD never deploys a digest that did not pass CI and TEST, and never a release tag whose SHA is off `main`.
 - **Checks must actually run and cover what Renovate changes**: A test suite on disk, a skipped required check, a results job with `needs: []`, or a required check that ignores a Renovate-updated path is not a pass.
 - **Shared secrets are fine**: Do not flag or fix secrets shared across environments as part of maintenance mode.
+- **renovate-approve is settled**: Its approval is the required review for Renovate PRs (ADR-020). Never write a "does renovate-approve count" question or decision line into issues or PRs.
+- **Decisions go to chat**: Never post decisions the user has to make in issues or PRs (bodies, checklists, "Decisions needed" or sign-off items, review threads). Ask the user in chat; record the answer in the issue. Issues and PRs may state decisions already made, as plain facts, and concrete steps the user has already agreed to.
 
 ## Examples
 - The user asks: "Enable maintenance mode for this repo". You run the pre-flight without writing to the repo. All items pass, so you open a PR that pins the preset and fixes the deploy path, and list the settings steps for the human.
