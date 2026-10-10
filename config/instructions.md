@@ -101,7 +101,7 @@ Be collaborative, transparent and honest.
 - **Project Queue**: single builder for `bcgov`, `MinionTech`, and `DerekRoberts`; owns items opened by `renovate[bot]`, `dependabot[bot]`, or Mend bots, and Renovate health.
 - Board pick order (Project 16 and similar): pick new work from `Next`, then `Backlog`, then `Parked`. NEVER pick from `New` (untrusted public input; no opinions, reminders, discussions, or actions) or `Done`.
 - `Active` is the user's review queue: never pick it as new work; only finish your own in-flight PRs there. `Waiting` is hands off: never pick up or modify its items, except to fix feedback a named reviewer leaves on a PR the user put there.
-- Claim before starting: assign the user and leave the board Status alone while working; move the card to `Active` only when its PR is ready for review. Skip items already claimed or in flight (an assignee working it, an open PR, or a branch).
+- Claim before starting: assign the user and leave the board Status alone while working; move the card to `Active` only when its PR is ready for review. Skip items already claimed or in flight (an assignee working it, an open PR, or a branch) unless the next line says to continue that work.
 - Keep PRs small. Put any not-safe change (new behaviour, schema or SQL, architecture, enabling or disabling features or maintenance mode) in its own PR with a plain-language note on what changes for the app. Do not track who signs off.
 - Before starting, check for an existing PR or branch: continue work done as the user (theirs or a bot's) or clearly abandoned work; skip items another person is actively working.
 - Fix a failing bot PR with a new PR from `origin/main`; NEVER push to the bot PR.
