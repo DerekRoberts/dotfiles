@@ -81,6 +81,15 @@ STUB
 
 stub() { printf '#!/usr/bin/env bash\necho "%s $*" >> "%s"\n%s\n' "$1" "$LOG" "${2:-}" > "$BIN/$1"; chmod +x "$BIN/$1"; }
 stub rpm-ostree
+cat >> "$BIN/rpm-ostree" << 'STUB'
+if [[ "$*" == "upgrade --check" ]]; then
+    case "${RPMOSTREE_CHECK:-update}" in
+        update) printf '%s\n' 'AvailableUpdate:' '        Version: 44.20261011.0 (2026-10-11T04:00:00Z)' ;;
+        none)   echo 'No updates available.'; exit 77 ;;
+        fail)   echo 'error: cannot reach the remote'; exit 1 ;;
+    esac
+fi
+STUB
 stub flatpak
 cat >> "$BIN/flatpak" << 'STUB'
 [[ "${FAIL_FLATPAK:-0}" -eq 0 ]] || exit 1
@@ -102,7 +111,8 @@ STUB
 
 run_updown() {
     env -i HOME="$FAKE_HOME" PATH="$BIN:/usr/bin:/bin" DOTFILES_DIR="$DF" \
-        KILO_LATEST="${KILO_LATEST:-1.2.3}" FAIL_FLATPAK="${FAIL_FLATPAK:-0}" bash "$TMP/inst/updown" "${@:---background}" 2>&1
+        KILO_LATEST="${KILO_LATEST:-1.2.3}" FAIL_FLATPAK="${FAIL_FLATPAK:-0}" \
+        RPMOSTREE_CHECK="${RPMOSTREE_CHECK:-update}" bash "$TMP/inst/updown" "${@:---background}" 2>&1
 }
 
 rc=0; out="$(run_updown)" || rc=$?
@@ -134,13 +144,27 @@ check    "failed flatpak update is not fatal" test "$rc" -eq 0
 contains "failed flatpak update warns"        "[updown] [flatpak-user] ⚠ Flatpak user update failed — continuing"
 check    "restorecon runs after a failed flatpak update" grep -q "^restorecon" "$LOG"
 
+# rpm-ostree: check first, stage only when there is an update.
+: > "$LOG"; out="$(run_updown)"
+contains "rpm-ostree update: staging version logged" "[updown] rpm-ostree: staging 44.20261011.0"
+check    "rpm-ostree update: upgrade staged"         grep -qx "rpm-ostree upgrade --quiet" "$LOG"
+: > "$LOG"; out="$(RPMOSTREE_CHECK=none run_updown)"
+contains "rpm-ostree no update: logged"              "[updown] rpm-ostree: no update"
+refute   "rpm-ostree no update: no upgrade"          grep -qx "rpm-ostree upgrade --quiet" "$LOG"
+: > "$LOG"; rc=0; out="$(RPMOSTREE_CHECK=fail run_updown)" || rc=$?
+check    "rpm-ostree check failed: run still exits 0" test "$rc" -eq 0
+contains "rpm-ostree check failed: fallback logged"  "[updown] ⚠ rpm-ostree: update check failed (exit 1) — running the upgrade anyway"
+check    "rpm-ostree check failed: upgrade still runs" grep -qx "rpm-ostree upgrade --quiet" "$LOG"
+check    "rpm-ostree check runs before the upgrade" \
+    test "$(grep -n '^rpm-ostree' "$LOG" | cut -d: -f2- | paste -sd'|')" = "rpm-ostree upgrade --check|rpm-ostree upgrade --quiet"
+
 # ── Run log ──────────────────────────────────────────────────────────────────
 
 RUNLOG="$FAKE_HOME/.local/state/dotfiles/updown.log"
 check  "run log written"                 test -s "$RUNLOG"
 check  "run log has the total"           grep -qF "[updown] ⏱ total: " "$RUNLOG"
 check  "run log has per-step timing"     grep -qF "[updown] [flatpak-user] ⏱ flatpak-user: " "$RUNLOG"
-check  "run log has stderr lines"        grep -qF "⚠ Flatpak user update failed" "$RUNLOG"
+check  "run log has stderr lines"        grep -qF "⚠ rpm-ostree: update check failed" "$RUNLOG"
 refute "every run log line is timestamped" \
     grep -vqE '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+-][0-9]{4} ' "$RUNLOG"
 lacks  "console output has no timestamps" "$(date +%Y)-"

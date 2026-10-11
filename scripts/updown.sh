@@ -131,7 +131,23 @@ trap 'report_total; close_log' EXIT
 
 # 1. rpm-ostree. Stages the update; does NOT reboot automatically.
 # On Kinoite, apply takes effect on next reboot (user-controlled).
+# Check first and stage only when there is an update. `upgrade --check` exits
+# 77 when there is nothing new; any other failure falls back to the upgrade.
 step_rpm_ostree() {
+    local out rc=0 version
+    info "Checking for an rpm-ostree update..."
+    out="$(rpm-ostree upgrade --check 2>&1)" || rc=$?
+    if [[ "$rc" -eq 77 ]] || { [[ "$rc" -eq 0 ]] && grep -qi 'no updates available' <<< "$out"; }; then
+        info "rpm-ostree: no update"
+        return 0
+    elif [[ "$rc" -eq 0 ]]; then
+        version="$(awk '/^[[:space:]]*Version:/ {print $2; exit}' <<< "$out")"
+        info "rpm-ostree: staging ${version:-update}"
+    else
+        [[ -z "$out" ]] || printf '%s\n' "$out"
+        warn "rpm-ostree: update check failed (exit $rc) — running the upgrade anyway"
+    fi
+
     info "Staging rpm-ostree upgrade..."
     if rpm-ostree upgrade --quiet 2>&1; then
         success "rpm-ostree upgrade staged (reboot when ready to apply)"
