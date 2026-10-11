@@ -61,3 +61,6 @@ jobs:
       - name: Test commit-msg hook
         run: bash scripts/test-commit-msg.sh
 
+      - name: Test updown
+        run: bash scripts/test-updown.sh
+
