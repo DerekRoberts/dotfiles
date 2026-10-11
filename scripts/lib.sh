@@ -227,6 +227,24 @@ kilo_cli_installed() {
     npm list -g --depth=0 @kilocode/cli >/dev/null 2>&1
 }
 
+# Installed @kilocode/cli version from the nvm global tree, e.g. 1.2.3.
+kilo_cli_version() {
+    local out
+    out="$(npm list -g --depth=0 @kilocode/cli 2>/dev/null)" || return 1
+    out="$(grep -oE '@kilocode/cli@[0-9][^[:space:]]*' <<< "$out" | head -n 1)"
+    [[ -n "$out" ]] || return 1
+    printf '%s\n' "${out#@kilocode/cli@}"
+}
+
+# Latest @kilocode/cli version on the npm registry. npm has no curl-style
+# timeouts, so cap the fetch the npm way.
+kilo_cli_latest_version() {
+    local ver
+    ver="$(npm view --fetch-timeout=20000 --fetch-retries=1 @kilocode/cli version 2>/dev/null)" || return 1
+    [[ "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]] || return 1
+    printf '%s\n' "$ver"
+}
+
 # npm 11+ needs an explicit allowlist for global lifecycle scripts; older npm runs them by default.
 install_kilo_cli_pkg() {
     local major
@@ -237,6 +255,111 @@ install_kilo_cli_pkg() {
     else
         npm install -g @kilocode/cli
     fi
+}
+
+# ── Version checks ───────────────────────────────────────────────────────────
+
+# True when the installed version matches a known latest version. An unknown
+# latest (lookup failed) or a missing install never counts as current.
+version_is_current() {
+    local current="$1" latest="$2"
+    [[ -n "$latest" && "$latest" != "unknown" ]] || return 1
+    [[ -n "$current" && "$current" != "none" ]] || return 1
+    [[ "$current" == "$latest" ]]
+}
+
+# ── Step timing & parallel jobs ──────────────────────────────────────────────
+#
+# LOG_PREFIX, when set by the caller, goes in front of timing lines.
+
+_report_elapsed() {
+    local name="$1" start="$2" rc="$3" end
+    end="$(date +%s)"
+    if [[ "$rc" -eq 0 ]]; then
+        printf '%s⏱ %s: %ss\n' "${LOG_PREFIX-}" "$name" "$((end - start))"
+    else
+        printf '%s⏱ %s: %ss (exit %s)\n' "${LOG_PREFIX-}" "$name" "$((end - start))" "$rc"
+    fi
+}
+
+# timed_step NAME CMD... — run CMD in a subshell and print its elapsed time,
+# also when CMD fails or set -e stops it. Returns CMD's status. CMD runs in the
+# same errexit context as the caller, so call it plainly to keep set -e.
+timed_step() {
+    local name="$1" start
+    shift
+    start="$(date +%s)"
+    (
+        # Globals, not locals: a set -e exit can unwind function scopes
+        # before the trap runs. The subshell keeps them from leaking.
+        _STEP_NAME="$name"
+        _STEP_START="$start"
+        trap '_report_elapsed "$_STEP_NAME" "$_STEP_START" "$?"' EXIT
+        "$@"
+    )
+}
+
+# prefix_lines PREFIX — copy stdin to stdout with PREFIX in front of every
+# line, so parallel jobs stay readable in the journal.
+prefix_lines() {
+    local prefix="$1" line
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        printf '%s%s\n' "$prefix" "$line"
+    done
+}
+
+PARALLEL_PIDS=()
+PARALLEL_NAMES=()
+
+# spawn_step PREFIX CMD... — run CMD in the background, stdout and stderr
+# merged and prefixed. Collect it with wait_steps. Steps spawned together must
+# not write the same files or take the same package-manager lock.
+spawn_step() {
+    local prefix="$1"
+    shift
+    ( "$@" 2>&1 | prefix_lines "$prefix" ) &
+    PARALLEL_PIDS+=("$!")
+    PARALLEL_NAMES+=("$prefix")
+}
+
+# wait_steps — wait for every spawned step. Returns 1 if any failed.
+wait_steps() {
+    local i rc=0
+    for i in "${!PARALLEL_PIDS[@]}"; do
+        if ! wait "${PARALLEL_PIDS[$i]}"; then
+            printf '%s⚠ step failed\n' "${PARALLEL_NAMES[$i]}" >&2
+            rc=1
+        fi
+    done
+    PARALLEL_PIDS=()
+    PARALLEL_NAMES=()
+    return "$rc"
+}
+
+# ── Run logs ─────────────────────────────────────────────────────────────────
+
+# rotate_logs FILE [KEEP] — shift FILE to FILE.1, FILE.1 to FILE.2, and so on,
+# keeping KEEP files in all (default 5: FILE and FILE.1 to FILE.4).
+rotate_logs() {
+    local file="$1" keep="${2:-5}" i
+    rm -f "${file}.$((keep - 1))"
+    for (( i = keep - 2; i >= 1; i-- )); do
+        if [[ -f "${file}.${i}" ]]; then
+            mv -f "${file}.${i}" "${file}.$((i + 1))"
+        fi
+    done
+    if [[ -f "$file" ]]; then
+        mv -f "$file" "${file}.1"
+    fi
+}
+
+# stamp_lines — copy stdin to stdout with a local ISO 8601 timestamp in front
+# of every line. Keeps reading if a write fails, so writers never block.
+stamp_lines() {
+    local line
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        printf '%(%Y-%m-%dT%H:%M:%S%z)T %s\n' -1 "$line" || true
+    done
 }
 
 # ── Insync ───────────────────────────────────────────────────────────────────

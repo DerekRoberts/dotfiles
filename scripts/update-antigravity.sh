@@ -28,7 +28,7 @@ if [ -n "${1:-}" ] && [ -f "$1" ]; then
     TARBALL_PATH=$(realpath "$1")
 else
     echo "Fetching latest Linux x64 download URL from $DOWNLOAD_PAGE..."
-    DOWNLOAD_URL=$(curl -sL --compressed --max-redirs 5 "$DOWNLOAD_PAGE" | grep -oE 'https://storage\.googleapis\.com/antigravity-public/antigravity-hub/[^"]+/linux-x64/Antigravity\.tar\.gz' | head -n 1) || DOWNLOAD_URL=""
+    DOWNLOAD_URL=$(curl -sL --compressed --max-redirs 5 --connect-timeout 10 --max-time 30 "$DOWNLOAD_PAGE" | grep -oE 'https://storage\.googleapis\.com/antigravity-public/antigravity-hub/[^"]+/linux-x64/Antigravity\.tar\.gz' | head -n 1) || DOWNLOAD_URL=""
 
     if [ -z "$DOWNLOAD_URL" ] || ! echo "$DOWNLOAD_URL" | grep -qE '^https://storage\.googleapis\.com/antigravity-public/'; then
         echo "Error: Could not resolve valid release URL from $DOWNLOAD_PAGE." >&2
@@ -49,7 +49,7 @@ else
     trap 'if [ "$IS_TEMP_FILE" = true ] && [ -f "$TARBALL_PATH" ]; then rm -f "$TARBALL_PATH"; fi' EXIT
 
     echo "Downloading to $TARBALL_PATH..."
-    curl -L --progress-bar --max-redirs 5 "$DOWNLOAD_URL" -o "$TARBALL_PATH"
+    curl -L --progress-bar --max-redirs 5 --connect-timeout 10 --max-time 900 "$DOWNLOAD_URL" -o "$TARBALL_PATH"
 fi
 
 

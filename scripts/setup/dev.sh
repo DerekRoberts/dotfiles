@@ -270,6 +270,20 @@ install_oc() {
     success "oc installed ($target, checksum verified)"
 }
 
+# Run "$@" the way the old `fetch_gh_release ... || failed=1` lines did (a
+# failure returns 1 rather than tripping set -e mid-function).
+_tool_or_fail() {
+    "$@" || return 1
+}
+
+# tool_job NAME CMD... — background job with "[NAME] " on every line and
+# its elapsed time. Collected by wait_steps in install_cli_tools.
+tool_job() {
+    local name="$1"
+    shift
+    spawn_step "[$name] " timed_step "$name" _tool_or_fail "$@"
+}
+
 install_cli_tools() {
     info "Installing standalone binaries..."
     BIN_DIR="${BIN_DIR:-$HOME/.local/bin}"
@@ -278,15 +292,18 @@ install_cli_tools() {
         export PATH="${BIN_DIR}:${PATH}"
     fi
 
+    # One background job per tool: each looks up its own release and writes
+    # only its own binaries, stamp and mktemp dir, so they can run at once.
     local failed=0
-    fetch_gh_release "jq"             "jqlang/jq"           "jq-linux-amd64"                          || failed=1
-    fetch_gh_release "gh"             "cli/cli"             "gh_{ver}_linux_amd64.tar.gz"             || failed=1
-    fetch_gh_release "gitleaks"       "gitleaks/gitleaks"   "gitleaks_{ver}_linux_x64.tar.gz"         || failed=1
-    fetch_gh_release "docker-compose" "docker/compose"      "docker-compose-linux-x86_64"             || failed=1
-    fetch_gh_release "shellcheck"     "koalaman/shellcheck" "shellcheck-{tag}.linux.x86_64.tar.gz"    || failed=1
-    fetch_gh_release "actionlint"     "rhysd/actionlint"    "actionlint_{ver}_linux_amd64.tar.gz"     || failed=1
-    fetch_gh_release "uv"             "astral-sh/uv"        "uv-x86_64-unknown-linux-gnu.tar.gz" "uv uvx" || failed=1
-    install_oc || failed=1
+    tool_job jq             fetch_gh_release "jq"             "jqlang/jq"           "jq-linux-amd64"
+    tool_job gh             fetch_gh_release "gh"             "cli/cli"             "gh_{ver}_linux_amd64.tar.gz"
+    tool_job gitleaks       fetch_gh_release "gitleaks"       "gitleaks/gitleaks"   "gitleaks_{ver}_linux_x64.tar.gz"
+    tool_job docker-compose fetch_gh_release "docker-compose" "docker/compose"      "docker-compose-linux-x86_64"
+    tool_job shellcheck     fetch_gh_release "shellcheck"     "koalaman/shellcheck" "shellcheck-{tag}.linux.x86_64.tar.gz"
+    tool_job actionlint     fetch_gh_release "actionlint"     "rhysd/actionlint"    "actionlint_{ver}_linux_amd64.tar.gz"
+    tool_job uv             fetch_gh_release "uv"             "astral-sh/uv"        "uv-x86_64-unknown-linux-gnu.tar.gz" "uv uvx"
+    tool_job oc             install_oc
+    wait_steps || failed=1
 
     # Clean up legacy podman-compose python wrapper script
     if [[ -x "$BIN_DIR/docker-compose" && -f "$BIN_DIR/podman-compose" ]]; then
