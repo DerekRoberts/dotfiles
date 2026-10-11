@@ -9,6 +9,7 @@
 #
 # rpm-ostree runs first on its own, the independent updates then run in
 # parallel, and restorecon runs last. Each step prints its elapsed time.
+# Each run is also logged to ~/.local/state/dotfiles/updown.log (last 5 kept).
 #
 # The systemd user service (config/systemd/dotfiles-update.service) calls
 # this script with --background on graphical session start (at most once per 23h).
@@ -71,11 +72,60 @@ CURL_META=(--connect-timeout 10 --max-time 20)
 CURL_SCRIPT=(--connect-timeout 10 --max-time 60)
 CURL_FILE=(--connect-timeout 10 --max-time 900)
 
+# ── Run log ──────────────────────────────────────────────────────────────────
+# Every run, background or interactive, is also written to UPDOWN_LOG with a
+# timestamp on each line, so output survives a shutdown. The last 5 runs are
+# kept (updown.log, updown.log.1 ... .4). Logging problems never fail the run.
+
+UPDOWN_LOG="$HOME/.local/state/dotfiles/updown.log"
+LOG_PIDS=()
+LOG_FD=""
+
+open_log() {
+    mkdir -p "$(dirname "$UPDOWN_LOG")" 2>/dev/null || return 1
+    rotate_logs "$UPDOWN_LOG" 5 2>/dev/null || true
+    : > "$UPDOWN_LOG" 2>/dev/null || return 1
+    # One writer stamps lines into the file. Console stdout and stderr each
+    # go through their own tee, so the console stays as it was. tee -p keeps
+    # writing to the console if the log side goes away.
+    exec {CONSOLE_OUT}>&1 {CONSOLE_ERR}>&2
+    exec {LOG_FD}> >(set +e; stamp_lines >> "$UPDOWN_LOG" 2>/dev/null; cat > /dev/null)
+    LOG_PIDS+=("$!")
+    exec > >(tee -p "/dev/fd/$LOG_FD" 2>/dev/null)
+    LOG_PIDS+=("$!")
+    exec 2> >(tee -p "/dev/fd/$LOG_FD" 1>&"$CONSOLE_ERR" 2>/dev/null)
+    LOG_PIDS+=("$!")
+}
+
+# Close the tees and the writer, wait for them to drain, then sync the log to
+# disk. Safe to call more than once.
+close_log() {
+    local pid i
+    [[ -n "$LOG_FD" ]] || return 0
+    exec 1>&"$CONSOLE_OUT" 2>&"$CONSOLE_ERR"
+    exec {LOG_FD}>&-
+    LOG_FD=""
+    for pid in "${LOG_PIDS[@]}"; do
+        # Bounded wait: a stuck writer must not hold up shutdown.
+        for (( i = 0; i < 50; i++ )); do
+            kill -0 "$pid" 2>/dev/null || break
+            sleep 0.1
+        done
+        if ! kill -0 "$pid" 2>/dev/null; then
+            wait "$pid" 2>/dev/null || true
+        fi
+    done
+    LOG_PIDS=()
+    sync -f "$UPDOWN_LOG" 2>/dev/null || sync 2>/dev/null || true
+}
+
+open_log || warn "Cannot write $UPDOWN_LOG — continuing without a log file"
+
 UPDOWN_START="$(date +%s)"
 report_total() {
     info "⏱ total: $(( $(date +%s) - UPDOWN_START ))s"
 }
-trap report_total EXIT
+trap 'report_total; close_log' EXIT
 
 # ── Steps ────────────────────────────────────────────────────────────────────
 
@@ -306,10 +356,14 @@ timed_step restorecon step_restorecon
 echo ""
 echo "✅ Maintenance complete."
 report_total
-trap - EXIT
-
 if [[ "$SHUTDOWN" -eq 1 ]]; then
     echo "Shutting down system in 3 seconds (Ctrl+C to cancel)..."
+fi
+# Flush and sync the log before anything can power the machine off.
+trap - EXIT
+close_log
+
+if [[ "$SHUTDOWN" -eq 1 ]]; then
     sleep 3
     systemctl poweroff
 fi

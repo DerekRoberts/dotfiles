@@ -336,6 +336,32 @@ wait_steps() {
     return "$rc"
 }
 
+# ── Run logs ─────────────────────────────────────────────────────────────────
+
+# rotate_logs FILE [KEEP] — shift FILE to FILE.1, FILE.1 to FILE.2, and so on,
+# keeping KEEP files in all (default 5: FILE and FILE.1 to FILE.4).
+rotate_logs() {
+    local file="$1" keep="${2:-5}" i
+    rm -f "${file}.$((keep - 1))"
+    for (( i = keep - 2; i >= 1; i-- )); do
+        if [[ -f "${file}.${i}" ]]; then
+            mv -f "${file}.${i}" "${file}.$((i + 1))"
+        fi
+    done
+    if [[ -f "$file" ]]; then
+        mv -f "$file" "${file}.1"
+    fi
+}
+
+# stamp_lines — copy stdin to stdout with a local ISO 8601 timestamp in front
+# of every line. Keeps reading if a write fails, so writers never block.
+stamp_lines() {
+    local line
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        printf '%(%Y-%m-%dT%H:%M:%S%z)T %s\n' -1 "$line" || true
+    done
+}
+
 # ── Insync ───────────────────────────────────────────────────────────────────
 
 # Live on this boot? One check: a real executable on PATH. Layering is setup's

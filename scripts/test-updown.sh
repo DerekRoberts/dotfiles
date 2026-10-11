@@ -88,6 +88,11 @@ STUB
 stub restorecon
 stub update-antigravity 'echo "hub stub"'
 stub systemctl
+cat >> "$BIN/systemctl" << 'STUB'
+# Snapshot the log at the moment poweroff would run.
+cp "$HOME/.local/state/dotfiles/updown.log" "$HOME/log-at-poweroff"
+STUB
+stub sleep   # the 3 s shutdown countdown
 stub curl 'exit 7'   # nothing reaches the network
 cp "$STUBS/npm" "$FAKE_HOME/.nvm/bin/npm"
 cat > "$FAKE_HOME/.nvm/nvm.sh" << 'STUB'
@@ -97,7 +102,7 @@ STUB
 
 run_updown() {
     env -i HOME="$FAKE_HOME" PATH="$BIN:/usr/bin:/bin" DOTFILES_DIR="$DF" \
-        KILO_LATEST="${KILO_LATEST:-1.2.3}" FAIL_FLATPAK="${FAIL_FLATPAK:-0}" bash "$TMP/inst/updown" --background 2>&1
+        KILO_LATEST="${KILO_LATEST:-1.2.3}" FAIL_FLATPAK="${FAIL_FLATPAK:-0}" bash "$TMP/inst/updown" "${@:---background}" 2>&1
 }
 
 rc=0; out="$(run_updown)" || rc=$?
@@ -128,6 +133,48 @@ rc=0; out="$(FAIL_FLATPAK=1 run_updown)" || rc=$?
 check    "failed flatpak update is not fatal" test "$rc" -eq 0
 contains "failed flatpak update warns"        "[updown] [flatpak-user] ⚠ Flatpak user update failed — continuing"
 check    "restorecon runs after a failed flatpak update" grep -q "^restorecon" "$LOG"
+
+# ── Run log ──────────────────────────────────────────────────────────────────
+
+RUNLOG="$FAKE_HOME/.local/state/dotfiles/updown.log"
+check  "run log written"                 test -s "$RUNLOG"
+check  "run log has the total"           grep -qF "[updown] ⏱ total: " "$RUNLOG"
+check  "run log has per-step timing"     grep -qF "[updown] [flatpak-user] ⏱ flatpak-user: " "$RUNLOG"
+check  "run log has stderr lines"        grep -qF "⚠ Flatpak user update failed" "$RUNLOG"
+refute "every run log line is timestamped" \
+    grep -vqE '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+-][0-9]{4} ' "$RUNLOG"
+lacks  "console output has no timestamps" "$(date +%Y)-"
+
+# Rotation: mark each run, then check the newest five are kept in order.
+for n in 1 2 3 4 5 6; do
+    run_updown > /dev/null
+    echo "marker run $n" >> "$RUNLOG"
+done
+check  "rotation keeps updown.log"       grep -q "marker run 6" "$RUNLOG"
+check  "rotation keeps updown.log.1"     grep -q "marker run 5" "$RUNLOG.1"
+check  "rotation keeps updown.log.4"     grep -q "marker run 2" "$RUNLOG.4"
+refute "rotation keeps no more than 5"   test -e "$RUNLOG.5"
+
+# An interactive run ends in shutdown: the log must be complete and on disk
+# before poweroff runs.
+rm -f "$FAKE_HOME/log-at-poweroff"
+rc=0; out="$(run_updown --shutdown)" || rc=$?
+check "shutdown run exits 0"             test "$rc" -eq 0
+check "poweroff ran"                     test -f "$FAKE_HOME/log-at-poweroff"
+check "log complete before poweroff: total" \
+    grep -qF "[updown] ⏱ total: " "$FAKE_HOME/log-at-poweroff"
+check "log complete before poweroff: shutdown notice" \
+    grep -qF "Shutting down system in 3 seconds" "$FAKE_HOME/log-at-poweroff"
+contains "console still shows the shutdown notice" "Shutting down system in 3 seconds"
+
+# Logging problems never fail the run.
+mv "$FAKE_HOME/.local/state/dotfiles" "$TMP/state-saved"
+touch "$FAKE_HOME/.local/state/dotfiles"   # a file where the log dir should be
+rc=0; out="$(run_updown)" || rc=$?
+rm -f "$FAKE_HOME/.local/state/dotfiles"; mv "$TMP/state-saved" "$FAKE_HOME/.local/state/dotfiles"
+check    "unwritable log dir does not fail the run" test "$rc" -eq 0
+contains "unwritable log dir still prints the total" "[updown] ⏱ total: "
+contains "unwritable log dir is reported" "continuing without a log file"
 
 # ── dev.sh --tools: one prefixed, timed job per tool ─────────────────────────
 
