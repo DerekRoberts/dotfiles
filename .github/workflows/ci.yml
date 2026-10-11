@@ -63,4 +63,3 @@ jobs:
 
       - name: Test updown
         run: bash scripts/test-updown.sh
-
