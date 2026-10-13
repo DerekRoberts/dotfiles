@@ -83,6 +83,8 @@ Be collaborative, transparent and honest.
 - ALWAYS use minimum permissions (e.g., `permissions: {}` in GitHub Actions). NEVER add manual version tracking artifacts.
 - ALWAYS pin third-party GitHub Actions to full 40-character commit SHAs of a published release, with a trailing tag comment; NEVER pin `@main` (e.g., `uses: bcgov/actions/workflow-results@<sha> # v0.7.0`). Official platform actions from `actions/*`, `github/*`, and `docker/*` may use version tags (e.g., `actions/checkout@v4`). All others (including `astral-sh/*`, `grafana/*`, and `bcgov/*`) must be SHA-pinned.
 - Reusable workflows: ALWAYS explicitly map secrets on caller jobs (`secrets: { key: ${{ secrets.KEY }} }`) alongside `with: environment: <env>`. NEVER use `secrets: inherit` unless explicitly requested.
+- SARIF uploads: Third-party security scans (e.g. Trivy) uploading SARIF to GitHub Code Scanning on `pull_request` must explicitly set `ref: refs/pull/${{ github.event.pull_request.number }}/head` and `sha: ${{ github.event.pull_request.head.sha }}`, and the scan job's existing `actions/checkout` step must set `ref: ${{ github.event.pull_request.head.sha || '' }}` so the scanned code matches the attributed sha (push and schedule runs unchanged; never add a second checkout step). Splitting PR uploads from default branch pushes prevents ephemeral merge ref recalculations from orphaning scan results and locking branch rulesets.
+
 
 ## Agent Interaction
 
