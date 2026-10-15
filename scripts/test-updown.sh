@@ -211,6 +211,16 @@ for t in jq gh gitleaks docker-compose shellcheck actionlint uv oc; do
 done
 contains "dev.sh --tools keeps per-tool warnings" "[gh]   ⚠ Could not resolve latest release tag for cli/cli"
 
+# ── Antigravity URL parsing ──────────────────────────────────────────────────
+
+mock_html="const r = \`https://storage.googleapis.com/antigravity-public/antigravity-hub/\${e}-\${t}\`;return n===\`linux-x64\`?\`\${r}/linux-x64/Antigravity.tar.gz\`:null; https://storage.googleapis.com/antigravity-public/antigravity-hub/2.23.1-6348059836284928/linux-x64/Antigravity.tar.gz"
+parsed_url="$(grep -oE 'https://storage\.googleapis\.com/antigravity-public/antigravity-hub/[0-9A-Za-z._-]+/linux-x64/Antigravity\.tar\.gz' <<< "$mock_html" | head -n 1 || true)"
+check "antigravity URL parsing ignores JS template literals" test "$parsed_url" = "https://storage.googleapis.com/antigravity-public/antigravity-hub/2.23.1-6348059836284928/linux-x64/Antigravity.tar.gz"
+
+mock_template="const r = \`https://storage.googleapis.com/antigravity-public/antigravity-hub/\${e}-\${t}\`;"
+no_url="$(grep -oE 'https://storage\.googleapis\.com/antigravity-public/antigravity-hub/[0-9A-Za-z._-]+/linux-x64/Antigravity\.tar\.gz' <<< "$mock_template" | head -n 1 || true)"
+check "antigravity URL parsing rejects JS template without release" test -z "$no_url"
+
 # ── Every curl on the updown path has both timeouts ──────────────────────────
 
 missing="$(grep -nE '(^|[^[:alnum:]_-])curl ' "$REPO/scripts/updown.sh" "$REPO/scripts/update-antigravity.sh" "$REPO/scripts/lib.sh" \
