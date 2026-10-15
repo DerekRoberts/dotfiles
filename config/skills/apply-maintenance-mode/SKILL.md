@@ -9,7 +9,7 @@ description: 'Draft, in development. Takes over an orphaned app, stabilizes CI, 
 
 # Apply Maintenance Mode
 
-Take over an orphaned app (no day-to-day team), make its CI trustworthy, check it with the product owner (PO), then put the repo into hands-off maintenance mode. Maintenance mode enforces zero-review auto-merges for dependencies once all CI tests pass.
+Take over an orphaned app (no day-to-day team), make its CI trustworthy, check it with the product owner (PO), then put the repo into hands-off maintenance mode. Maintenance mode auto-merges dependency updates with no human review; each merge still needs the `renovate-approve[bot]` approval and passing required checks.
 
 ## Use When
 - The user asks to take over, adopt or stabilize an app or repo.
@@ -47,6 +47,7 @@ Run these before the Renovate pre-flight and scaffolding below when the app stil
 - Use `bcgov/actions/workflow-results` with `needs` listing the jobs it gates. Do not set `title:`; leave the action's default header (`Workflow Results`). Required check names come from the job `name:` (`PR Results`, `Validate Results`, `Analysis Results`), not from `title:`.
 - Standard job names: `PR Results`, `Validate Results`, `Analysis Results`. Add results jobs; don't rename existing jobs.
 - The user sets the rulesets to require exactly those three checks.
+- `workflow-results` counts every `skipped` job in `needs` as passing and has no input for expected or allowed skips. Only `failure`, `cancelled` or an unknown result fails it. So a test job skipped by a wrong `if:` still passes the gate. Give test jobs no `if:` that can skip them on a Renovate PR, list them directly in `needs` (the context holds direct needs only), and check a Renovate PR's run shows them as `success`, not `skipped`.
 
 ### 4. Pin actions
 - Pin every action by release-commit SHA with a version comment: `uses: owner/action@<sha> # vX.Y.Z`.
@@ -54,10 +55,10 @@ Run these before the Renovate pre-flight and scaffolding below when the app stil
 
 ### 5. QA with the PO
 - Build the UAT checklist, PO test plan and approximation tests with `derive-uat-checklist`. Run checks in TEST only.
-- File neutral issues for anything the PO must decide.
+- Ask the user in chat about anything the PO must decide. Record only the agreed outcome in the tracking issue.
 
 ### 6. Declare maintenance mode
-- Continue with the pre-flight and Renovate scaffolding below. Close the tracking issue once UAT passes.
+- Continue with the pre-flight and Renovate scaffolding below. Close the tracking issue only when its whole checklist is complete, UAT included.
 
 ## Tier-1 Blockers
 
@@ -162,6 +163,7 @@ Some repos carry an older maintenance-mode checklist issue. Where it conflicts w
 - [ ] Upgrade PRs queued for any PostgreSQL/PostGIS major behind quickstart-openshift's current one (not blocking)
 - [ ] PROD promotes the tested digest (PROD approval gate optional)
 - [ ] `SECURITY.md` uses quickstart-openshift's private vulnerability reporting wording; private vulnerability reporting enabled
+- [ ] UAT passed with the PO
 
 ## Rules
 - **Hands off settings**: Never change repository settings, rulesets, environments, secrets, or app installs. Give the human steps.
@@ -181,7 +183,7 @@ Some repos carry an older maintenance-mode checklist issue. Where it conflicts w
 
 ## Edge Cases
 - **Monorepos**: map each Renovate-updated directory to a required check; one green check for one app does not cover the others.
-- **Path-filtered workflows**: an event-level `paths` / `paths-ignore` filter means the workflow never starts, so its required results check never reports and the PR waits forever. Required workflows must trigger on every PR and apply path conditions at the job level, with the results job treating those skips as expected.
+- **Path-filtered workflows**: an event-level `paths` / `paths-ignore` filter means the workflow never starts, so its required results check never reports and the PR waits forever. Required workflows must trigger on every PR and apply path conditions at the job level, and only skip jobs that are safe to skip, since the results job passes every skip.
 
 ## References
 - `bcgov/quickstart-openshift` workflows: results-job pattern (`PR Results`, `Analysis Results`).
