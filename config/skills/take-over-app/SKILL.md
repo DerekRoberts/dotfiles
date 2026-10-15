@@ -30,7 +30,7 @@ Adopt an app that no longer has a day-to-day team, make its CI trustworthy, chec
 - Lint workflows (for example `actionlint`).
 
 ### 3. Adopt standard results gates
-- Use `bcgov/actions/workflow-results` with `needs` listing the jobs it gates.
+- Use `bcgov/actions/workflow-results` with `needs` listing the jobs it gates. Do not set `title:`; leave the action's default header (`Workflow Results`). Required check names come from the job `name:` (`PR Results`, `Validate Results`, `Analysis Results`), not from `title:`.
 - Standard job names: `PR Results`, `Validate Results`, `Analysis Results`. Add results jobs; don't rename existing jobs.
 - The user sets the rulesets to require exactly those three checks.
 
