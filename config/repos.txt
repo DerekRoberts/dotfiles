@@ -5,7 +5,6 @@
 bcgov/action-repo-reporter
 bcgov/actions
 bcgov/actions-openshift
-bcgov/agent-skills
 bcgov/nr-fom
 bcgov/nr-results-exam
 bcgov/nr-seedtransfer-map
