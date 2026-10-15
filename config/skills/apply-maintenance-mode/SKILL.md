@@ -1,6 +1,6 @@
 ---
 name: apply-maintenance-mode
-description: 'Draft, in development. Automates the transition of a repository into "Maintenance Mode" (Renovate auto-merge, unconditional tests, deployment upgrades). Not ready to ship. Use only after a read-only pre-flight finds no Tier-1 blockers.'
+description: 'Draft, in development. Takes over an orphaned app, stabilizes CI, then puts the repo into Maintenance Mode (Renovate auto-merge, unconditional tests, deployment upgrades). Use when the user asks to take over, adopt or stabilize an app, or to put it into maintenance mode. Not ready to ship. Use the Renovate steps only after a read-only pre-flight finds no Tier-1 blockers.'
 ---
 
 > **Draft, in development.** Maintenance mode is still being worked out. This file lives in `DerekRoberts/dotfiles` at `config/skills/apply-maintenance-mode/`. `scripts/setup/ai.sh` copies every directory under `config/skills/` into `~/.agents/skills/`, which is what Derek's tools load. Do not copy this into the `bcgov/quickstart-openshift` template or its `AGENTS.md`. It may move there, or to a BC Gov library, once it settles. Decision record: ADR-018 in `DerekRoberts/brain`. Moved from [bcgov/agent-skills#60](https://github.com/bcgov/agent-skills/pull/60); that repo is archived (consolidated into bcgov/agent-marketplace).
@@ -9,24 +9,55 @@ description: 'Draft, in development. Automates the transition of a repository in
 
 # Apply Maintenance Mode
 
-To adopt and stabilize an app before this step (CI and Sonar cleanup, results gates, SHA pins, PO QA), use `take-over-app`.
-
-Automate the scaffolding and configuration required to put a mature BC Gov repository into a hands-off, automated maintenance mode. This enforces zero-review auto-merges for dependencies, provided all CI tests pass.
+Take over an orphaned app (no day-to-day team), make its CI trustworthy, check it with the product owner (PO), then put the repo into hands-off maintenance mode. Maintenance mode enforces zero-review auto-merges for dependencies once all CI tests pass.
 
 ## Use When
+- The user asks to take over, adopt or stabilize an app or repo.
 - The user asks to put a specific app, repo, or service into "maintenance mode" or "autopilot".
-- The read-only pre-flight below finds no Tier-1 blocker.
+- An app is heading into maintenance mode and its CI, gates or pins need cleanup first.
+- The read-only pre-flight below finds no Tier-1 blocker (for the Renovate / maintenance-mode steps).
 
 ## Don't Use When
-- The pre-flight finds any Tier-1 blocker (defined below).
+- The pre-flight finds any Tier-1 blocker (defined below) for the Renovate / maintenance-mode steps.
 
 Maintenance mode is about merging dependency updates without humans. It does not remove deploy approval: a human approval gate on PROD (a required reviewer on the PROD environment) is fine.
 
 ## Ground Rules
-- **No repo changes before pre-flight passes.** Do not create branches, commits, or files in the repository, including audit output such as `MATURITY_REPORT.md`. Keep audit reports outside the checkout (for example a scratch directory) or post a summary in the tracking issue.
-- **Never change repository settings.** Branch protection, rulesets, environments, secrets, app installs, and repository options (such as `allow_auto_merge`) are changed by a human. Read them with `gh api` if you can; for anything that must change, give the human numbered, click-by-click steps.
+- **No version changes outside version PRs.** Runtime, base image and dependency versions stay as they are in cleanup PRs. Flag mismatches to the user instead of fixing them.
+- **PROD only with approval.** Never deploy, promote or write to PROD without the user's explicit approval.
+- **Settings are the user's.** Rulesets, environments and secrets are changed by the user; give exact steps. Never change repository settings yourself. Read them with `gh api` if you can; for anything that must change, give the human numbered, click-by-click steps.
+- **No feature work.** Keep PRs small, one concern each.
+- **No repo changes before pre-flight passes** (for the Renovate / maintenance-mode steps). Do not create branches, commits, or files in the repository for those steps, including audit output such as `MATURITY_REPORT.md`. Keep audit reports outside the checkout (for example a scratch directory) or post a summary in the tracking issue.
 - **Hard stops are rule-based.** If any Tier-1 condition below matches, stop. Do not weigh it against other strengths of the repo.
 - **How GitHub treats skips.** A required check that reports `skipped` counts as passing for merge. A required check that never reports at all leaves the PR waiting forever. Design gates with both in mind.
+
+## Take Over Workflow
+
+Run these before the Renovate pre-flight and scaffolding below when the app still needs CI cleanup, gates or PO QA.
+
+### 1. Take over the repo
+- Read the README, workflows, open issues and PRs. Open a tracking issue with a checklist of the steps below.
+
+### 2. Clean up CI and Sonar
+- Remove dead workflows, jobs and config. Keep what works.
+- Sonar: keep the working path (for example SonarCloud automatic analysis). Remove stray project keys, unused `sonar-project.properties` and redundant scanner args. Say in the PR what remains and why.
+- Lint workflows (for example `actionlint`).
+
+### 3. Adopt standard results gates
+- Use `bcgov/actions/workflow-results` with `needs` listing the jobs it gates. Do not set `title:`; leave the action's default header (`Workflow Results`). Required check names come from the job `name:` (`PR Results`, `Validate Results`, `Analysis Results`), not from `title:`.
+- Standard job names: `PR Results`, `Validate Results`, `Analysis Results`. Add results jobs; don't rename existing jobs.
+- The user sets the rulesets to require exactly those three checks.
+
+### 4. Pin actions
+- Pin every action by release-commit SHA with a version comment: `uses: owner/action@<sha> # vX.Y.Z`.
+- Renovate bumps the pins.
+
+### 5. QA with the PO
+- Build the UAT checklist, PO test plan and approximation tests with `derive-uat-checklist`. Run checks in TEST only.
+- File neutral issues for anything the PO must decide.
+
+### 6. Declare maintenance mode
+- Continue with the pre-flight and Renovate scaffolding below. Close the tracking issue once UAT passes.
 
 ## Tier-1 Blockers
 
