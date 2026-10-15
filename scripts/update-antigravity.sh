@@ -15,14 +15,9 @@ if [ -L "$CANONICAL_INSTALL_DIR" ] || echo "$CANONICAL_INSTALL_DIR" | grep -qE '
     exit 1
 fi
 INSTALL_DIR="$CANONICAL_INSTALL_DIR"
-STAMP_FILE="${ANTIGRAVITY_STAMP_FILE:-$HOME/.local/share/dotfiles/antigravity.url}"
 
 DOWNLOAD_PAGE="https://antigravity.google/download"
-CURRENT_VER=$(jq -r '.version' "$INSTALL_DIR/resources/app/package.json" 2>/dev/null || true)
-if [ -z "$CURRENT_VER" ] && [ -f "$STAMP_FILE" ]; then
-    CURRENT_VER=$(sed -nE 's#^https://storage\.googleapis\.com/antigravity-public/antigravity-hub/([0-9A-Za-z._-]+)/.*#\1#p' "$STAMP_FILE")
-fi
-CURRENT_VER="${CURRENT_VER:-Not Installed / Unknown}"
+CURRENT_VER=$(jq -r '.version' "$INSTALL_DIR/resources/app/package.json" 2>/dev/null || echo "Not Installed / Unknown")
 echo "Current Antigravity installation version: $CURRENT_VER"
 
 TARBALL_PATH=""
@@ -42,6 +37,7 @@ else
     fi
 
     # Check if we already have this exact build AND the binary exists
+    STAMP_FILE="$HOME/.local/share/dotfiles/antigravity.url"
     if [ -f "$STAMP_FILE" ] && [ -x "$INSTALL_DIR/antigravity" ] && [ "$(cat "$STAMP_FILE")" = "$DOWNLOAD_URL" ]; then
         echo "Antigravity hub is already up to date."
         exit 0
@@ -100,11 +96,7 @@ if command -v restorecon &>/dev/null; then
     restorecon -R "$INSTALL_DIR" 2>/dev/null || true
 fi
 
-NEW_VER=$(jq -r '.version' "$INSTALL_DIR/resources/app/package.json" 2>/dev/null || true)
-if [ -z "$NEW_VER" ] && [ -n "${DOWNLOAD_URL:-}" ]; then
-    NEW_VER=$(sed -nE 's#^https://storage\.googleapis\.com/antigravity-public/antigravity-hub/([0-9A-Za-z._-]+)/.*#\1#p' <<< "$DOWNLOAD_URL")
-fi
-NEW_VER="${NEW_VER:-Unknown}"
+NEW_VER=$(jq -r '.version' "$INSTALL_DIR/resources/app/package.json" 2>/dev/null || echo "Unknown")
 if [ -n "${DOWNLOAD_URL:-}" ] && [ -n "${STAMP_FILE:-}" ]; then
     mkdir -p "$(dirname "$STAMP_FILE")"
     echo "$DOWNLOAD_URL" > "$STAMP_FILE"
