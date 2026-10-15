@@ -1,6 +1,6 @@
 ---
 name: apply-maintenance-mode
-description: 'Draft, in development. Automates the transition of a repository into "Maintenance Mode" (Renovate auto-merge, unconditional tests, deployment upgrades). Not ready to ship. Use only after a read-only pre-flight finds no Tier-1 blockers.'
+description: 'Draft, in development. Takes over an orphaned app, stabilizes CI, then puts the repo into Maintenance Mode (Renovate auto-merge, unconditional tests, deployment upgrades). Use when the user asks to take over, adopt or stabilize an app, or to put it into maintenance mode. Not ready to ship. Use the Renovate steps only after a read-only pre-flight finds no Tier-1 blockers.'
 ---
 
 > **Draft, in development.** Maintenance mode is still being worked out. This file lives in `DerekRoberts/dotfiles` at `config/skills/apply-maintenance-mode/`. `scripts/setup/ai.sh` copies every directory under `config/skills/` into `~/.agents/skills/`, which is what Derek's tools load. Do not copy this into the `bcgov/quickstart-openshift` template or its `AGENTS.md`. It may move there, or to a BC Gov library, once it settles. Decision record: ADR-018 in `DerekRoberts/brain`. Moved from [bcgov/agent-skills#60](https://github.com/bcgov/agent-skills/pull/60); that repo is archived (consolidated into bcgov/agent-marketplace).
@@ -9,22 +9,56 @@ description: 'Draft, in development. Automates the transition of a repository in
 
 # Apply Maintenance Mode
 
-Automate the scaffolding and configuration required to put a mature BC Gov repository into a hands-off, automated maintenance mode. This enforces zero-review auto-merges for dependencies, provided all CI tests pass.
+Take over an orphaned app (no day-to-day team), make its CI trustworthy, check it with the product owner (PO), then put the repo into hands-off maintenance mode. Maintenance mode auto-merges dependency updates with no human review; each merge still needs the `renovate-approve[bot]` approval and passing required checks.
 
 ## Use When
+- The user asks to take over, adopt or stabilize an app or repo.
 - The user asks to put a specific app, repo, or service into "maintenance mode" or "autopilot".
-- The read-only pre-flight below finds no Tier-1 blocker.
+- An app is heading into maintenance mode and its CI, gates or pins need cleanup first.
+- The read-only pre-flight below finds no Tier-1 blocker (for the Renovate / maintenance-mode steps).
 
 ## Don't Use When
-- The pre-flight finds any Tier-1 blocker (defined below).
+- The pre-flight finds any Tier-1 blocker (defined below) for the Renovate / maintenance-mode steps.
 
 Maintenance mode is about merging dependency updates without humans. It does not remove deploy approval: a human approval gate on PROD (a required reviewer on the PROD environment) is fine.
 
 ## Ground Rules
-- **No repo changes before pre-flight passes.** Do not create branches, commits, or files in the repository, including audit output such as `MATURITY_REPORT.md`. Keep audit reports outside the checkout (for example a scratch directory) or post a summary in the tracking issue.
-- **Never change repository settings.** Branch protection, rulesets, environments, secrets, app installs, and repository options (such as `allow_auto_merge`) are changed by a human. Read them with `gh api` if you can; for anything that must change, give the human numbered, click-by-click steps.
+- **No version changes outside version PRs.** Runtime, base image and dependency versions stay as they are in cleanup PRs. Flag mismatches to the user instead of fixing them.
+- **PROD only with approval.** Never deploy, promote or write to PROD without the user's explicit approval.
+- **Settings are the user's.** Rulesets, environments and secrets are changed by the user; give exact steps. Never change repository settings yourself. Read them with `gh api` if you can; for anything that must change, give the human numbered, click-by-click steps.
+- **No feature work.** Keep PRs small, one concern each.
+- **No repo changes before pre-flight passes** (for the Renovate / maintenance-mode steps). Do not create branches, commits, or files in the repository for those steps, including audit output such as `MATURITY_REPORT.md`. Keep audit reports outside the checkout (for example a scratch directory) or post a summary in the tracking issue.
 - **Hard stops are rule-based.** If any Tier-1 condition below matches, stop. Do not weigh it against other strengths of the repo.
 - **How GitHub treats skips.** A required check that reports `skipped` counts as passing for merge. A required check that never reports at all leaves the PR waiting forever. Design gates with both in mind.
+
+## Take Over Workflow
+
+Run these before the Renovate pre-flight and scaffolding below when the app still needs CI cleanup, gates or PO QA.
+
+### 1. Take over the repo
+- Read the README, workflows, open issues and PRs. Open a tracking issue with a checklist of the steps below.
+
+### 2. Clean up CI and Sonar
+- Remove dead workflows, jobs and config. Keep what works.
+- Sonar: keep the working path (for example SonarCloud automatic analysis). Remove stray project keys, unused `sonar-project.properties` and redundant scanner args. Say in the PR what remains and why.
+- Lint workflows (for example `actionlint`).
+
+### 3. Adopt standard results gates
+- Use `bcgov/actions/workflow-results` with `needs` listing the jobs it gates. Do not set `title:`; leave the action's default header (`Workflow Results`). Required check names come from the job `name:` (`PR Results`, `Validate Results`, `Analysis Results`), not from `title:`.
+- Standard job names: `PR Results`, `Validate Results`, `Analysis Results`. Add results jobs; don't rename existing jobs.
+- The user sets the rulesets to require exactly those three checks.
+- `workflow-results` counts every `skipped` job in `needs` as passing and has no input for expected or allowed skips. Only `failure`, `cancelled` or an unknown result fails it. So a test job skipped by a wrong `if:` still passes the gate. Give test jobs no `if:` that can skip them on a Renovate PR, list them directly in `needs` (the context holds direct needs only), and check a Renovate PR's run shows them as `success`, not `skipped`.
+
+### 4. Pin actions
+- Pin every action by release-commit SHA with a version comment: `uses: owner/action@<sha> # vX.Y.Z`.
+- Renovate bumps the pins.
+
+### 5. QA with the PO
+- Build the UAT checklist, PO test plan and approximation tests with `derive-uat-checklist`. Run checks in TEST only.
+- Ask the user in chat about anything the PO must decide. Record only the agreed outcome in the tracking issue.
+
+### 6. Declare maintenance mode
+- Continue with the pre-flight and Renovate scaffolding below. Close the tracking issue only when its whole checklist is complete, UAT included.
 
 ## Tier-1 Blockers
 
@@ -55,7 +89,7 @@ Run every item. Write nothing to the repository while doing so.
    - List what Renovate updates: run through `renovate.json`'s managers and recent Renovate PRs (`gh pr list --author app/renovate --state all --limit 20 --json number,files`).
    - For each manifest or path, name the required check that builds and tests it. Anything without one is Tier-1 item 1.
    - On recent Renovate PRs, every required check completed `success` after its tests actually ran.
-   - Recommended pattern, from `bcgov/quickstart-openshift`: each workflow ends with a distinctly named results job (for example `PR Results`, `Analysis Results`) that `needs:` every other job in that workflow, runs with `if: always()`, and fails when any needed job's result is `failure` or `cancelled`, or `skipped` when that job was not expected to skip. The ruleset then requires those results checks, one per workflow. A results job only gates the jobs listed in its `needs:`, so every new job must be added there; check that no job is missing. Test steps must fail normally: a step with `continue-on-error: true` leaves its job `success` even when tests fail, so the results job cannot see it. If the repo lacks this, propose it as a code PR (a human still adds the checks to the ruleset).
+   - Recommended pattern, from `bcgov/quickstart-openshift`: each workflow ends with a distinctly named results job (for example `PR Results`, `Analysis Results`) that `needs:` every other job in that workflow, runs with `if: always()`, and uses `bcgov/actions/workflow-results` with `needs` only (do not set `title:`; the default header is `Workflow Results`). Required check names come from the job `name:`, not from `title:`. The action fails when any needed job's result is `failure` or `cancelled`, or `skipped` when that job was not expected to skip. The ruleset then requires those results checks, one per workflow. A results job only gates the jobs listed in its `needs:`, so every new job must be added there; check that no job is missing. Test steps must fail normally: a step with `continue-on-error: true` leaves its job `success` even when tests fail, so the results job cannot see it. If the repo lacks this, propose it as a code PR (a human still adds the checks to the ruleset).
    - **Trivy / Container & Filesystem Scanning**: Repos in maintenance mode must run Trivy in CI (or required code scanning). To prevent unfixable upstream advisories from deadlocking auto-merges, Trivy scans must configure `ignore-unfixed: true` with severity threshold at `CRITICAL` (or error-level SARIF). PR SARIF uploads must explicitly target `ref: refs/pull/${{ github.event.pull_request.number }}/head` and `sha: ${{ github.event.pull_request.head.sha }}`, and the scan job's existing `actions/checkout` must set `ref: ${{ github.event.pull_request.head.sha || '' }}` (no extra checkout step), to avoid orphaning scan results on merge-ref recalculations.
 4. **renovate-approve can approve Renovate PRs.** Fixed policy, everywhere: the [`renovate-approve`](https://github.com/apps/renovate-approve) GitHub App's approval is the required review for Renovate PRs (ADR-020, "Maintenance-Mode Review, Secrets and CHEFS", in `DerekRoberts/brain`). Do not reopen that policy decision. Check, mechanically with `gh`, that it works on this repo now:
    - **Current access.** renovate-approve only approves Renovate PRs whose body contains `**Automerge**: Enabled`; those are the eligible PRs. List the eligible ones from the last 7 days and whether each has a `renovate-approve[bot]` review: `gh pr list --repo {owner}/{repo} --author app/renovate --state all --search "created:>=$(date -d '7 days ago' +%F)" --json number,body,reviews --jq '.[] | select(.body | contains("**Automerge**: Enabled")) | {number, approved: ([.reviews[].author.login] | index("renovate-approve") != null)}'`. `gh api repos/{owner}/{repo}/installation` needs an app token and fails with a user token.
@@ -129,6 +163,7 @@ Some repos carry an older maintenance-mode checklist issue. Where it conflicts w
 - [ ] Upgrade PRs queued for any PostgreSQL/PostGIS major behind quickstart-openshift's current one (not blocking)
 - [ ] PROD promotes the tested digest (PROD approval gate optional)
 - [ ] `SECURITY.md` uses quickstart-openshift's private vulnerability reporting wording; private vulnerability reporting enabled
+- [ ] UAT passed with the PO
 
 ## Rules
 - **Hands off settings**: Never change repository settings, rulesets, environments, secrets, or app installs. Give the human steps.
@@ -148,7 +183,7 @@ Some repos carry an older maintenance-mode checklist issue. Where it conflicts w
 
 ## Edge Cases
 - **Monorepos**: map each Renovate-updated directory to a required check; one green check for one app does not cover the others.
-- **Path-filtered workflows**: an event-level `paths` / `paths-ignore` filter means the workflow never starts, so its required results check never reports and the PR waits forever. Required workflows must trigger on every PR and apply path conditions at the job level, with the results job treating those skips as expected.
+- **Path-filtered workflows**: an event-level `paths` / `paths-ignore` filter means the workflow never starts, so its required results check never reports and the PR waits forever. Required workflows must trigger on every PR and apply path conditions at the job level, and only skip jobs that are safe to skip, since the results job passes every skip.
 
 ## References
 - `bcgov/quickstart-openshift` workflows: results-job pattern (`PR Results`, `Analysis Results`).
