@@ -9,6 +9,8 @@ description: 'Draft, in development. Automates the transition of a repository in
 
 # Apply Maintenance Mode
 
+To adopt and stabilize an app before this step (CI and Sonar cleanup, results gates, SHA pins, PO QA), use `take-over-app`.
+
 Automate the scaffolding and configuration required to put a mature BC Gov repository into a hands-off, automated maintenance mode. This enforces zero-review auto-merges for dependencies, provided all CI tests pass.
 
 ## Use When
