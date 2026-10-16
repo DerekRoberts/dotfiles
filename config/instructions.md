@@ -111,7 +111,7 @@ Be collaborative, transparent and honest.
 - Keep PRs small. Put any not-safe change (new behaviour, schema or SQL, architecture, enabling or disabling features or maintenance mode) in its own PR with a plain-language note on what changes for the app. Do not track who signs off.
 - Before starting, check for an existing PR or branch: continue work done as the user (theirs or a bot's) or clearly abandoned work; skip items another person is actively working.
 - Fix a failing bot PR with a new PR from `origin/main`; NEVER push to the bot PR.
-- Org repos (`bcgov`, `bcgov-c`): an agent runs `git` and `gh` only on dt14, in the existing `~/Repos/<repo>` checkout, as the user. A cloud agent does not clone, push, or open PRs on those orgs. Add an always-on host to this line only after it has a hostname, `~/Repos/`, and the user git credential. Until then dt14 is the only agent host.
+- Org repos (`bcgov`, `bcgov-c`): an agent runs `git` and `gh` on the always-on agent box, as the user, with the user's `gh` login. dt14 is optional: use it only for a test that must run on the user's machine.
 - GitHub Actions on those orgs uses `actions/checkout` and `GITHUB_TOKEN` on the runner. `scripts/clone-repos.sh` is the user setup script, not an agent gate.
 - Crunchy (`bcgov/action-crunchy`, `crunchy/` paths): contributions are allowed, but `cberg-aot`, the crunchy subject-matter expert, must review and approve them before they release beyond the Canary Group.
 - NEVER change repository or org settings by any route (UI, `gh api`, `gh repo edit`): rulesets, branch protection, environments and their reviewers, secrets and variables, Actions permissions, webhooks, collaborators. Give the user step-by-step instructions; they make the change.
