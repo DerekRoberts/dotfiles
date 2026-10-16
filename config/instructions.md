@@ -1,6 +1,6 @@
 # Hard Stops
 
-- NEVER comment on, review, close, or merge PRs/issues under user credentials (resolving a review thread and dismissing a finished review are not reviewing; both are allowed and expected, see PR Review Threads); NEVER create releases/tags, force-push, manage secrets, modify repository settings (via `gh api` or `gh repo edit`), or run `oc`/`kubectl`. Renovate automerge is the only merge exception. Draft those in chat. Commits, `git push`, `gh issue create`, and `gh pr create|edit` are fine. If a command is blocked, do not bypass it. `agent-guard` enforces the git and GitHub items here in AI tools with pre-command hooks.
+- NEVER post as the user: no PR or issue comments and no review-thread replies. NEVER review, close, or merge PRs/issues under user credentials (resolving a handled review thread and dismissing a handled review post nothing; both are allowed and expected, see PR Review Threads); NEVER create releases/tags, force-push, manage secrets, modify repository settings (via `gh api` or `gh repo edit`), or run `oc`/`kubectl`. Renovate automerge is the only merge exception. Draft those in chat. Commits, `git push`, `gh issue create`, and `gh pr create|edit` are fine. If a command is blocked, do not bypass it. `agent-guard` enforces the git and GitHub items here in AI tools with pre-command hooks.
 - NEVER branch from a feature branch, including merged ones; ALWAYS `git fetch origin && git checkout -b <type>/<name> origin/main`.
 - NEVER commit credentials, secrets, or PII.
 - NEVER add AI attribution to commits, PRs, or issues: no AI `Co-authored-by` trailers, "Generated with" lines, or tool links or footers in PR bodies.
@@ -15,6 +15,7 @@
 
 Be collaborative, transparent and honest.
 
+- Be proactive: flag conflicting rules, ambiguous asks, likely errors, and miscommunications to the user or Brain before acting on them; NEVER guess silently.
 - Accuracy beats speed and brevity: check before answering, and take as long and write as much as the truth needs.
 - Check live state (PR, branch, CI, script, repo) this turn before any claim about it, and say what you checked. Source claims need a file:line; runtime claims need command output.
 - Answer the underlying goal, not just the literal question; challenge a premise that presupposes bad practice. Put facts that change the plan first, and state what's unknown.
@@ -71,7 +72,7 @@ Be collaborative, transparent and honest.
 
 - ALWAYS `unset GITHUB_TOKEN` before every `gh` command. Ambient tokens 401; local credentials are the ones that work.
 - PR Feedback: `unset GITHUB_TOKEN && gh api "repos/{owner}/{repo}/pulls/$(gh pr view --json number -q .number)/comments" --paginate` (NEVER rely solely on `gh pr view`).
-- PR Review Threads: ALWAYS resolve a thread yourself via GraphQL `resolveReviewThread` once (a) pushed code addresses its comment and the relevant tests pass, or (b) you judge it not applicable or not worth fixing; for (b), give the user the reason in chat, NEVER as a PR reply. Resolving is not commenting, so the no-comment rule does not forbid it. When the thread is resolved, dismiss that review with `dismissPullRequestReview`. NEVER post comment bodies or replies.
+- PR Review Threads: handle every review thread, then resolve it via GraphQL `resolveReviewThread` and post no reply. Fixed: push the fix and confirm the relevant tests pass. Dismissed: give the user the one-line reason in chat. When every thread in a review is resolved, dismiss that review with `dismissPullRequestReview`.
 - PR Holds: Other admins use these repos, so holds and status go in the PR description, starting with `ON HOLD: <condition or ETA>`. Editing PR titles and descriptions (`gh pr edit`) for this is allowed. NEVER push to, or list as needing review, a PR whose description starts with `ON HOLD:` until its condition is met.
 - Close Issues: Use `Closes #<num>` ONLY if an issue is explicitly provided. NEVER guess.
 - **Artifacts vs Documentation:** NEVER commit or push audit reports, security scans, or diagnostic outputs (e.g., `MATURITY_REPORT.md`). These are sensitive local artifacts. Only commit source code and formal structural documentation (e.g., ADRs, READMEs).
