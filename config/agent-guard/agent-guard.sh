@@ -23,16 +23,25 @@ if [ "$1" = mcp ]; then
         *comment*|*review*)  case "$tool" in list_*|get_*) ;; *) deny "commenting or reviewing" ;; esac ;;
         *secret*|update_repository*|delete_repository*) deny "changing repo settings" ;;
         update_issue|update_pull_request|issue_write|pull_request_write)
-            case "$3" in *'"state"'*'"open"'*|*'"state":"OPEN"'*) deny "reopening an issue or PR" ;; esac ;;
+            # JSON allows whitespace around ":" and the state may be any case.
+            args="$(printf '%s' "$3" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+            case "$args" in *'"state":"open"'*) deny "reopening an issue or PR" ;; esac ;;
     esac
     exit 0
 fi
 
 # Reads a "gh api" command into: path (the endpoint), method (-X/--method,
 # or POST when it sends fields with -f/-F/--input), and state (a field sets
-# "state" to anything but "closed", i.e. reopens).
+# "state" to anything but "closed", i.e. reopens), and open (a field other
+# than the query has the value OPEN, e.g. a GraphQL variable -f nextState=OPEN).
+gh_field() {
+    case "$1" in state=closed|[\"\']state=closed*) ;; state=*|[\"\']state=*) state=1 ;; esac
+    case "$1" in query=*|[\"\']query=*) return ;; esac
+    v="$(printf '%s' "${1#*=}" | tr -d "\"'" | tr '[:upper:]' '[:lower:]')"
+    [ "$v" != open ] || open=1
+}
 gh_api() {
-    path='' method='' fields='' state=''
+    path='' method='' fields='' state='' open=''
     set -f
     # shellcheck disable=SC2086 # split into words on purpose
     set -- $1
@@ -44,7 +53,7 @@ gh_api() {
             -X*)                       method="${1#-X}" ;;
             --method=*)                method="${1#*=}" ;;
             -f|-F|--field|--raw-field) fields=1
-                                       case "$2" in state=closed|[\"\']state=closed*) ;; state=*|[\"\']state=*) state=1 ;; esac; shift ;;
+                                       gh_field "$2"; shift ;;
             -f*|-F*|--field=*|--raw-field=*)
                                        fields=1
                                        case "$1" in
@@ -52,7 +61,7 @@ gh_api() {
                                            -F*) v="${1#-F}" ;;
                                            *)   v="${1#*=}" ;;
                                        esac
-                                       case "$v" in state=closed|[\"\']state=closed*) ;; state=*|[\"\']state=*) state=1 ;; esac ;;
+                                       gh_field "$v" ;;
             --input|--input=*)         fields=1; [ "$1" = --input ] && shift ;;
             -H|--header|-q|--jq|-t|--template|--hostname|--cache|-p|--preview) shift ;;
             -*) ;;
@@ -95,6 +104,7 @@ while read -r c; do
                         *updatePullRequestReview*|*deletePullRequestReview*) deny "reviewing" ;;
                         *reopenIssue*|*deleteIssue*|*reopenPullRequest*) deny "reopening or deleting an issue or PR" ;;
                         *updateIssue*state:OPEN*|*updatePullRequest*state:OPEN*) deny "reopening an issue or PR" ;;
+                        *updateIssue*|*updatePullRequest*) [ -z "$open" ] || deny "reopening an issue or PR" ;;
                     esac
                     continue ;;
             esac

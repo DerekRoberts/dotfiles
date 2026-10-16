@@ -67,7 +67,7 @@ deny  'gh api repos/o/r/issues/3/comments -f body=hi'
 deny  'gh api repos/o/r/issues/3/comments -fbody=hi'
 deny  'gh api repos/o/r/pulls/12/reviews --raw-field=event=APPROVE'
 deny  'gh api repos/o/r/issues/3/comments --input=payload.json'
-allow 'gh api repos/o/r/issues/3 -fstate=closed'
+allow 'gh api -X PATCH repos/o/r/issues/3 -fstate=closed'
 allow 'gh api --method=PATCH repos/o/r/pulls/12 --field=state=closed'
 deny  'gh api -X POST repos/o/r/issues/3/comments -f body=hi'
 deny  'gh api --method POST repos/o/r/pulls/12/comments -f body=hi'
@@ -105,6 +105,9 @@ deny  "gh api graphql -f query='mutation { reopenIssue(input: {issueId: \"I_x\"}
 allow "gh api graphql -f query='mutation { updatePullRequest(input: {pullRequestId: \"PR_x\", state: CLOSED}) { clientMutationId } }'"
 deny  "gh api graphql -f query='mutation { updatePullRequest(input: {pullRequestId: \"PR_x\", state : OPEN}) { clientMutationId } }'"
 allow "gh api graphql -f query='mutation { updateIssue(input: {id: \"I_x\", state : CLOSED}) { clientMutationId } }'"
+deny  "gh api graphql -f query='mutation(\$s: IssueState) { updateIssue(input: {id: \"I_x\", state: \$s}) { clientMutationId } }' -f s=OPEN"
+deny  "gh api graphql -f query='mutation(\$nextState: PullRequestUpdateState) { updatePullRequest(input: {pullRequestId: \"PR_x\", state: \$nextState}) { clientMutationId } }' -F nextState=open"
+allow "gh api graphql -f query='mutation(\$nextState: PullRequestUpdateState) { updatePullRequest(input: {pullRequestId: \"PR_x\", state: \$nextState}) { clientMutationId } }' -f nextState=CLOSED"
 deny  "gh api graphql -f query='mutation { mergePullRequest(input: {pullRequestId: \"PR_x\"}) { clientMutationId } }'"
 deny  "gh api graphql -f query='mutation { enablePullRequestAutoMerge(input: {pullRequestId: \"PR_x\"}) { clientMutationId } }'"
 deny  "gh api graphql -f query='mutation { unresolveReviewThread(input: {threadId: \"PRRT_x\"}) { thread { isResolved } } }'"
@@ -141,6 +144,9 @@ expect deny  mcp unresolve_review_thread '{"threadId":"PRRT_x"}'
 expect allow mcp create_pull_request '{"repo":"r"}'
 expect allow mcp update_issue '{"issue_number":3,"state":"closed"}'
 expect deny  mcp update_issue '{"issue_number":3,"state":"open"}'
+expect deny  mcp update_issue '{"issue_number":3, "state": "OPEN"}'
+expect deny  mcp update_pull_request '{"pullNumber":12,"state" : "Open"}'
+expect allow mcp update_pull_request '{"pullNumber":12, "state": "CLOSED"}'
 expect allow mcp update_pull_request '{"pullNumber":12,"state":"closed"}'
 expect allow mcp update_pull_request '{"pullNumber":12,"title":"t","body":"b"}'
 expect allow mcp list_issues '{"state":"open"}'
