@@ -71,13 +71,13 @@ This repository establishes a client-side safety net and policy framework that e
 - **Safety Belt, Not a Sandbox**: Guardrails serve as a safety belt to prevent well-intentioned tools from making automated mistakes. They do not constitute an adversarial security sandbox. Genuine security boundaries must be enforced at the platform level (e.g., GitHub branch protection rules, least-privilege cloud IAM, and CI/CD pipelines).
 - **Human-in-the-Loop Lifecycle**: Autonomous agents excel at writing code, generating tests, and drafting pull requests. However, **humans retain sole ownership of critical lifecycle events**:
   - Deploying to or inspecting live infrastructure (`oc`, `kubectl`).
-  - Merging pull requests, closing issues, and managing releases or tags.
+  - Merging pull requests, reopening or deleting issues and PRs, and managing releases or tags. Agents may close issues and PRs without asking, but never with a comment.
   - Posting reviews or comments under human credentials (preventing impersonation).
   - Modifying security configurations, repository secrets, or database destruction toggles.
 - **Soft Policy vs. Hard Checks**:
   - *Soft Policy (Behavioral Guidelines)*: Structured behavioral constraints, communication standards, and planning expectations live in [`config/instructions.md`](config/instructions.md) and deploy directly to agent prompts (e.g., Cursor, Antigravity).
   - *Hard Checks (Hooks & Guardians)*: Automated verification runs locally via global Git hooks (`~/.githooks/pre-commit`, `~/.githooks/pre-push`) to block secret leakage and version regressions before commits are recorded.
-  - *Agent Guard*: `config/agent-guard/agent-guard.sh` (installed as `~/.local/bin/agent-guard`) is a short, readable reminder for a helpful agent that forgot a rule, not security. It knows only the plain forms: `gh pr merge`, force-push, tag push/creation, PR/issue comments, reviews, and closes, repo settings, and secrets and variables, whether via `gh` subcommands, raw `gh api` writes, GraphQL mutations, or GitHub MCP tools (issue transfers, resolving review threads, and dismissing a finished review are allowed). It tells the agent to ask the user. The rules read best as examples in `scripts/test-agent-guard.sh`.
+  - *Agent Guard*: `config/agent-guard/agent-guard.sh` (installed as `~/.local/bin/agent-guard`) is a short, readable reminder for a helpful agent that forgot a rule, not security. It knows only the plain forms: `gh pr merge`, force-push, tag push/creation, PR/issue comments, reviews, reopens, and deletes, repo settings, and secrets and variables, whether via `gh` subcommands, raw `gh api` writes, GraphQL mutations, or GitHub MCP tools (issue transfers, closing issues and PRs without a comment, resolving review threads, and dismissing a finished review are allowed). It tells the agent to ask the user. The rules read best as examples in `scripts/test-agent-guard.sh`.
 
 ### Allowed vs. Blocked Matrix
 
@@ -86,7 +86,7 @@ This repository establishes a client-side safety net and policy framework that e
 | Tool / Domain | Permitted Actions | Rationale & Context |
 | :--- | :--- | :--- |
 | **`git`** | `commit`, `push` (non-force), branch creation, `fetch`, `merge origin/main` | Standard feature branch development. |
-| **`gh`** | `pr create`, `pr edit`, `pr view`, `pr diff`, `api` reads, GraphQL `resolveReviewThread` and `dismissPullRequestReview`, `api` edits of PR titles and bodies; other `api` writes unless `agent-guard` blocks the pattern (`…/merge`, `…/comments`, `…/reviews`, `state` changes on issues and PRs, `…/secrets`, `…/variables`, `…/protection`, `…/rulesets`, `…/collaborators`, and the matching GraphQL mutations) | Opening and updating pull requests, inspecting review feedback, resolving addressed review threads. `agent-guard` treats `-X`/`--method` and `-f`/`-F`/`--input` without `-X` (POST) as writes; the Blocked rows below still apply as policy. |
+| **`gh`** | `pr create`, `pr edit`, `pr view`, `pr diff`, `pr close` and `issue close` without `-c`/`--comment`, `api` reads, GraphQL `resolveReviewThread` and `dismissPullRequestReview`, `api` edits of PR titles and bodies; other `api` writes unless `agent-guard` blocks the pattern (`…/merge`, `…/comments`, `…/reviews`, `state` values other than `closed` on issues and PRs, `…/secrets`, `…/variables`, `…/protection`, `…/rulesets`, `…/collaborators`, and the matching GraphQL mutations) | Opening and updating pull requests, inspecting review feedback, resolving addressed review threads. `agent-guard` treats `-X`/`--method` and `-f`/`-F`/`--input` without `-X` (POST) as writes; the Blocked rows below still apply as policy. |
 | **Package Managers** (`npm`, `uv`, `pip`, etc.) | Standard package install, build, test, and typecheck commands | Regular dependency resolution without peer dependency bypasses. |
 | **Diagnostics & Tests** | Running test suites, linters (`shellcheck`, `actionlint`, `eslint`), and build checks | Verifying code quality and runtime correctness prior to completion. |
 
@@ -105,7 +105,7 @@ This repository establishes a client-side safety net and policy framework that e
 | **`gh`** | `repo delete` | Prevents catastrophic repository deletion. |
 | **`gh`** | `secret` | Prevents exposure or automated modification of repository/organization secrets. |
 | **`gh`** | `issue comment`, `pr comment`, `pr review`, `-c`, `--comment` | Prevents agents from impersonating human developers in discussions or approvals. Feedback and drafts must be presented in chat. |
-| **`gh`** | `pr merge`, `pr close`, `issue close`; mutating `api` (`/comments`, `/reviews`, `state=closed`) | Enforces human control over PR and issue lifecycles (issues close via merged PRs). |
+| **`gh`** | `pr merge`, `pr reopen`, `issue reopen`, `issue delete`; mutating `api` (`/comments`, `/reviews`, `state` other than `closed`, GraphQL `reopenIssue`, `reopenPullRequest`, `deleteIssue`, and `state: OPEN` directly or through a variable) | Keeps merges, reviews, comments, reopens, and deletes with the user. Closing issues and PRs without a comment is allowed and needs no ask-first. |
 | **`npm` / `npx`** | `--legacy-peer-deps`, `NPM_CONFIG_LEGACY_PEER_DEPS` | Prevents dirty dependency resolution bypasses; requires fixing root dependency conflicts. |
 | **Data Layer** | Modifying `overwrite: false` to `true`, destructive storage class / volume changes | Protects database persistence layers and prevents accidental volume purging. |
 | **Pipelines** | Modifying CI/CD deploy matrices, orchestrator flags, or safety toggles during bugfixes | Enforces Stateful Isolation Invariant: confine component fixes to component manifests. |

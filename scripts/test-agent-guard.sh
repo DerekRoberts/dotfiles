@@ -46,12 +46,16 @@ deny  'git push origin refs/tags/v9'
 allow 'git push origin main' "$REPO"
 allow 'git push -u origin feat/x' "$REPO"
 
-# Comments, reviews, closes
+# Comments, reviews, closes (closing allowed, reopening denied)
 deny  'gh pr comment 12 --body hi'
 deny  'gh pr review 12 --approve'
-deny  'gh pr close 12'
+allow 'gh pr close 12'
+deny  'gh pr close 12 --comment superseded'
+deny  'gh pr reopen 12'
 deny  'gh issue comment 3 --body hi'
-deny  'gh issue close 3'
+allow 'gh issue close 3'
+deny  'gh issue close 3 -c done'
+deny  'gh issue reopen 3'
 deny  'gh issue delete 3'
 allow 'gh issue create --title t --body b'
 allow "gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: \"PRRT_x\"}) { thread { isResolved } } }'"
@@ -63,16 +67,16 @@ deny  'gh api repos/o/r/issues/3/comments -f body=hi'
 deny  'gh api repos/o/r/issues/3/comments -fbody=hi'
 deny  'gh api repos/o/r/pulls/12/reviews --raw-field=event=APPROVE'
 deny  'gh api repos/o/r/issues/3/comments --input=payload.json'
-deny  'gh api repos/o/r/issues/3 -fstate=closed'
-deny  'gh api --method=PATCH repos/o/r/pulls/12 --field=state=closed'
+allow 'gh api -X PATCH repos/o/r/issues/3 -fstate=closed'
+allow 'gh api --method=PATCH repos/o/r/pulls/12 --field=state=closed'
 deny  'gh api -X POST repos/o/r/issues/3/comments -f body=hi'
 deny  'gh api --method POST repos/o/r/pulls/12/comments -f body=hi'
 deny  'gh api repos/o/r/pulls/12/comments/99/replies -F body=hi'
 deny  'gh api -X PATCH repos/o/r/issues/comments/99 -f body=hi'
 deny  'gh api -XDELETE repos/o/r/issues/comments/99'
 deny  'gh api repos/o/r/pulls/12/reviews -f event=APPROVE'
-deny  'gh api -X PATCH repos/o/r/issues/3 -f state=closed'
-deny  'gh api --method=PATCH repos/o/r/pulls/12 -f state=closed'
+allow 'gh api -X PATCH repos/o/r/issues/3 -f state=closed'
+allow 'gh api --method=PATCH repos/o/r/pulls/12 -f state=closed'
 deny  'gh api repos/o/r/pulls/12 -X PATCH -F state=open'
 deny  'gh api -X PUT repos/o/r/actions/secrets/TOKEN -f encrypted_value=x -f key_id=1'
 deny  'gh api -X DELETE repos/o/r/actions/secrets/TOKEN'
@@ -95,12 +99,15 @@ allow 'gh api -X POST repos/o/r/pulls/12/requested_reviewers -f "reviewers[]=u"'
 deny  "gh api graphql -f query='mutation { addComment(input: {subjectId: \"I_x\", body: \"hi\"}) { clientMutationId } }'"
 deny  "gh api graphql -f query='mutation { addPullRequestReview(input: {pullRequestId: \"PR_x\", event: APPROVE}) { clientMutationId } }'"
 deny  "gh api graphql -f query='mutation { addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: \"PRRT_x\", body: \"hi\"}) { clientMutationId } }'"
-deny  "gh api graphql -f query='mutation { closeIssue(input: {issueId: \"I_x\"}) { clientMutationId } }'"
-deny  "gh api graphql -f query='mutation { closePullRequest(input: {pullRequestId: \"PR_x\"}) { clientMutationId } }'"
+allow "gh api graphql -f query='mutation { closeIssue(input: {issueId: \"I_x\"}) { clientMutationId } }'"
+allow "gh api graphql -f query='mutation { closePullRequest(input: {pullRequestId: \"PR_x\"}) { clientMutationId } }'"
 deny  "gh api graphql -f query='mutation { reopenIssue(input: {issueId: \"I_x\"}) { clientMutationId } }'"
-deny  "gh api graphql -f query='mutation { updatePullRequest(input: {pullRequestId: \"PR_x\", state: CLOSED}) { clientMutationId } }'"
-deny  "gh api graphql -f query='mutation { updatePullRequest(input: {pullRequestId: \"PR_x\", state : CLOSED}) { clientMutationId } }'"
-deny  "gh api graphql -f query='mutation { updateIssue(input: {id: \"I_x\", state : CLOSED}) { clientMutationId } }'"
+allow "gh api graphql -f query='mutation { updatePullRequest(input: {pullRequestId: \"PR_x\", state: CLOSED}) { clientMutationId } }'"
+deny  "gh api graphql -f query='mutation { updatePullRequest(input: {pullRequestId: \"PR_x\", state : OPEN}) { clientMutationId } }'"
+allow "gh api graphql -f query='mutation { updateIssue(input: {id: \"I_x\", state : CLOSED}) { clientMutationId } }'"
+deny  "gh api graphql -f query='mutation(\$s: IssueState) { updateIssue(input: {id: \"I_x\", state: \$s}) { clientMutationId } }' -f s=OPEN"
+deny  "gh api graphql -f query='mutation(\$nextState: PullRequestUpdateState) { updatePullRequest(input: {pullRequestId: \"PR_x\", state: \$nextState}) { clientMutationId } }' -F nextState=open"
+allow "gh api graphql -f query='mutation(\$nextState: PullRequestUpdateState) { updatePullRequest(input: {pullRequestId: \"PR_x\", state: \$nextState}) { clientMutationId } }' -f nextState=CLOSED"
 deny  "gh api graphql -f query='mutation { mergePullRequest(input: {pullRequestId: \"PR_x\"}) { clientMutationId } }'"
 deny  "gh api graphql -f query='mutation { enablePullRequestAutoMerge(input: {pullRequestId: \"PR_x\"}) { clientMutationId } }'"
 deny  "gh api graphql -f query='mutation { unresolveReviewThread(input: {threadId: \"PRRT_x\"}) { thread { isResolved } } }'"
@@ -135,8 +142,12 @@ expect allow mcp list_pull_request_reviews '{}'
 expect allow mcp resolve_review_thread '{"threadId":"PRRT_x"}'
 expect deny  mcp unresolve_review_thread '{"threadId":"PRRT_x"}'
 expect allow mcp create_pull_request '{"repo":"r"}'
-expect deny  mcp update_issue '{"issue_number":3,"state":"closed"}'
-expect deny  mcp update_pull_request '{"pullNumber":12,"state":"closed"}'
+expect allow mcp update_issue '{"issue_number":3,"state":"closed"}'
+expect deny  mcp update_issue '{"issue_number":3,"state":"open"}'
+expect deny  mcp update_issue '{"issue_number":3, "state": "OPEN"}'
+expect deny  mcp update_pull_request '{"pullNumber":12,"state" : "Open"}'
+expect allow mcp update_pull_request '{"pullNumber":12, "state": "CLOSED"}'
+expect allow mcp update_pull_request '{"pullNumber":12,"state":"closed"}'
 expect allow mcp update_pull_request '{"pullNumber":12,"title":"t","body":"b"}'
 expect allow mcp list_issues '{"state":"open"}'
 expect allow mcp create_or_update_file '{"repo":"action-crunchy"}'
