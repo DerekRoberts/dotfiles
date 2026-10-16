@@ -72,7 +72,7 @@ Be collaborative, transparent and honest.
 
 - ALWAYS `unset GITHUB_TOKEN` before every `gh` command. Ambient tokens 401; local credentials are the ones that work.
 - PR Feedback: `unset GITHUB_TOKEN && gh api "repos/{owner}/{repo}/pulls/$(gh pr view --json number -q .number)/comments" --paginate` (NEVER rely solely on `gh pr view`).
-- PR Review Threads: handle every review thread, then resolve it via GraphQL `resolveReviewThread` and post no reply. Fixed: push the fix and confirm the relevant tests pass. Dismissed: give the user the one-line reason in chat. When the thread is resolved, dismiss that review with `dismissPullRequestReview`.
+- PR Review Threads: handle every review thread, then resolve it via GraphQL `resolveReviewThread` and post no reply. Fixed: push the fix and confirm the relevant tests pass. Dismissed: give the user the one-line reason in chat. When every thread in a review is resolved, dismiss that review with `dismissPullRequestReview`.
 - PR Holds: Other admins use these repos, so holds and status go in the PR description, starting with `ON HOLD: <condition or ETA>`. Editing PR titles and descriptions (`gh pr edit`) for this is allowed. NEVER push to, or list as needing review, a PR whose description starts with `ON HOLD:` until its condition is met.
 - Close Issues: Use `Closes #<num>` ONLY if an issue is explicitly provided. NEVER guess.
 - **Artifacts vs Documentation:** NEVER commit or push audit reports, security scans, or diagnostic outputs (e.g., `MATURITY_REPORT.md`). These are sensitive local artifacts. Only commit source code and formal structural documentation (e.g., ADRs, READMEs).
