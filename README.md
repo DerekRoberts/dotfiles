@@ -105,7 +105,7 @@ This repository establishes a client-side safety net and policy framework that e
 | **`gh`** | `repo delete` | Prevents catastrophic repository deletion. |
 | **`gh`** | `secret` | Prevents exposure or automated modification of repository/organization secrets. |
 | **`gh`** | `issue comment`, `pr comment`, `pr review`, `-c`, `--comment` | Prevents agents from impersonating human developers in discussions or approvals. Feedback and drafts must be presented in chat. |
-| **`gh`** | `pr merge`, `pr close`, `issue close`; mutating `api` (`/comments`, `/reviews`, `state=closed`) | Enforces human control over PR and issue lifecycles (issues close via merged PRs). |
+| **`gh`** | `pr merge`, `pr reopen`, `issue reopen`, `issue delete`; mutating `api` (`/comments`, `/reviews`, reopening `state`) | Keeps merges, reviews, and comments with the user; agents may close issues and PRs. |
 | **`npm` / `npx`** | `--legacy-peer-deps`, `NPM_CONFIG_LEGACY_PEER_DEPS` | Prevents dirty dependency resolution bypasses; requires fixing root dependency conflicts. |
 | **Data Layer** | Modifying `overwrite: false` to `true`, destructive storage class / volume changes | Protects database persistence layers and prevents accidental volume purging. |
 | **Pipelines** | Modifying CI/CD deploy matrices, orchestrator flags, or safety toggles during bugfixes | Enforces Stateful Isolation Invariant: confine component fixes to component manifests. |

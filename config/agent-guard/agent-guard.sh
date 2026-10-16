@@ -23,14 +23,14 @@ if [ "$1" = mcp ]; then
         *comment*|*review*)  case "$tool" in list_*|get_*) ;; *) deny "commenting or reviewing" ;; esac ;;
         *secret*|update_repository*|delete_repository*) deny "changing repo settings" ;;
         update_issue|update_pull_request|issue_write|pull_request_write)
-            case "$3" in *'"state"'*) deny "closing or reopening an issue or PR" ;; esac ;;
+            case "$3" in *'"state"'*'"open"'*|*'"state":"OPEN"'*) deny "reopening an issue or PR" ;; esac ;;
     esac
     exit 0
 fi
 
 # Reads a "gh api" command into: path (the endpoint), method (-X/--method,
 # or POST when it sends fields with -f/-F/--input), and state (a field sets
-# "state", i.e. closes or reopens).
+# "state" to anything but "closed", i.e. reopens).
 gh_api() {
     path='' method='' fields='' state=''
     set -f
@@ -44,7 +44,7 @@ gh_api() {
             -X*)                       method="${1#-X}" ;;
             --method=*)                method="${1#*=}" ;;
             -f|-F|--field|--raw-field) fields=1
-                                       case "$2" in state=*|[\"\']state=*) state=1 ;; esac; shift ;;
+                                       case "$2" in state=closed|[\"\']state=closed*) ;; state=*|[\"\']state=*) state=1 ;; esac; shift ;;
             -f*|-F*|--field=*|--raw-field=*)
                                        fields=1
                                        case "$1" in
@@ -52,7 +52,7 @@ gh_api() {
                                            -F*) v="${1#-F}" ;;
                                            *)   v="${1#*=}" ;;
                                        esac
-                                       case "$v" in state=*|[\"\']state=*) state=1 ;; esac ;;
+                                       case "$v" in state=closed|[\"\']state=closed*) ;; state=*|[\"\']state=*) state=1 ;; esac ;;
             --input|--input=*)         fields=1; [ "$1" = --input ] && shift ;;
             -H|--header|-q|--jq|-t|--template|--hostname|--cache|-p|--preview) shift ;;
             -*) ;;
@@ -74,16 +74,17 @@ while read -r c; do
         "gh issue transfer"*) continue ;;
 
         "gh pr merge"*)                                   deny "merging a PR" ;;
-        "gh pr comment"*|"gh pr review"*|"gh pr close"*)  deny "commenting on, reviewing, or closing a PR" ;;
-        "gh issue comment"*|"gh issue close"*|"gh issue delete"*) deny "commenting on, closing, or deleting an issue" ;;
+        "gh pr comment"*|"gh pr review"*|"gh pr reopen"*) deny "commenting on, reviewing, or reopening a PR" ;;
+        "gh pr close"*" -c"*|"gh pr close"*" --comment"*|"gh issue close"*" -c"*|"gh issue close"*" --comment"*) deny "commenting" ;;
+        "gh issue comment"*|"gh issue reopen"*|"gh issue delete"*) deny "commenting on, reopening, or deleting an issue" ;;
         "gh repo edit"*|"gh repo archive"*|"gh repo delete"*)     deny "changing repo settings" ;;
         "gh secret set"*|"gh secret delete"*|"gh variable set"*|"gh variable delete"*) deny "changing secrets or variables" ;;
         "gh api "*)
             gh_api "$c"
             case "$path" in
                 graphql|[\"\']graphql[\"\'])
-                    # Mutations by name. resolveReviewThread and
-                    # dismissPullRequestReview are allowed.
+                    # Mutations by name. resolveReviewThread,
+                    # dismissPullRequestReview, closeIssue and closePullRequest are allowed.
                     # GraphQL ignores whitespace around ":", so "state :" is "state:".
                     graphql_cmd="$(printf '%s' "$c" | sed -E 's/state[[:space:]]*:[[:space:]]*/state:/g')"
                     case "$graphql_cmd" in
@@ -92,8 +93,8 @@ while read -r c; do
                         *addComment*|*updateIssueComment*|*deleteIssueComment*|*minimizeComment*) deny "commenting" ;;
                         *addPullRequestReview*|*submitPullRequestReview*) deny "reviewing" ;;
                         *updatePullRequestReview*|*deletePullRequestReview*) deny "reviewing" ;;
-                        *closeIssue*|*reopenIssue*|*deleteIssue*|*closePullRequest*|*reopenPullRequest*) deny "closing or reopening an issue or PR" ;;
-                        *updateIssue*state:*|*updatePullRequest*state:*) deny "closing or reopening an issue or PR" ;;
+                        *reopenIssue*|*deleteIssue*|*reopenPullRequest*) deny "reopening or deleting an issue or PR" ;;
+                        *updateIssue*state:OPEN*|*updatePullRequest*state:OPEN*) deny "reopening an issue or PR" ;;
                     esac
                     continue ;;
             esac
@@ -103,7 +104,7 @@ while read -r c; do
                 */comments*|*/reviews*)                    deny "commenting or reviewing" ;;
                 */protection*|*/rulesets*|*/collaborators*) deny "changing repo settings" ;;
                 */secrets*|*/variables*)                   deny "changing secrets or variables" ;;
-                */issues/[0-9]*|*/pulls/[0-9]*)            [ -z "$state" ] || deny "closing or reopening an issue or PR" ;;
+                */issues/[0-9]*|*/pulls/[0-9]*)            [ -z "$state" ] || deny "reopening an issue or PR" ;;
             esac ;;
 
         "git push"*" -f"|"git push"*" -f "*|"git push"*" --force"*) deny "force-pushing" ;;
