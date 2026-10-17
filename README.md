@@ -39,7 +39,7 @@ source ~/.bashrc
 ./setup.sh --help       # Show usage and options
 ```
 
-| Component / Feature | `--desktop` (Family & Friends) | `--dev` / Default (Derek) |
+| Component / Feature | `--desktop` (Family & Friends) | `--dev` / Default (owner) |
 |---|:---:|:---:|
 | **Desktop Environment** (Spectacle $\to$ Downloads, Left Panel, Natural Scroll) | ✅ | ✅ |
 | **Silent OS & App Updates** (`updown` via systemd) | ✅ | ✅ |
