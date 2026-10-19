@@ -48,7 +48,7 @@ source ~/.bashrc
 | **Global Git Hooks (gitleaks secret scanning)** | ❌ | ✅ |
 | **Developer CLI Suite** (`gh`, `jq`, `gitleaks`, `shellcheck`, `actionlint`, `uv`, `docker-compose`, `oc`) | ❌ | ✅ |
 | **Node.js LTS** (via NVM) | ❌ | ✅ |
-| **AI Assistants & Prompt Rules** (Cursor, Cursor CLI (`agent`), Grok Bot, Antigravity Hub, `agy`, Kilo CLI, Ponytail) | ❌ | ✅ |
+| **AI Assistants & Prompt Rules** (Cursor, Grok Bot, Antigravity Hub, Ponytail) | ❌ | ✅ |
 | **Drop-Down Terminal** (Yakuake) | ❌ | ✅ |
 | **GitHub Work Repositories** (`~/Repos`) | ❌ | ✅ |
 
@@ -139,7 +139,7 @@ This repository establishes a client-side safety net and policy framework that e
 
    | Tool | Installed to | Docs |
    | :--- | :--- | :--- |
-   | Antigravity / `agy` | `~/.gemini/GEMINI.md` | |
+   | Antigravity | `~/.gemini/GEMINI.md` | |
    | Cursor | `~/.cursor/plugins/local/dotfiles/rules/instructions.mdc` (always-apply plugin rule) | |
    | Claude Code | `~/.claude/rules/dotfiles.md` | [User-level rules](https://code.claude.com/docs/en/memory) |
    | Kilo | managed block in `~/.config/kilo/AGENTS.md` (other content kept) | [Global instructions](https://kilo.ai/docs/customize/custom-instructions) |
@@ -174,12 +174,9 @@ verified; the rest is documented here rather than left implicit.
 | `oc` | **sha256 verified** | Red Hat publishes `sha256sum.txt` per release; a mismatch aborts the install. |
 | `jq`, `gh`, `gitleaks`, `docker-compose`, `shellcheck`, `actionlint`, `uv` | TLS only | GitHub release assets, resolved from the `/releases/latest` redirect. No upstream checksums. Archives are rejected if their members are absolute, traversing, or link outside the extraction directory. |
 | Cursor AppImage | TLS + URL anchored | The download URL comes from Cursor's API and must sit under `https://downloads.cursor.com/`. |
-| Cursor CLI (`agent`) | TLS + URL anchored | Official installer `https://cursor.com/install` runs only after its `DOWNLOAD_URL` is under `https://downloads.cursor.com/` (same prefix as the AppImage). Links `~/.local/bin/agent` and `cursor-agent`. Leaves the `cursor` AppImage wrapper and `cursor.desktop` in place. Later updates use `agent update`. No upstream checksum. |
 | Grok Bot AppImage | User-supplied file | Copied from `~/Downloads/Grok_Bot_*.AppImage` (browser download from `https://x.ai/bot` / `https://cursor.com/download/bot`). No unauthenticated AppImage URL to pin. `.deb`/`.rpm` are unused on Kinoite. |
 | Antigravity hub | TLS + URL anchored | URL scraped from the download page, must be under `storage.googleapis.com/antigravity-public/`; archive checked for path traversal. |
 | Insync | TLS + URL anchored + digest | URL anchored to `cdn.insynchq.com`. **Insync ships unsigned RPMs** (no `SIGPGP`/`RSAHEADER`), so there is nothing to verify against a key. `rpmkeys --checksig` confirms the package's own digests, and the installed hash is recorded to `~/.local/share/dotfiles/insync.sha256`. |
-| `agy` CLI | TLS only | `curl \| bash` of `antigravity.google/cli/install.sh`. Upstream publishes no versioned installer or checksum. |
-| Kilo CLI | TLS only | `npm install -g @kilocode/cli` into nvm's userspace prefix (`--allow-scripts=@kilocode/cli` so its postinstall runs on npm 11+). Upstream publishes no checksum. |
 | `nvm` | Pinned tag | Installer fetched at a resolved release tag, not `main`. |
 | Ponytail agent rule | Pinned commit | Pinned by SHA in `dev.sh`, since it becomes standing instructions for every agent session. Bump deliberately after reading the diff. |
 

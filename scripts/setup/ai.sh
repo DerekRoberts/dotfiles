@@ -233,29 +233,6 @@ install_ponytail() {
             warn "Failed to download Cursor rule"
         fi
     fi
-
-    info "Configuring Ponytail for Antigravity (agy)..."
-    local AGY_BIN="${HOME}/.local/bin/agy"
-    if ! command -v agy &>/dev/null && [[ ! -x "$AGY_BIN" ]]; then
-        warn "agy CLI not found. Skipping plugin install."
-    else
-        [[ -x "$AGY_BIN" ]] || AGY_BIN="agy"
-        local PLUGIN_DIR="$HOME/.gemini/config/plugins/ponytail"
-        if [[ -d "$PLUGIN_DIR" ]] || "$AGY_BIN" plugin list 2>/dev/null | grep -q '"name": "ponytail"'; then
-            success "Ponytail plugin already installed for agy"
-        else
-            local tmp_clone
-            tmp_clone="$(mktemp -d "${TMPDIR:-/tmp}/ponytail.XXXXXX")"
-            if git clone --quiet https://github.com/DietrichGebert/ponytail "$tmp_clone" \
-                && git -C "$tmp_clone" checkout --quiet --detach "$PONYTAIL_REF" \
-                && "$AGY_BIN" plugin install "$tmp_clone" 2>/dev/null; then
-                success "agy plugin installed"
-            else
-                warn "agy plugin install failed (network issue or repo error)"
-            fi
-            rm -rf "$tmp_clone"
-        fi
-    fi
 }
 
 # ── GitHub MCP Server ────────────────────────────────────────────────────────

@@ -29,23 +29,6 @@ refute "not current when lookup failed"    version_is_current 1.2.3 unknown
 refute "not current when latest is empty"  version_is_current 1.2.3 ""
 refute "not current when not installed"    version_is_current none 1.2.3
 
-STUBS="$TMP/stubs"; mkdir -p "$STUBS"
-cat > "$STUBS/npm" << 'STUB'
-#!/usr/bin/env bash
-case "$1" in
-    list) printf '%s\n' "$HOME/.nvm/versions/node/v22/lib" "└── @kilocode/cli@${KILO_INSTALLED:-1.2.3}" ;;
-    view) printf '%s\n' "${KILO_LATEST:-1.2.3}" ;;
-    prefix) printf '%s\n' "$HOME/.nvm/versions/node/v22" ;;
-    -v) echo 11.0.0 ;;
-    install) touch "$HOME/kilo-installed" ;;
-esac
-STUB
-chmod +x "$STUBS/npm"
-PATH_SAVED="$PATH"; PATH="$STUBS:$PATH"
-check  "kilo installed version parsed"   test "$(kilo_cli_version)" = 1.2.3
-check  "kilo latest version read"        test "$(KILO_LATEST=2.0.1 kilo_cli_latest_version)" = 2.0.1
-refute "kilo latest rejects non-versions" env KILO_LATEST="npm error" bash -c ". '$REPO/scripts/lib.sh'; kilo_cli_latest_version"
-PATH="$PATH_SAVED"
 
 out="$(LOG_PREFIX="[x] " timed_step demo true)"
 check "timed_step prints elapsed" grep -qxE '\[x\] ⏱ demo: [0-9]+s' <<< "$out"
@@ -70,7 +53,7 @@ check "spawned steps run at the same time" test $(( $(date +%s) - start )) -lt 4
 # ── updown.sh end to end, stubbed ────────────────────────────────────────────
 
 FAKE_HOME="$TMP/home"; DF="$TMP/dotfiles"; BIN="$TMP/bin"; LOG="$TMP/calls"
-mkdir -p "$FAKE_HOME/.local/bin" "$FAKE_HOME/.nvm/bin" "$DF/scripts/setup" "$BIN"
+mkdir -p "$FAKE_HOME/.local/bin" "$DF/scripts/setup" "$BIN"
 cp "$REPO/scripts/lib.sh" "$DF/scripts/lib.sh"
 mkdir -p "$TMP/inst"   # no setup.sh one level up, so DOTFILES_DIR is used
 cp "$REPO/scripts/updown.sh" "$TMP/inst/updown"
@@ -103,15 +86,10 @@ cp "$HOME/.local/state/dotfiles/updown.log" "$HOME/log-at-poweroff"
 STUB
 stub sleep   # the 3 s shutdown countdown
 stub curl 'exit 7'   # nothing reaches the network
-cp "$STUBS/npm" "$FAKE_HOME/.nvm/bin/npm"
-cat > "$FAKE_HOME/.nvm/nvm.sh" << 'STUB'
-export PATH="$NVM_DIR/bin:$PATH"
-nvm() { return 0; }
-STUB
 
 run_updown() {
     env -i HOME="$FAKE_HOME" PATH="$BIN:/usr/bin:/bin" DOTFILES_DIR="$DF" \
-        KILO_LATEST="${KILO_LATEST:-1.2.3}" FAIL_FLATPAK="${FAIL_FLATPAK:-0}" \
+        FAIL_FLATPAK="${FAIL_FLATPAK:-0}" \
         RPMOSTREE_CHECK="${RPMOSTREE_CHECK:-update}" bash "$TMP/inst/updown" "${@:---background}" 2>&1
 }
 
@@ -125,16 +103,11 @@ contains "hub step prefixed"         "[updown] [antigravity] hub stub"
 contains "parallel wall time"        "[updown] ⏱ parallel steps: "
 contains "restorecon timed"          "[updown] ⏱ restorecon: "
 contains "total printed"             "[updown] ⏱ total: "
-contains "kilo current, skipped"     "[updown] [kilo] ✓ Kilo CLI is up to date (1.2.3)"
-refute "kilo current, no reinstall" test -e "$FAKE_HOME/kilo-installed"
 refute "no shutdown in background" grep -q "^systemctl" "$LOG"
 order="$(grep -nE '⏱ (rpm-ostree|parallel steps|restorecon|total):' <<< "$out" | cut -d: -f1 | paste -sd' ')"
 check "rpm-ostree first, restorecon after the parallel steps" \
     test "$order" = "$(tr ' ' '\n' <<< "$order" | sort -n | paste -sd' ')" -a "$(wc -w <<< "$order")" -eq 4
 
-out="$(KILO_LATEST=1.2.4 run_updown)"
-check "kilo outdated, reinstalled" test -e "$FAKE_HOME/kilo-installed"
-contains "kilo update logged" "Updating Kilo CLI (1.2.3 -> 1.2.4)"
 
 # A failed flatpak update warns and continues, as before: the run still
 # succeeds and restorecon still runs.
