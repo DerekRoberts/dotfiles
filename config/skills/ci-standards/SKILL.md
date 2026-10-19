@@ -1,0 +1,15 @@
+---
+name: ci-standards
+description: 'CI and GitHub Actions authoring rules: SHA pins, minimum permissions, secret mapping for reusable workflows, diff-triggers gating, results gate names and SARIF uploads. Use before creating or editing GitHub Actions workflows, action.yml files, action pins, required checks or code-scanning uploads.'
+---
+
+> This file lives in `DerekRoberts/dotfiles` at `config/skills/ci-standards/`. `scripts/setup/ai.sh` copies every directory under `config/skills/` into `~/.agents/skills/`. Moved out of the always-loaded `config/instructions.md` (Project Standards), which points here.
+
+# CI Standards
+
+- ALWAYS use minimum permissions (e.g., `permissions: {}` in GitHub Actions).
+- ALWAYS pin third-party GitHub Actions to full 40-character commit SHAs of a published release, with a trailing tag comment; NEVER pin `@main` (e.g., `uses: bcgov/actions/workflow-results@<sha> # v0.7.0`). Official platform actions from `actions/*`, `github/*`, and `docker/*` may use version tags (e.g., `actions/checkout@v4`). All others (including `astral-sh/*`, `grafana/*`, and `bcgov/*`) must be SHA-pinned.
+- Reusable workflows: ALWAYS explicitly map secrets on caller jobs (`secrets: { key: ${{ secrets.KEY }} }`) alongside `with: environment: <env>`. NEVER use `secrets: inherit` unless explicitly requested.
+- PR workflows must NOT fire unnecessarily: gate heavy jobs (matrices, deploys, container tests) with the established `bcgov/actions/diff-triggers` or path-skip pattern. Docs/Markdown-only changes NEVER trigger heavy jobs. Path filters list only the files a job actually depends on, NEVER a whole action folder that includes READMEs. Skipped jobs still report through `bcgov/actions/workflow-results` with their gate job names and no `title`, so required checks stay stable.
+- Results gate job names are required check names: NEVER rename an existing gate or results job, even when it doesn't match the standard. Use the standard names (`PR Results`, `Validate Results`, `Analysis Results`, or `<Title Case Name> Results`) only for new gates in workflows that have none.
+- SARIF uploads: Third-party security scans (e.g. Trivy) uploading SARIF to GitHub Code Scanning on `pull_request` must explicitly set `ref: refs/pull/${{ github.event.pull_request.number }}/head` and `sha: ${{ github.event.pull_request.head.sha }}`, and the scan job's existing `actions/checkout` step must set `ref: ${{ github.event.pull_request.head.sha || '' }}` so the scanned code matches the attributed sha (push and schedule runs unchanged; never add a second checkout step). Splitting PR uploads from default branch pushes prevents ephemeral merge ref recalculations from orphaning scan results and locking branch rulesets.
