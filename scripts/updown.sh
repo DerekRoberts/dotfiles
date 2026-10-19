@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # updown — Workstation silent maintenance
 # Stages rpm-ostree upgrade, updates flatpaks, updates third-party binaries,
-# and updates Antigravity CLI + hub, Kilo CLI, Cursor CLI, Cursor, and Grok Bot.
+# and updates the Antigravity hub, Cursor, and Grok Bot.
 #
 # Usage:
 #   updown                 — run updates then power off (default / interactive)
@@ -68,8 +68,6 @@ success() { echo "${LOG_PREFIX}✓ $*"; }
 warn()    { echo "${LOG_PREFIX}⚠ $*" >&2; }
 
 # Timeouts for every curl here, so one stalled host can't hold up the run.
-CURL_META=(--connect-timeout 10 --max-time 20)
-CURL_SCRIPT=(--connect-timeout 10 --max-time 60)
 CURL_FILE=(--connect-timeout 10 --max-time 900)
 
 # ── Run log ──────────────────────────────────────────────────────────────────
@@ -194,73 +192,6 @@ step_antigravity() {
     fi
 }
 
-# 4. agy CLI. Re-running the install script is its update mechanism.
-step_agy() {
-    local agy_bin="${HOME}/.local/bin/agy" latest current
-    if [[ ! -x "$agy_bin" ]]; then
-        info "agy CLI not installed — skipping"
-        return 0
-    fi
-    info "Checking agy CLI for updates..."
-    latest=$(curl -fsSL "${CURL_META[@]}" https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests/linux_amd64.json | jq -r .version 2>/dev/null || echo "unknown")
-    current=$("$agy_bin" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "none")
-
-    if version_is_current "$current" "$latest"; then
-        success "agy CLI is up to date ($current)"
-    else
-        info "Updating agy CLI ($current -> $latest)..."
-        if curl -fsSL "${CURL_SCRIPT[@]}" https://antigravity.google/cli/install.sh | bash 2>&1; then
-            success "agy CLI updated"
-        else
-            warn "agy update failed — continuing"
-        fi
-    fi
-}
-
-# 5. Kilo Code CLI (nvm npm global). Only step that touches npm.
-step_kilo() {
-    local latest current
-    if ! { load_nvm && kilo_cli_installed; }; then
-        info "Kilo CLI not installed — skipping"
-        return 0
-    fi
-    info "Checking Kilo CLI for updates..."
-    latest="$(kilo_cli_latest_version || echo unknown)"
-    current="$(kilo_cli_version || echo none)"
-
-    if version_is_current "$current" "$latest"; then
-        success "Kilo CLI is up to date ($current)"
-    else
-        info "Updating Kilo CLI ($current -> $latest)..."
-        if install_kilo_cli_pkg 2>&1; then
-            success "Kilo CLI updated ($(kilo --version 2>/dev/null || echo ok))"
-        else
-            warn "Kilo CLI update failed — continuing"
-        fi
-    fi
-}
-
-# 5b. Cursor CLI (agent / cursor-agent). Upstream update command: agent update
-# https://cursor.com/docs/cli/installation
-step_cursor_cli() {
-    local bin=""
-    if [[ -x "${HOME}/.local/bin/agent" ]]; then
-        bin="${HOME}/.local/bin/agent"
-    elif [[ -x "${HOME}/.local/bin/cursor-agent" ]]; then
-        bin="${HOME}/.local/bin/cursor-agent"
-    fi
-    if [[ -n "$bin" ]]; then
-        info "Updating Cursor CLI..."
-        if "$bin" update; then
-            success "Cursor CLI updated ($("$bin" --version 2>/dev/null || echo ok))"
-        else
-            warn "Cursor CLI update failed — continuing"
-        fi
-    else
-        info "Cursor CLI not installed — skipping"
-    fi
-}
-
 # 6. Cursor. Writes cursor.AppImage and the cursor.url stamp.
 step_cursor() {
     local cursor_bin="${HOME}/.local/bin/cursor.AppImage"
@@ -346,15 +277,12 @@ timed_step rpm-ostree step_rpm_ostree
 
 # Everything below is independent: each step writes only its own files, and no
 # two share a package manager (flatpak --user and --system use separate
-# installations; only Kilo uses npm).
+# installations).
 info "Running update steps in parallel..."
 PARALLEL_START="$(date +%s)"
 bg_step flatpak-user   step_flatpak_user
 bg_step flatpak-system step_flatpak_system
 bg_step antigravity    step_antigravity
-bg_step agy            step_agy
-bg_step kilo           step_kilo
-bg_step cursor-cli     step_cursor_cli
 bg_step cursor         step_cursor
 bg_step grok           step_grok
 bg_step tools          step_tools

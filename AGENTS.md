@@ -13,7 +13,7 @@ This repository configures **Fedora Kinoite** (an immutable, rpm-ostree-based KD
 - **Placement & Mechanism:**
   - **Flatpaks:** User-level installs via `--user` Flathub (`flatpak install --user -y flathub <app-id>`) wired into `setup.sh`.
   - **Binaries / AppImages / Tarballs:** Extracted or downloaded into `~/.local/bin` and `~/.local/lib` without elevating permissions.
-  - **Updater Integration:** Wired into `scripts/bootstrap-tools.sh` and `scripts/updown.sh` with process kill guards (`kill_running_apps`) and URL/hash stamp checks in `~/.local/share/dotfiles/*.url`.
+  - **Updater Integration:** Wired into `scripts/setup/dev.sh --tools` (which `scripts/updown.sh` re-runs with `UPDATE=1`) and `scripts/updown.sh` with process kill guards (`kill_running_apps`) and URL/hash stamp checks in `~/.local/share/dotfiles/*.url`.
 - **Zero Host OS Layering:** Never use `rpm-ostree install` or mutate `/usr`. Host layering is strictly forbidden.
 
 ### Tier 2: Ephemeral Dev Tools / Compilers (Container Isolated)

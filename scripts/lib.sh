@@ -94,34 +94,6 @@ cursor_latest_url() {
     printf '%s\n' "$url"
 }
 
-# Official CLI install (https://cursor.com/docs/cli/installation):
-#   curl https://cursor.com/install -fsS | bash
-# The script links ~/.local/bin/agent and ~/.local/bin/cursor-agent to the
-# versioned binary. It does not replace ~/.local/bin/cursor. Updates are
-# `agent update`.
-CURSOR_AGENT_INSTALL_URL='https://cursor.com/install'
-
-# Print the package URL embedded in an installer script, or fail. Bash keeps
-# the last DOWNLOAD_URL assignment, so a prefix check on a joined string would
-# accept an allowed first URL and then run a later one. Require exactly one.
-cursor_agent_package_url() {
-    local script="$1" url
-    local -a urls=()
-    mapfile -t urls < <(printf '%s\n' "$script" | grep -o 'DOWNLOAD_URL="[^"]*"' | cut -d'"' -f2)
-    [[ "${#urls[@]}" -eq 1 ]] || return 1
-    url="${urls[0]}"
-    require_url_prefix "$url" "$CURSOR_URL_PREFIX" || return 1
-    printf '%s\n' "$url"
-}
-
-# Fetch the official installer and print it. Refuse when the package URL is
-# missing or outside $CURSOR_URL_PREFIX.
-cursor_agent_installer() {
-    local script
-    script="$(curl -fsSL --connect-timeout 10 --max-time 20 "$CURSOR_AGENT_INSTALL_URL")" || return 1
-    cursor_agent_package_url "$script" >/dev/null || return 1
-    printf '%s\n' "$script"
-}
 
 # Stop this user's processes whose command line contains one of the patterns.
 # Used before replacing a managed binary. Skips this shell and its parent so
@@ -221,40 +193,6 @@ load_nvm() {
     [[ "$npm_bin" == "$NVM_DIR"/* ]] || return 1
     prefix="$(npm prefix -g)" || return 1
     [[ "$prefix" == "$HOME"/* ]] || return 1
-}
-
-kilo_cli_installed() {
-    npm list -g --depth=0 @kilocode/cli >/dev/null 2>&1
-}
-
-# Installed @kilocode/cli version from the nvm global tree, e.g. 1.2.3.
-kilo_cli_version() {
-    local out
-    out="$(npm list -g --depth=0 @kilocode/cli 2>/dev/null)" || return 1
-    out="$(grep -oE '@kilocode/cli@[0-9][^[:space:]]*' <<< "$out" | head -n 1)"
-    [[ -n "$out" ]] || return 1
-    printf '%s\n' "${out#@kilocode/cli@}"
-}
-
-# Latest @kilocode/cli version on the npm registry. npm has no curl-style
-# timeouts, so cap the fetch the npm way.
-kilo_cli_latest_version() {
-    local ver
-    ver="$(npm view --fetch-timeout=20000 --fetch-retries=1 @kilocode/cli version 2>/dev/null)" || return 1
-    [[ "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]] || return 1
-    printf '%s\n' "$ver"
-}
-
-# npm 11+ needs an explicit allowlist for global lifecycle scripts; older npm runs them by default.
-install_kilo_cli_pkg() {
-    local major
-    major="$(npm -v | cut -d. -f1)"
-    [[ "$major" =~ ^[0-9]+$ ]] || return 1
-    if [[ "$major" -ge 11 ]]; then
-        npm install -g --allow-scripts=@kilocode/cli @kilocode/cli
-    else
-        npm install -g @kilocode/cli
-    fi
 }
 
 # ── Version checks ───────────────────────────────────────────────────────────
