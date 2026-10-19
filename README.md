@@ -217,6 +217,7 @@ Two other deliberate trade-offs:
 │   ├── instructions.md                # Unified AI agent instructions & guardrails
 │   ├── personal.md                    # Personal tone & taste, appended to instructions.md
 │   ├── skills/
+│   │   ├── cloud-agent-kickoff/       # Standing wishes for cloud-agent handoffs
 │   │   ├── podman-runner/             # Containerized execution & resource limits
 │   │   ├── preflight/                 # Ground external prompts against reality
 │   │   └── typescript-standards/      # Modular agent skills
