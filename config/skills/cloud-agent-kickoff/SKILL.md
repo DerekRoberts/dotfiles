@@ -23,14 +23,9 @@ Use this whenever you launch a cloud agent or send a follow-up (`reply`) for iss
 - **Goal**: issue or PR link, the problem, and success criteria.
 - **Iterate loop**: keep working on the same branch and PR (for a failing bot PR, the new PR from `origin/main` that Bot Lanes requires) until CI is green AND still-valid review feedback is addressed. Stop only for user blockers (secrets, product decisions, repo access). Never merge.
 - **Review threads**: for each open thread, verify it against current code. Still valid: make a minimal fix and push. Outdated, wrong or intentional won't-fix: resolve the thread without replying and give the one-line reason in the final summary.
-- **Commit identity and no attribution**: follow the `config/instructions.md` Hard Stops. Set `git config user.name` and `user.email` to the user before the FIRST commit, add no attribution trailers or footers, and confirm `git log --format='%an <%ae>' origin/<base>..HEAD` lists only the user before handing over.
+- **Commit identity and no attribution** (the cloud agent does not load `config/instructions.md`, so the Hard Stops it needs go in the prompt): set `git config user.name` and `user.email` to the user before the FIRST commit, add no attribution trailers or footers, and confirm `git log --format='%an <%ae>' origin/<base>..HEAD` lists only the user before handing over.
 - **Scope**: only the named repos. Do not touch other orgs or repos unless the user named them.
 - **PR hygiene**: branch and PR selection follow Bot Lanes. Push to the existing PR when one exists, except a bot's PR (Renovate, Dependabot, Mend), which is fixed with a new PR from `origin/main` and never pushed to. Never open a duplicate PR for the same fix.
-
-## Attribution reality
-Cloud agents default their git author to the tool's bot account at the platform layer, and desktop attribution settings don't apply to them. Setting git `user.name` and `user.email` inside the run before the first commit works, so the commit-identity line above is mandatory.
-
-If an earlier commit already has the wrong author, the author check fails: stop and report it to the user as a blocker. Never rewrite or force-push history (Hard Stops).
 
 ## After launch
 1. Tell the user once (PR or agent link). Do not babysit CI or re-investigate from chat unless they ask or you're blocked.
