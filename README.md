@@ -60,106 +60,25 @@ source ~/.bashrc
 | `UPDATE` | `0` | Set `UPDATE=1` to re-check GitHub CLI tools (`scripts/setup/dev.sh --tools`) and `oc` |
 | `OC_VERSION` | `latest` | Override version tag for `oc` |
 
-## AI Agent Guardrails & Safety
+## AI Agent Guardrails
 
-AI-assisted development accelerates velocity, but autonomous coding agents require strict guardrails to protect shared environments, preserve git history integrity, and maintain compliance.
+The rules live in one place each; this README links to them instead of restating them.
 
-This repository establishes a client-side safety net and policy framework that enforces a **human-in-the-loop** workflow across all AI tooling (Cursor, Antigravity, and CLI agents).
+- **Policy:** [`config/instructions.md`](config/instructions.md) (Hard Stops, Git & Branch Hygiene, Bot Lanes), plus [`config/personal.md`](config/personal.md) for tone. Skills in [`config/skills/`](config/skills/) load on demand.
+- **Reminder hook:** [`config/agent-guard/agent-guard.sh`](config/agent-guard/agent-guard.sh), installed as `~/.local/bin/agent-guard`. It denies the plain forms of the Hard Stops (merges, force-pushes, tags, comments, reviews, reopens, deletes, settings, secrets) and tells the agent to ask the user. A reminder, not a sandbox. The rules read best as examples in [`scripts/test-agent-guard.sh`](scripts/test-agent-guard.sh). Cursor is wired through `config/agent-guard/cursor-hooks.json`; other tools can call `agent-guard shell "<command>" [cwd]` or `agent-guard mcp <tool> <args-json>` from their own pre-command hook.
+- **Git hooks:** [`config/hooks/`](config/hooks/), installed to `~/.githooks`: gitleaks on pre-commit, no direct pushes to `main`/`master` on pre-push, and AI `Co-authored-by` trailers dropped on commit-msg.
+- **Shell:** [`config/bashrc`](config/bashrc) unsets ambient `GITHUB_TOKEN`/`GH_TOKEN` for agents and restores the user's git identity when a tool rewrites `~/.gitconfig`.
 
-### Core Philosophy
+`scripts/setup/ai.sh` concatenates `config/instructions.md` and `config/personal.md` into `~/.local/share/dotfiles/instructions.md` and installs it for each tool:
 
-- **Safety Belt, Not a Sandbox**: Guardrails serve as a safety belt to prevent well-intentioned tools from making automated mistakes. They do not constitute an adversarial security sandbox. Genuine security boundaries must be enforced at the platform level (e.g., GitHub branch protection rules, least-privilege cloud IAM, and CI/CD pipelines).
-- **Human-in-the-Loop Lifecycle**: Autonomous agents excel at writing code, generating tests, and drafting pull requests. However, **humans retain sole ownership of critical lifecycle events**:
-  - Deploying to or inspecting live infrastructure (`oc`, `kubectl`).
-  - Merging pull requests, reopening or deleting issues and PRs, and managing releases or tags. Agents may close issues and PRs without asking, but never with a comment.
-  - Posting reviews or comments under human credentials (preventing impersonation).
-  - Modifying security configurations, repository secrets, or database destruction toggles.
-- **Soft Policy vs. Hard Checks**:
-  - *Soft Policy (Behavioral Guidelines)*: Structured behavioral constraints, communication standards, and planning expectations live in [`config/instructions.md`](config/instructions.md) and deploy directly to agent prompts (e.g., Cursor, Antigravity).
-  - *Hard Checks (Hooks & Guardians)*: Automated verification runs locally via global Git hooks (`~/.githooks/pre-commit`, `~/.githooks/pre-push`) to block secret leakage and version regressions before commits are recorded.
-  - *Agent Guard*: `config/agent-guard/agent-guard.sh` (installed as `~/.local/bin/agent-guard`) is a short, readable reminder for a helpful agent that forgot a rule, not security. It knows only the plain forms: `gh pr merge`, force-push, tag push/creation, PR/issue comments, reviews, reopens, and deletes, repo settings, and secrets and variables, whether via `gh` subcommands, raw `gh api` writes, GraphQL mutations, or GitHub MCP tools (issue transfers, closing issues and PRs without a comment, resolving review threads, and dismissing a finished review are allowed). It tells the agent to ask the user. The rules read best as examples in `scripts/test-agent-guard.sh`.
-
-### Allowed vs. Blocked Matrix
-
-#### What Is Allowed (Agents)
-
-| Tool / Domain | Permitted Actions | Rationale & Context |
+| Tool | Installed to | Docs |
 | :--- | :--- | :--- |
-| **`git`** | `commit`, `push` (non-force), branch creation, `fetch`, `merge origin/main` | Standard feature branch development. |
-| **`gh`** | `pr create`, `pr edit`, `pr view`, `pr diff`, `pr close` and `issue close` without `-c`/`--comment`, `api` reads, GraphQL `resolveReviewThread` and `dismissPullRequestReview`, `api` edits of PR titles and bodies; other `api` writes unless `agent-guard` blocks the pattern (`…/merge`, `…/comments`, `…/reviews`, `state` values other than `closed` on issues and PRs, `…/secrets`, `…/variables`, `…/protection`, `…/rulesets`, `…/collaborators`, and the matching GraphQL mutations) | Opening and updating pull requests, inspecting review feedback, resolving addressed review threads. `agent-guard` treats `-X`/`--method` and `-f`/`-F`/`--input` without `-X` (POST) as writes; the Blocked rows below still apply as policy. |
-| **Package Managers** (`npm`, `uv`, `pip`, etc.) | Standard package install, build, test, and typecheck commands | Regular dependency resolution without peer dependency bypasses. |
-| **Diagnostics & Tests** | Running test suites, linters (`shellcheck`, `actionlint`, `eslint`), and build checks | Verifying code quality and runtime correctness prior to completion. |
+| Antigravity | `~/.gemini/GEMINI.md` | |
+| Cursor | `~/.cursor/plugins/local/dotfiles/rules/instructions.mdc` (always-apply plugin rule) | |
+| Claude Code | `~/.claude/rules/dotfiles.md` | [User-level rules](https://code.claude.com/docs/en/memory) |
+| Kilo | managed block in `~/.config/kilo/AGENTS.md` (other content kept) | [Global instructions](https://kilo.ai/docs/customize/custom-instructions) |
 
-#### What Is Blocked (Hard Stops)
-
-| Target / Tool | Blocked Action / Flag | Policy Rationale |
-| :--- | :--- | :--- |
-| **`oc` / `kubectl`** | All commands and subcommands | Prevents automated cluster access, data leakage, and unintended modifications to live OpenShift/Kubernetes environments. |
-| **`git`** | `commit --no-verify`, `push --no-verify`, `commit -n` | Prohibits agents from bypassing local pre-commit hooks and secret scanning. |
-| **`git`** | `commit --amend` | Prevents history rewrites on shared or existing commit chains. |
-| **`git`** | `config` subcommand | Prevents agents from altering global/local git configurations or disabling safety hooks. |
-| **`git`** | write `tag`, `push --tags` | Restricts release tagging to human maintainers. |
-| **`git`** | `rebase -i`, `--interactive`, `squash`, `fixup`, `--autosquash` | Prevents destructive history rewriting and obfuscating change history. |
-| **`git`** | `merge --squash`, force-push (`-f`, `--force`, `--force-with-lease`) | Prohibits destructive overwrites on remote branches. |
-| **`gh`** | `release` | Restricts release publication to human developers. |
-| **`gh`** | `repo delete` | Prevents catastrophic repository deletion. |
-| **`gh`** | `secret` | Prevents exposure or automated modification of repository/organization secrets. |
-| **`gh`** | `issue comment`, `pr comment`, `pr review`, `-c`, `--comment` | Prevents agents from impersonating human developers in discussions or approvals. Feedback and drafts must be presented in chat. |
-| **`gh`** | `pr merge`, `pr reopen`, `issue reopen`, `issue delete`; mutating `api` (`/comments`, `/reviews`, `state` other than `closed`, GraphQL `reopenIssue`, `reopenPullRequest`, `deleteIssue`, and `state: OPEN` directly or through a variable) | Keeps merges, reviews, comments, reopens, and deletes with the user. Closing issues and PRs without a comment is allowed and needs no ask-first. |
-| **`npm` / `npx`** | `--legacy-peer-deps`, `NPM_CONFIG_LEGACY_PEER_DEPS` | Prevents dirty dependency resolution bypasses; requires fixing root dependency conflicts. |
-| **Data Layer** | Modifying `overwrite: false` to `true`, destructive storage class / volume changes | Protects database persistence layers and prevents accidental volume purging. |
-| **Pipelines** | Modifying CI/CD deploy matrices, orchestrator flags, or safety toggles during bugfixes | Enforces Stateful Isolation Invariant: confine component fixes to component manifests. |
-
-### Enforcement Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           AI Agent Execution                            │
-├──────────────────────────────────┬──────────────────────────────────────┤
-│ Application / Prompt Layer       │ config/instructions.md               │
-│                                  │ • Injected into Antigravity & Cursor │
-│                                  │ • Prompt-Scope Fencing               │
-│                                  │ • Hard Stop behavioral rules         │
-├──────────────────────────────────┼──────────────────────────────────────┤
-│ Global Git Hooks Layer           │ config/hooks/ (~/.githooks)         │
-│                                  │ • Gitleaks secret scanning           │
-│                                  │ • Block pushes to main (pre-push)    │
-├──────────────────────────────────┼──────────────────────────────────────┤
-│ Shell & Environment Layer        │ config/bashrc                        │
-│                                  │ • Agent marker detection             │
-│                                  │ • Clean non-interactive subshells    │
-│                                  │ • Token isolation (GH_TOKEN unsets)  │
-└──────────────────────────────────┴──────────────────────────────────────┘
-```
-
-1. **Global Git Pre-Commit Hook (`~/.githooks/pre-commit`)**: Configured globally via `git config --global core.hooksPath ~/.githooks`. Executes `gitleaks protect --staged --redact --no-banner` on every commit.
-2. **Global Git Pre-Push Hook (`~/.githooks/pre-push`)**: Blocks accidental direct pushes to `main` or `master` across all repositories unless explicitly bypassed by a human developer.
-3. **Global Git Commit-Msg Hook (`~/.githooks/commit-msg`)**: Drops `Co-authored-by` trailers whose address belongs to an AI tool (list at the top of the hook), so commits stay authored by the user. Human co-authors are kept.
-4. **Prompt-Scope Fencing & Behavioral Instructions (`config/instructions.md` + `config/personal.md`)**: Concatenated into `~/.local/share/dotfiles/instructions.md`, then installed into each AI tool's user-level rules location by `scripts/setup/ai.sh`. Not written into other repositories.
-
-   | Tool | Installed to | Docs |
-   | :--- | :--- | :--- |
-   | Antigravity | `~/.gemini/GEMINI.md` | |
-   | Cursor | `~/.cursor/plugins/local/dotfiles/rules/instructions.mdc` (always-apply plugin rule) | |
-   | Claude Code | `~/.claude/rules/dotfiles.md` | [User-level rules](https://code.claude.com/docs/en/memory) |
-   | Kilo | managed block in `~/.config/kilo/AGENTS.md` (other content kept) | [Global instructions](https://kilo.ai/docs/customize/custom-instructions) |
-
-   Not covered: there is no global `AGENTS.md` that every tool reads (`~/.agents/AGENTS.md` is only a proposal), and tools without a documented user-level rules file are not wired. VS Code also reads `~/.claude/rules`, so it may load these rules twice.
-
-   **Customizing:** `config/instructions.md` holds generic rules; `config/personal.md` holds one user's tone and taste. To tailor your own setup, replace `config/personal.md` (or delete it for none) and run `setup.sh --ai`.
-5. **Agent Guard (`~/.local/bin/agent-guard`)**: `agent-guard shell "<command>" [cwd]` or `agent-guard mcp <tool> <args-json>`; exit 0 allows, exit 2 denies with the reason on stderr. Cursor is wired via `config/agent-guard/cursor-hooks.json`; other tools (Antigravity/`agy`, Kilo, Claude Code-style CLIs) can call it from their own pre-command hook. A reminder, not a sandbox: anything it doesn't recognize is allowed.
-6. **Shell & Agent Environment Isolation (`config/bashrc`)**: Copied to `~/.config/dotfiles/bashrc` on setup (not sourced from the git work tree). Detects AI agent execution (`ANTIGRAVITY_AGENT`) to strip prompt evaluation overhead and unset ambient `GITHUB_TOKEN` / `GH_TOKEN` environment variables so commands use authenticated local credentials. On startup it remembers this machine's git name and email in `~/.config/dotfiles/git-identity` (not in the repo), puts the user back as author and committer when `~/.gitconfig` was rewritten to Cursor Agent, leaves the user's own signing setup alone, and makes `commit-msg.cursor.co-author` non-executable when that file exists.
-
-### Bypassing (Human Developers Only)
-
-* **Override Git Aliases / Wrappers**: Use the shell `command` builtin:
-  ```bash
-  command git config --local user.email "developer@example.com"
-  ```
-* **Bypass Git Hooks (Emergency Only)**:
-  ```bash
-  git commit --no-verify -m "fix: emergency out-of-band hotfix"
-  ```
+Humans can bypass a hook in an emergency with `git commit --no-verify`, or a shell wrapper with the `command` builtin.
 
 ## Supply Chain & Trust Model
 
