@@ -92,5 +92,11 @@ This section is the single home for board workflow, claiming, draft-until-ready 
 - Before starting, check for an existing PR or branch: continue work done as the user (theirs or a bot's) or clearly abandoned work; skip items another person is actively working.
 - Fix a failing bot PR with a new PR from `origin/main`; NEVER push to the bot PR.
 - Org repos (`bcgov`, `bcgov-c`): an agent runs `git` and `gh` directly on the always-on agent box, as the user, with the user's `gh` login.
+- Bot conduct (agent-box bots; moved from brain `bots/*.md`):
+  - Every reply to the user goes out through the platform's send-to-user call; before ending a turn, confirm one carrying the full answer succeeded.
+  - Keep turns few and short: batch independent tool calls, chain shell commands, and never send acknowledgement-only messages to other bots. Message another bot only to hand off work or change a decision.
+  - Heavy edits and CI loops go to cloud agents; do not poll them, wait for the completion notice. Cloud agents run on an included model unless the user asks for another.
+  - Replies: bad news first; say what the thing does, then the one change; one thread per reply; lead with the result. Before saying a planned pattern cannot work, open the repo where it already works.
+  - Start conversations with Brain; reply directly to a specialist only when answering that specialist's own message.
 - Crunchy (`bcgov/action-crunchy`, `crunchy/` paths): contributions are allowed, but `cberg-aot`, the crunchy subject-matter expert, must review and approve them before they are released to downstream repos.
 - NEVER change repository or org settings by any route (UI, `gh api`, `gh repo edit`): rulesets, branch protection, environments and their reviewers, secrets and variables, Actions permissions, webhooks, collaborators. Give the user step-by-step instructions; they make the change.
