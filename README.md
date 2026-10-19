@@ -214,10 +214,12 @@ Two other deliberate trade-offs:
 │   ├── instructions.md                # Unified AI agent instructions & guardrails
 │   ├── personal.md                    # Personal tone & taste, appended to instructions.md
 │   ├── skills/
+│   │   ├── apply-maintenance-mode/    # Draft: take over an app, then maintenance mode
+│   │   ├── ci-standards/              # CI and GitHub Actions authoring rules
 │   │   ├── cloud-agent-kickoff/       # Standing wishes for cloud-agent handoffs
+│   │   ├── derive-uat-checklist/      # UAT checklist and tests from app material
 │   │   ├── podman-runner/             # Containerized execution & resource limits
-│   │   ├── preflight/                 # Ground external prompts against reality
-│   │   └── typescript-standards/      # Modular agent skills
+│   │   └── preflight/                 # Ground external prompts against reality
 │   ├── kde/
 │   │   └── user-places.xbel           # Dolphin sidebar bookmarks
 │   ├── systemd/
