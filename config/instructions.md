@@ -40,7 +40,7 @@
 
 ## Definition of Done
 
-- ALWAYS `git push` and ensure the branch has a pull request (`gh pr create` only when none exists) upon completing branch work. Before any push to a PR branch, merge its base branch in (`git fetch origin && git merge origin/<base>`); NEVER force-push.
+- ALWAYS `git push` and ensure the branch has a pull request (`gh pr create` only when none exists) upon completing branch work. Before any push to a branch, merge its base branch in (`git fetch origin && git merge origin/<base>`); NEVER force-push.
 
 ## Dependencies & Solutions
 
