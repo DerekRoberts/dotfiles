@@ -91,7 +91,7 @@ This section is the single home for board workflow, claiming, draft-until-ready 
 - Decision issues: bots may file a decision issue when a question needs the maintainer's call. The issue body holds the problem, the options with their trade-offs, and any open questions, and it is kept current by editing the body, never by commenting. Ask the maintainer in chat before filing one, so only a few get created, and only for questions that can't be answered on the spot.
 - Before starting, check for an existing PR or branch: continue work done as the user (theirs or a bot's) or clearly abandoned work; skip items another person is actively working.
 - Fix a failing bot PR with a new PR from `origin/main`; NEVER push to the bot PR.
-- A workflow waiting on a manual PROD approval is stuck, not failed: report it as stuck and flag the repo to the maintainer for transition to release-to-prod. Do not change the repo beyond its role rules.
+- A workflow waiting on a manual PROD approval is stuck, not failed: report it as stuck and flag the repo to the maintainer for transition to release-to-prod. A manual approval on top of a release-to-prod workflow (very important products, controlling product owners) is allowed and not flagged. Do not change the repo beyond its role rules.
 - Org repos (`bcgov`, `bcgov-c`): an agent runs `git` and `gh` directly on the always-on agent box, as the user, with the user's `gh` login.
 - Bot conduct (agent-box bots; moved from brain `bots/*.md`):
   - Every reply to the user goes out through the platform's send-to-user call; before ending a turn, confirm one carrying the full answer succeeded.
