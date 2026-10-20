@@ -20,7 +20,7 @@ Take over an orphaned app (no day-to-day team), make its CI trustworthy, check i
 ## Don't Use When
 - The pre-flight finds any Tier-1 blocker (defined below) for the Renovate / maintenance-mode steps.
 
-Maintenance mode is about merging dependency updates without humans. It does not remove deploy approval: a human approval gate on PROD (a required reviewer on the PROD environment) is fine.
+Maintenance mode is about merging dependency updates without humans. PROD deploys through one of the target patterns in step 3, such as release-to-prod, where PROD deploys the tested images when a release is published.
 
 ## Ground Rules
 - **No version changes outside version PRs.** Runtime, base image and dependency versions stay as they are in cleanup PRs. Flag mismatches to the user instead of fixing them.
@@ -133,14 +133,14 @@ Analyze `.github/workflows/` and bring the deploy path to one of the target patt
 - **Triggers.** TEST may deploy on `push` to `main`, or from a `workflow_run` that follows the `main` build. For `workflow_run`, the deploy must check `github.event.workflow_run.conclusion == 'success'`, `head_branch == 'main'`, and `event == 'push'`, and deploy the artifact built for `github.event.workflow_run.head_sha`, not whatever is newest.
 - **Path filters.** Do not put `paths` / `paths-ignore` on the merge or PR workflow trigger to skip work. Put path conditions on jobs, so the workflow always runs and its results check always reports.
 - **Same artifact means same digest.** Promotion must deploy the image digest that passed CI and TEST. Retagging a mutable tag (such as `latest` or `test` → `prod`) counts only if the workflow resolves and verifies the digest it is promoting. Prefer promoting by digest, for example recording and looking up digests with [`bcgov/actions` `image-tracker`](https://github.com/bcgov/actions/tree/main/image-tracker). A retag without digest verification is a finding to fix, not a pass.
-- **PROD approval.** A required reviewer on the PROD environment is acceptable and should be kept if the team wants it. "Automatic" below means PROD needs no extra build or manual trigger, not that it skips an approval gate.
+- **PROD environment.** The `prod` environment holds PROD secrets and its deployment branch and tag rules. If it has other protection rules, list them for the maintainer as environment settings to adjust. "Automatic" below means PROD needs no extra build or trigger step.
 - **`workflow_dispatch` that can deploy PROD.** It may stay only if it can deploy nothing but a digest that already passed TEST (it looks up and verifies that digest; it never builds). Otherwise flag it and replace it with one of the target patterns.
-- **Target Pattern 1: Release-Gated**:
+- **Target Pattern 1: Release-to-PROD**:
   - `TEST` deploys automatically from `main` (push or `workflow_run`) and records the tested digest.
   - `PROD` deploys when a GitHub Release is published (`on: release: types: [published]`), only after verifying that its tag targets a commit on `main`; promote the same digest that passed CI and `TEST`.
   - A published release can point at an arbitrary tag or commit, so the release event alone is not enough. If the tag SHA is not on `main`, or the workflow rebuilds or cannot verify the digest, do not deploy PROD.
 - **Target Pattern 2: Straight-to-TEST+PROD**:
-  - `TEST` and `PROD` deploy sequentially from `main`, promoting the same digest from the pipeline that passed CI, with an optional PROD approval gate. PROD follows TEST for that digest; it does not build a second one.
+  - `TEST` and `PROD` deploy sequentially from `main`, promoting the same digest from the pipeline that passed CI. PROD follows TEST for that digest; it does not build a second one.
 
 If the existing pipeline already meets a target pattern, leave it alone and say so.
 
@@ -161,7 +161,8 @@ Some repos carry an older maintenance-mode checklist issue. Where it conflicts w
 - [ ] Release pipeline green on the default branch
 - [ ] No end-of-life runtimes, database majors or base images
 - [ ] Upgrade PRs queued for any PostgreSQL/PostGIS major behind quickstart-openshift's current one (not blocking)
-- [ ] PROD promotes the tested digest (PROD approval gate optional)
+- [ ] PROD promotes the tested digest
+- [ ] PROD deploys through a target pattern (release-to-prod deploys on a published release)
 - [ ] `SECURITY.md` uses quickstart-openshift's private vulnerability reporting wording; private vulnerability reporting enabled
 - [ ] UAT passed with the PO
 
