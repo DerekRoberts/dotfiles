@@ -20,7 +20,7 @@ Take over an orphaned app (no day-to-day team), make its CI trustworthy, check i
 ## Don't Use When
 - The pre-flight finds any Tier-1 blocker (defined below) for the Renovate / maintenance-mode steps.
 
-Maintenance mode is about merging dependency updates without humans. Replace manual PROD approval gates (a required reviewer on the PROD environment) with a release-to-prod flow, where PROD deploys when a release is published: manual approvals time out and create junk failures. Exception: a manual PROD approval may stay as an extra gate on top of release-to-prod for very important products or controlling product owners; only a manual approval used instead of release-to-prod gets replaced.
+Maintenance mode is about merging dependency updates without humans. Replace manual PROD approval gates (a required reviewer on the PROD environment) with a release-to-prod flow, where PROD deploys when a release is published: manual approvals time out and create junk failures. Exception: where a team already requires it, a manual PROD approval after release-to-prod is tolerated; never recommend adding one. Only a manual approval used instead of release-to-prod gets replaced.
 
 ## Ground Rules
 - **No version changes outside version PRs.** Runtime, base image and dependency versions stay as they are in cleanup PRs. Flag mismatches to the user instead of fixing them.
@@ -162,7 +162,7 @@ Some repos carry an older maintenance-mode checklist issue. Where it conflicts w
 - [ ] No end-of-life runtimes, database majors or base images
 - [ ] Upgrade PRs queued for any PostgreSQL/PostGIS major behind quickstart-openshift's current one (not blocking)
 - [ ] PROD promotes the tested digest
-- [ ] Manual PROD approval gates replaced with release-to-prod (PROD deploys on published release); manual approvals time out and create junk failures (a manual approval on top of release-to-prod may stay for very important products or controlling POs)
+- [ ] Manual PROD approval gates replaced with release-to-prod (PROD deploys on published release); manual approvals time out and create junk failures (a manual approval after release-to-prod is tolerated only where a team already requires it)
 - [ ] `SECURITY.md` uses quickstart-openshift's private vulnerability reporting wording; private vulnerability reporting enabled
 - [ ] UAT passed with the PO
 
