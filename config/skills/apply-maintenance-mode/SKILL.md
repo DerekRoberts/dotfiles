@@ -133,14 +133,14 @@ Analyze `.github/workflows/` and bring the deploy path to one of the target patt
 - **Triggers.** TEST may deploy on `push` to `main`, or from a `workflow_run` that follows the `main` build. For `workflow_run`, the deploy must check `github.event.workflow_run.conclusion == 'success'`, `head_branch == 'main'`, and `event == 'push'`, and deploy the artifact built for `github.event.workflow_run.head_sha`, not whatever is newest.
 - **Path filters.** Do not put `paths` / `paths-ignore` on the merge or PR workflow trigger to skip work. Put path conditions on jobs, so the workflow always runs and its results check always reports.
 - **Same artifact means same digest.** Promotion must deploy the image digest that passed CI and TEST. Retagging a mutable tag (such as `latest` or `test` → `prod`) counts only if the workflow resolves and verifies the digest it is promoting. Prefer promoting by digest, for example recording and looking up digests with [`bcgov/actions` `image-tracker`](https://github.com/bcgov/actions/tree/main/image-tracker). A retag without digest verification is a finding to fix, not a pass.
-- **PROD approval.** A required reviewer on the PROD environment is acceptable and should be kept if the team wants it. "Automatic" below means PROD needs no extra build or manual trigger, not that it skips an approval gate.
+- **PROD approval.** Replace a required reviewer on the PROD environment with a target pattern below. Where a team already requires one, a manual PROD approval after release-to-prod is tolerated; never recommend adding one. "Automatic" below means PROD needs no extra build or manual trigger.
 - **`workflow_dispatch` that can deploy PROD.** It may stay only if it can deploy nothing but a digest that already passed TEST (it looks up and verifies that digest; it never builds). Otherwise flag it and replace it with one of the target patterns.
 - **Target Pattern 1: Release-Gated**:
   - `TEST` deploys automatically from `main` (push or `workflow_run`) and records the tested digest.
   - `PROD` deploys when a GitHub Release is published (`on: release: types: [published]`), only after verifying that its tag targets a commit on `main`; promote the same digest that passed CI and `TEST`.
   - A published release can point at an arbitrary tag or commit, so the release event alone is not enough. If the tag SHA is not on `main`, or the workflow rebuilds or cannot verify the digest, do not deploy PROD.
 - **Target Pattern 2: Straight-to-TEST+PROD**:
-  - `TEST` and `PROD` deploy sequentially from `main`, promoting the same digest from the pipeline that passed CI, with an optional PROD approval gate. PROD follows TEST for that digest; it does not build a second one.
+  - `TEST` and `PROD` deploy sequentially from `main`, promoting the same digest from the pipeline that passed CI. PROD follows TEST for that digest; it does not build a second one.
 
 If the existing pipeline already meets a target pattern, leave it alone and say so.
 
