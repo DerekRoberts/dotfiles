@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Run ShellCheck
-        run: shellcheck setup.sh scripts/*.sh scripts/setup/*.sh config/agent-guard/*.sh config/hooks/commit-msg
+        run: shellcheck setup.sh scripts/*.sh scripts/setup/*.sh config/agent-guard/*.sh config/hooks/commit-msg config/hooks/pre-push
 
   actionlint:
     name: Actionlint
@@ -60,6 +60,9 @@ jobs:
 
       - name: Test commit-msg hook
         run: bash scripts/test-commit-msg.sh
+
+      - name: Test pre-push hook
+        run: bash scripts/test-pre-push.sh
 
       - name: Test updown
         run: bash scripts/test-updown.sh
