@@ -74,7 +74,7 @@ install_ai() {
 # ── Native Standalone Tools & Toolchains ─────────────────────────────────────
 #
 # EXPECTED_SHA256, if set by a caller, is checked by fetch_tarball_bins before
-# extraction. Only oc can use it: GitHub releases here publish no checksums.
+# extraction. Only oc and helm use it: GitHub releases here publish no checksums.
 
 # curl flags for tag lookups and binary downloads (timeouts keep updown from hanging)
 GH_CURL_META=(--fail --silent --show-error --location --connect-timeout 10 --max-time 20 --retry 2)
@@ -256,7 +256,7 @@ install_oc() {
         return 0
     fi
 
-    # Unlike every other download here, Red Hat publishes per-release checksums.
+    # Red Hat publishes per-release checksums.
     local sums EXPECTED_SHA256
     sums="$(curl "${GH_CURL_META[@]}" "$OC_MIRROR/${target}/sha256sum.txt")" || sums=""
     EXPECTED_SHA256="$(awk -v a="$asset" '$2 == a {print $1; exit}' <<< "$sums")"
@@ -268,6 +268,41 @@ install_oc() {
     info "Downloading oc ($target)..."
     fetch_tarball_bins "$OC_MIRROR/${target}/${asset}" oc || return 1
     success "oc installed ($target, checksum verified)"
+}
+
+# helm ships from get.helm.sh; the tag comes from GitHub's latest release and
+# each tarball has a published .sha256sum next to it.
+HELM_MIRROR="https://get.helm.sh"
+
+install_helm() {
+    local target="${HELM_VERSION:-latest}"
+    if [[ "$target" == "latest" ]]; then
+        target="$(gh_latest_tag "helm/helm")" || target=""
+    fi
+    if [[ -z "$target" ]]; then
+        warn "Could not resolve latest helm version"
+        return 1
+    fi
+
+    local current
+    current="$("$BIN_DIR/helm" version --template '{{.Version}}' 2>/dev/null || true)"
+    if [[ "${UPDATE:-0}" -eq 0 && "$current" == "$target" ]]; then
+        success "helm is up to date ($current)"
+        return 0
+    fi
+
+    local asset="helm-${target}-linux-amd64.tar.gz"
+    local sums EXPECTED_SHA256
+    sums="$(curl "${GH_CURL_META[@]}" "$HELM_MIRROR/${asset}.sha256sum")" || sums=""
+    EXPECTED_SHA256="$(awk -v a="$asset" '$2 == a {print $1; exit}' <<< "$sums")"
+    if [[ -z "$EXPECTED_SHA256" ]]; then
+        warn "No published checksum for helm $asset — refusing to install"
+        return 1
+    fi
+
+    info "Downloading helm ($target)..."
+    fetch_tarball_bins "$HELM_MIRROR/${asset}" helm || return 1
+    success "helm installed ($target, checksum verified)"
 }
 
 # Run "$@" the way the old `fetch_gh_release ... || failed=1` lines did (a
@@ -303,6 +338,7 @@ install_cli_tools() {
     tool_job actionlint     fetch_gh_release "actionlint"     "rhysd/actionlint"    "actionlint_{ver}_linux_amd64.tar.gz"
     tool_job uv             fetch_gh_release "uv"             "astral-sh/uv"        "uv-x86_64-unknown-linux-gnu.tar.gz" "uv uvx"
     tool_job oc             install_oc
+    tool_job helm           install_helm
     wait_steps || failed=1
 
     # Clean up legacy podman-compose python wrapper script
