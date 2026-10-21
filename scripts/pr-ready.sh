@@ -38,10 +38,10 @@ elif [[ -n "$failed" ]]; then bad "checks failed: $failed"
 else ok "checks: $total done and green"; fi
 
 # Unresolved review threads.
-threads=$(gh api graphql -f owner="$owner" -f name="$name" -F num="$num" -f query='
-  query($owner:String!,$name:String!,$num:Int!){repository(owner:$owner,name:$name){pullRequest(number:$num){
-    reviewThreads(first:100){nodes{isResolved}}}}}' \
-  --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved|not)] | length')
+threads=$(gh api graphql --paginate -f owner="$owner" -f name="$name" -F num="$num" -f query='
+  query($owner:String!,$name:String!,$num:Int!,$endCursor:String){repository(owner:$owner,name:$name){pullRequest(number:$num){
+    reviewThreads(first:100,after:$endCursor){nodes{isResolved} pageInfo{hasNextPage endCursor}}}}}' \
+  --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved|not)] | length' | awk '{n+=$1} END{print n+0}')
 (( threads == 0 )) && ok "0 unresolved threads" || bad "$threads unresolved review thread(s)"
 
 # Behind base.
@@ -57,9 +57,16 @@ esac
 
 # Quiet period since the last push (earliest check suite on the head commit ~ push time).
 pushed=$(gh api "repos/$repo/commits/$head/check-suites" --jq '[.check_suites[].created_at] | min // empty')
-[[ -n "$pushed" ]] || pushed=$(jq -r '.commits[-1].committedDate' <<<"$pr")
-age=$(( ($(date +%s) - $(date -d "$pushed" +%s)) / 60 ))
-(( age >= MIN_QUIET_MINUTES )) && ok "last push ${age} min ago" || bad "last push ${age} min ago (need ${MIN_QUIET_MINUTES})"
+if [[ -z "$pushed" ]]; then
+    bad "push time unknown (no check suites on the head commit yet)"
+else
+    age=$(( ($(date +%s) - $(date -d "$pushed" +%s)) / 60 ))
+    (( age >= MIN_QUIET_MINUTES )) && ok "last push ${age} min ago" || bad "last push ${age} min ago (need ${MIN_QUIET_MINUTES})"
+fi
+
+# The head must not have moved while checking.
+now_head=$(gh pr view "$url" --json headRefOid --jq .headRefOid)
+[[ "$now_head" == "$head" ]] || bad "new push during the check; run again"
 
 if (( fail )); then echo "NOT READY"; exit 1; fi
 jq -e .isDraft <<<"$pr" >/dev/null && echo "READY (still a draft: gh pr ready $num -R $repo)" || echo "READY"
