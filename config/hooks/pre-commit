@@ -33,7 +33,7 @@ if added '*.npmrc' '*npmrc' '*.json' '*.json5' '*.yml' '*.yaml' '*.sh' '*Dockerf
 fi
 
 # Local audit/scan artifacts never belong in a repo.
-reports="$(git diff --cached --name-only --diff-filter=A \
+reports="$(git diff --cached --name-only --diff-filter=AR \
   | grep -iE '(^|/)[^/]*(audit|scan|maturity|diagnostic)[-_]?report[^/]*$' || true)"
 [ -z "$reports" ] || block "adds report artifact(s): $reports. Keep them local (./.tmp/)."
 
