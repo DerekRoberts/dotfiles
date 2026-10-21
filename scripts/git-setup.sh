@@ -174,8 +174,8 @@ ensure_scratch_ignored() {
   if [[ -z "$file" ]]; then
     # Git's default excludes file; leave core.excludesfile unset
     file="${XDG_CONFIG_HOME:-$HOME/.config}/git/ignore"
-    mkdir -p "$(dirname "$file")"
   fi
+  mkdir -p "$(dirname "$file")"
   if grep -qxF '.tmp/' "$file" 2>/dev/null; then
     print_skip ".tmp/ already ignored in $file"
   else

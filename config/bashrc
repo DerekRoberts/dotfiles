@@ -66,10 +66,10 @@ if [ -d "$HOME/.local/bin" ]; then
 fi
 # Dotfiles wrappers (e.g. gh) go first so they shadow the real tools
 if [ -d "$HOME/.local/share/dotfiles/bin" ]; then
-    case ":$PATH:" in
-        *":$HOME/.local/share/dotfiles/bin:"*) ;;
-        *) PATH="$HOME/.local/share/dotfiles/bin:$PATH" ;;
-    esac
+    PATH=":$PATH:"
+    PATH="${PATH//:$HOME\/.local\/share\/dotfiles\/bin:/:}"
+    PATH="${PATH#:}"; PATH="${PATH%:}"
+    PATH="$HOME/.local/share/dotfiles/bin:$PATH"
 fi
 
 # Aliases - Navigation & General
