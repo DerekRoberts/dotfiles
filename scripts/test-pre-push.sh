@@ -14,12 +14,11 @@ git clone -q "$TMP/remote.git" "$TMP/w" 2>/dev/null
 cd "$TMP/w"
 git config user.name Me; git config user.email me@example.com
 git commit -q --allow-empty -m init; git push -q origin main
-git remote set-head origin main
 c() { git commit -q --allow-empty -m "$1" "${@:2}"; git rev-parse HEAD; }
 
 # expect <name> <0|1> <local_sha> <remote_ref> <remote_sha>
 expect() {
-    if printf 'refs/heads/x %s %s %s\n' "$3" "$4" "$5" | bash "$HOOK" origin >/dev/null 2>&1; then got=0; else got=1; fi
+    if printf '%s %s %s %s\n' "${6:-refs/heads/x}" "$3" "$4" "$5" | bash "$HOOK" origin >/dev/null 2>&1; then got=0; else got=1; fi
     if [[ "$got" == "$2" ]]; then echo "ok   $1"; else echo "FAIL $1 (exit $got)"; fails=1; fi
 }
 
@@ -40,5 +39,11 @@ git merge -q --no-edit origin/main; m=$(git rev-parse HEAD)
 expect "after merging base allowed (base authors ignored)" 0 "$m" refs/heads/feat/a "$a2"
 o=$(c other --author="Bot <bot@example.com>")
 expect "other author blocked" 1 "$o" refs/heads/feat/a "$m"
+
+expect "HEAD:main blocked" 1 "$a1" refs/heads/main "$Z" HEAD
+expect "deleting main blocked" 1 "$Z" refs/heads/main "$a1" "(delete)"
+git checkout -q -b feat/c origin/main
+git merge -q --no-ff --no-edit "$o" 2>/dev/null; fm=$(git rev-parse HEAD)
+expect "earlier foreign commit blocked" 1 "$(c c1)" refs/heads/feat/c "$fm"
 
 exit "$fails"
