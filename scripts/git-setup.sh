@@ -167,6 +167,23 @@ configure_gitignore() {
   TEMP_GITIGNORE_FILE=""
 }
 
+# Always ignore agent scratch space, whatever the gitignore choice above
+ensure_scratch_ignored() {
+  local file
+  file=$(command git config --global --path --get core.excludesfile 2>/dev/null || true)
+  if [[ -z "$file" ]]; then
+    # Git's default excludes file; leave core.excludesfile unset
+    file="${XDG_CONFIG_HOME:-$HOME/.config}/git/ignore"
+  fi
+  mkdir -p "$(dirname "$file")"
+  if grep -qxF '.tmp/' "$file" 2>/dev/null; then
+    print_skip ".tmp/ already ignored in $file"
+  else
+    printf '\n# Agent scratch space\n.tmp/\n' >> "$file"
+    print_success "Added .tmp/ to $file"
+  fi
+}
+
 # Apply recommended git configurations
 configure_git_settings() {
   print_header "Recommended Git Configuration"
@@ -321,6 +338,7 @@ main() {
   
   configure_user
   configure_gitignore
+  ensure_scratch_ignored
   configure_git_settings
   configure_commit_signing
   

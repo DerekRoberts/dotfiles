@@ -22,7 +22,7 @@
 ## Operational Guardrails
 
 - NEVER run test runners, compilers, or migrations on the host, even if containers are stopped. Cap concurrency at 2 workers (Jest `--maxWorkers=2`/`--runInBand`; Vitest `--maxConcurrency=2`/`--threads=false`). Recipes: `podman-runner` skill.
-- Scratch files: git-ignored `./.tmp/`, else `/tmp`. NEVER elsewhere in the tree.
+- Scratch files: `./.tmp/` (globally git-ignored by setup), else `/tmp`. NEVER elsewhere in the tree.
 
 ## Think & Plan
 
@@ -53,7 +53,6 @@
 
 ## Git & Branch Hygiene
 
-- ALWAYS `unset GITHUB_TOKEN` before every `gh` command. Ambient tokens 401; local credentials are the ones that work.
 - PR Review Threads: handle every review thread, then resolve it via GraphQL `resolveReviewThread` and post no reply. Fixed: push the fix and confirm the relevant tests pass. Dismissed: give the user the one-line reason in chat. When every thread in a review is resolved, dismiss that review with `dismissPullRequestReview`.
 - PR Holds: Other admins use these repos, so holds and status go in the PR description, starting with `ON HOLD: <condition or ETA>`. Editing PR titles and descriptions (`gh pr edit`) for this is allowed. NEVER push to, or list as needing review, a PR whose description starts with `ON HOLD:` until its condition is met.
 - Close Issues: Use `Closes #<num>` ONLY if an issue is explicitly provided. NEVER guess.
