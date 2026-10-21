@@ -21,7 +21,7 @@ block() {
 }
 
 # Lines this commit adds to the given paths.
-added() { git diff --cached --no-color -U0 -- "$@" | grep -E '^\+[^+]' || true; }
+added() { git diff --cached --no-color -U0 -- "$@" | awk '/^@@/ { h = 1; next } /^diff / { h = 0 } h && /^\+/'; }
 
 if added '*.js' '*.jsx' '*.mjs' '*.cjs' '*.ts' '*.tsx' '*.mts' '*.cts' '*.vue' '*.svelte' \
   | grep -qE 'eslint-disable|@ts-ignore|@ts-nocheck'; then

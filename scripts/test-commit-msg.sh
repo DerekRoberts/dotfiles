@@ -34,6 +34,7 @@ reject() {
 }
 reject "non-conventional subject" $'Update stuff'
 reject "Generated with line" $'fix: thing\n\nGenerated with SomeTool'
+reject "Generated with line in merge" $'Merge branch \'main\'\n\nGenerated with SomeTool'
 expect "breaking change with scope" $'feat(api)!: drop v1' $'feat(api)!: drop v1'
 expect "merge subject allowed" $'Merge branch \'main\' into feat/x' $'Merge branch \'main\' into feat/x'
 

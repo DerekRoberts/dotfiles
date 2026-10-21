@@ -18,14 +18,16 @@ awk -v ai="$ai" '
 
 subject=$(sed -n '1p' "$1")
 case "$subject" in
-    "Merge "*|"Revert "*|"fixup! "*|"squash! "*|"amend! "*) exit 0 ;;
+    "Merge "*|"Revert "*|"fixup! "*|"squash! "*|"amend! "*) ;;
+    *)
+        if ! printf '%s\n' "$subject" | grep -qE '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([^)]+\))?!?: .+'; then
+            echo "BLOCKED by global commit-msg hook: subject is not a Conventional Commit: $subject" >&2
+            echo "   Fix: <type>(<scope>): <summary>, e.g. 'fix(api): handle empty input'" >&2
+            echo "   (HUMAN BYPASS ONLY: git commit --no-verify)" >&2
+            exit 1
+        fi
+        ;;
 esac
-if ! printf '%s\n' "$subject" | grep -qE '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([^)]+\))?!?: .+'; then
-    echo "BLOCKED by global commit-msg hook: subject is not a Conventional Commit: $subject" >&2
-    echo "   Fix: <type>(<scope>): <summary>, e.g. 'fix(api): handle empty input'" >&2
-    echo "   (HUMAN BYPASS ONLY: git commit --no-verify)" >&2
-    exit 1
-fi
 if grep -qiE '^(🤖 )?generated (with|by) ' "$1"; then
     echo "BLOCKED by global commit-msg hook: remove the 'Generated with' line." >&2
     echo "   (HUMAN BYPASS ONLY: git commit --no-verify)" >&2
