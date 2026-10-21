@@ -172,8 +172,9 @@ ensure_scratch_ignored() {
   local file
   file=$(command git config --global --path --get core.excludesfile 2>/dev/null || true)
   if [[ -z "$file" ]]; then
-    file="$GLOBAL_GITIGNORE"
-    command git config --global core.excludesfile "$file"
+    # Git's default excludes file; leave core.excludesfile unset
+    file="${XDG_CONFIG_HOME:-$HOME/.config}/git/ignore"
+    mkdir -p "$(dirname "$file")"
   fi
   if grep -qxF '.tmp/' "$file" 2>/dev/null; then
     print_skip ".tmp/ already ignored in $file"

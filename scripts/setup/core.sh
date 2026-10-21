@@ -88,8 +88,10 @@ install_maintenance_tools() {
         success "Installed updown → $HOME/.local/bin/updown"
     fi
     if [[ -f "$DOTFILES_DIR/scripts/gh-wrapper.sh" ]]; then
-        install_copy "$DOTFILES_DIR/scripts/gh-wrapper.sh" "$HOME/.local/bin/gh"
-        success "Installed gh wrapper (drops GITHUB_TOKEN) → $HOME/.local/bin/gh"
+        # Own dir, not ~/.local/bin, so gh installs and upgrades never clobber it
+        mkdir -p "$HOME/.local/share/dotfiles/bin"
+        install_copy "$DOTFILES_DIR/scripts/gh-wrapper.sh" "$HOME/.local/share/dotfiles/bin/gh"
+        success "Installed gh wrapper (drops GITHUB_TOKEN) → $HOME/.local/share/dotfiles/bin/gh"
     fi
 
     if [[ -d "$DOTFILES_DIR/config/systemd" ]]; then
