@@ -27,4 +27,14 @@ expect "human trailer kept" \
     $'fix: thing\n\nCo-authored-by: Jane Doe <jane@example.com>\nCo-authored-by: Cursor Agent <cursoragent@cursor.com>' \
     $'fix: thing\n\nCo-authored-by: Jane Doe <jane@example.com>'
 
+# reject <name> <message>: hook must exit non-zero
+reject() {
+    printf '%s\n' "$2" > "$TMP/msg"
+    if sh "$HOOK" "$TMP/msg" 2>/dev/null; then echo "FAIL $1 (accepted)"; fails=1; else echo "ok   $1"; fi
+}
+reject "non-conventional subject" $'Update stuff'
+reject "Generated with line" $'fix: thing\n\nGenerated with SomeTool'
+expect "breaking change with scope" $'feat(api)!: drop v1' $'feat(api)!: drop v1'
+expect "merge subject allowed" $'Merge branch \'main\' into feat/x' $'Merge branch \'main\' into feat/x'
+
 exit "$fails"

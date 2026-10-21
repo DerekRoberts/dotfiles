@@ -12,6 +12,31 @@ fi
 
 gitleaks protect --staged --redact --no-banner
 
+block() {
+  echo "" >&2
+  echo "BLOCKED by global pre-commit hook: $1" >&2
+  echo "   (HUMAN BYPASS ONLY: git commit --no-verify)" >&2
+  echo "" >&2
+  exit 1
+}
+
+# Lines this commit adds to the given paths.
+added() { git diff --cached --no-color -U0 -- "$@" | grep -E '^\+[^+]' || true; }
+
+if added '*.js' '*.jsx' '*.mjs' '*.cjs' '*.ts' '*.tsx' '*.mts' '*.cts' '*.vue' '*.svelte' \
+  | grep -qE 'eslint-disable|@ts-ignore|@ts-nocheck'; then
+  block "adds eslint-disable/@ts-ignore/@ts-nocheck. Fix the root cause instead."
+fi
+if added '*.npmrc' '*npmrc' '*.json' '*.json5' '*.yml' '*.yaml' '*.sh' '*Dockerfile*' '*Containerfile*' \
+  | grep -qiE 'legacy-peer-deps|NPM_CONFIG_LEGACY_PEER_DEPS'; then
+  block "adds legacy-peer-deps. Fix the dependency graph (overrides, peer ranges) instead."
+fi
+
+# Local audit/scan artifacts never belong in a repo.
+reports="$(git diff --cached --name-only --diff-filter=A \
+  | grep -iE '(^|/)[^/]*(audit|scan|maturity|diagnostic)[-_]?report[^/]*$' || true)"
+[ -z "$reports" ] || block "adds report artifact(s): $reports. Keep them local (./.tmp/)."
+
 # A version-downgrade check used to live here. It compared the first
 # version-shaped number among the removed lines against the first among the
 # added lines, which are unrelated values in any diff touching more than one
