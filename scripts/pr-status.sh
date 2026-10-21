@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016  # GraphQL vars are literal
 # pr-status — read-only list of PRs and default-branch runs that need Derek, one line per item.
-# Usage: pr-status [--rerun|--dry-run] [days]   (failed runs from the last N days, default 2)
-#   --rerun    rerun failed jobs once (attempt 1 only) when the log shows the runner was
-#              blocked from the OpenShift API; never PROD runs or runs waiting on approval
-#   --dry-run  show what --rerun would do
+# Usage: pr-status [--yes] [days]   (failed runs from the last N days, default 2)
+#   Every run lists failed runs whose log shows the runner was blocked from the OpenShift API,
+#   then asks "N blocked runs found, rerun them? [y/N]" (default No) and reruns exactly those
+#   (failed jobs, attempt 1 only; never PROD runs or runs still running or waiting on approval).
+#   --yes      rerun without asking. With no terminal it only reports.
 set -euo pipefail
 unset GITHUB_TOKEN GH_TOKEN
 
 ME=DerekRoberts
-MODE=""
-[[ "${1:-}" == --rerun || "${1:-}" == --dry-run ]] && { MODE=$1; shift; }
+YES=false
+[[ "${1:-}" == --yes ]] && { YES=true; shift; }
 DAYS="${1:-2}"
 # Runner IP blocked from the OpenShift API (oc login / kubectl to api.*:6443), seen in
 # actions-openshift 38076084540, nr-fds-pyetl 38767262795, pubcode 37707107595.
@@ -36,7 +37,7 @@ search() { # $1 = tag, $2 = search qualifiers
       --jq ".data.search.nodes[] | . + {tag:\"$1\"}"
 }
 
-tmp=$(mktemp); trap 'rm -f "$tmp" "$tmp.runs"' EXIT
+tmp=$(mktemp); trap 'rm -f "$tmp" "$tmp.runs" "$tmp.blocked"' EXIT
 prs=$( { search review "review-requested:$ME" && search direct "user-review-requested:$ME" &&
     search assigned "assignee:$ME" && search authored "author:$ME"; } | jq -s '
   group_by(.url) | map(.[0] + {tags: map(.tag)})')
@@ -85,7 +86,7 @@ for repo in $watch; do
     ) &
 done | sort | tee "$tmp.runs"
 
-rerun() { # $1 = run URL
+check_blocked() { # $1 = run URL; prints "ok|skip <tab> url <tab> reason" for IP-blocked runs
     local url=$1 repo id run why=""
     repo=$(sed -E 's#https://github.com/([^/]+/[^/]+)/actions/runs/.*#\1#' <<<"$url")
     id=$(sed -E 's#.*/runs/([0-9]+).*#\1#' <<<"$url")
@@ -97,18 +98,29 @@ rerun() { # $1 = run URL
     elif gh api "repos/$repo/deployments?sha=$(jq -r .headSha <<<"$run")" --jq '.[].environment' |
         grep -Eqi '\bprod(uction)?\b'; then why="deploys to PROD"
     fi
-    if [[ -n "$why" ]]; then echo "skip   $url ($why)"
-    elif [[ $MODE == --dry-run ]]; then echo "would  $url"
-    else gh run rerun "$id" -R "$repo" --failed && echo "rerun  $url"; fi
+    if [[ -n "$why" ]]; then printf 'skip\t%s\t%s\n' "$url" "$why"; else printf 'ok\t%s\t\n' "$url"; fi
 }
 
-if [[ -n "$MODE" ]]; then
-    echo "== IP-block reruns ($MODE)"
-    {
-        grep -Eo 'https://github.com/[^ ]+/actions/runs/[0-9]+' "$tmp.runs" || true
-        awk -F'\t' '$2=="failing checks" {print $3}' "$tmp" | while read -r pr; do
-            gh pr checks "$pr" --json state,link --jq '.[] | select(.state=="FAILURE") | .link' || true
-        done | grep -Eo 'https://github.com/[^ ]+/actions/runs/[0-9]+' || true
-    } | sort -u | while read -r url; do rerun "$url"; done
+echo "== IP-blocked runs"
+{
+    grep -Eo 'https://github.com/[^ ]+/actions/runs/[0-9]+' "$tmp.runs" || true
+    awk -F'\t' '$2=="failing checks" {print $3}' "$tmp" | while read -r pr; do
+        gh pr checks "$pr" --json state,link --jq '.[] | select(.state=="FAILURE") | .link' || true
+    done | grep -Eo 'https://github.com/[^ ]+/actions/runs/[0-9]+' || true
+} | sort -u | while read -r url; do check_blocked "$url"; done >"$tmp.blocked"
+awk -F'\t' '$1=="skip" {printf "skip   %s (%s)\n", $2, $3}' "$tmp.blocked"
+awk -F'\t' '$1=="ok" {printf "found  %s\n", $2}' "$tmp.blocked"
+n=$(awk -F'\t' '$1=="ok"' "$tmp.blocked" | wc -l)
+if (( n > 0 )); then
+    answer=n
+    if $YES; then answer=y
+    elif [[ -t 0 && -t 1 ]]; then read -r -p "$n blocked runs found, rerun them? [y/N] " answer
+    else echo "$n blocked runs found. No terminal, so not rerunning (use --yes)."; fi
+    if [[ $answer =~ ^[Yy]([Ee][Ss])?$ ]]; then
+        awk -F'\t' '$1=="ok" {print $2}' "$tmp.blocked" | while read -r url; do
+            repo=$(sed -E 's#https://github.com/([^/]+/[^/]+)/actions/runs/.*#\1#' <<<"$url")
+            gh run rerun "${url##*/}" -R "$repo" --failed && echo "rerun  $url"
+        done
+    elif [[ -t 0 && -t 1 ]]; then echo "Not rerun."; fi
 fi
 echo "(checked $(date '+%Y-%m-%d %H:%M %Z'))"
