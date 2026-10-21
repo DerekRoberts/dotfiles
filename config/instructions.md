@@ -3,10 +3,9 @@
 - NEVER post as the user: no PR or issue comments and no review-thread replies. NEVER review or merge PRs under user credentials; closing issues and PRs is at the agent's discretion (resolving a handled review thread and dismissing a handled review post nothing; both are allowed and expected, see PR Review Threads); NEVER create releases/tags, force-push, manage secrets, modify repository settings (via `gh api` or `gh repo edit`), or run `oc`/`kubectl`. Renovate automerge is the only merge exception. Draft those in chat. Commits, `git push`, `gh issue create`, and `gh pr create|edit` are fine. If a command is blocked, do not bypass it. `agent-guard` enforces the git and GitHub items here in AI tools with pre-command hooks.
 - One PR per change; the global `pre-push` hook blocks force-pushes, bot branches (`renovate/*`, `dependabot/*`), branches behind their base, and commits not authored by the user. NEVER branch from a feature branch or stack a PR on another PR's branch, including merged ones; ALWAYS `git fetch origin && git checkout -b <type>/<name> origin/main`.
 - NEVER commit credentials, secrets, or PII.
-- NEVER add AI attribution to commits, PRs, or issues: no AI `Co-authored-by` trailers, "Generated with" lines, or tool links or footers in PR bodies.
+- NEVER add AI attribution to PRs or issues (tool links or footers in bodies); the `commit-msg` hook strips or blocks it in commits.
 - NEVER commit as a tool's bot account (e.g. Cursor Agent). Set `git config user.name`/`user.email` to the user (Derek Roberts <derek.roberts@gmail.com>) before the FIRST commit; GitHub adds a `Co-authored-by` line on squash merge for any commit whose author email differs from the merger's default commit email (bot accounts and `users.noreply.github.com` addresses included), and deleting trailer text does not stop it.
-- NEVER silence diagnostics (`eslint-disable`, `@ts-ignore`); fix the root cause.
-- NEVER pass `--legacy-peer-deps` to `npm`/`npx`; NEVER set `NPM_CONFIG_LEGACY_PEER_DEPS`; NEVER write `legacy-peer-deps=true` to `.npmrc`, `npmrc`, or Renovate `npmrc`. Fix the dependency graph (`overrides`, peer ranges, callers). NEVER recommend `--legacy-peer-deps`, `NPM_CONFIG_LEGACY_PEER_DEPS`, or `legacy-peer-deps=true` as a workaround.
+- Fix root causes: NEVER silence diagnostics or use or recommend `--legacy-peer-deps`; the `pre-commit` hook blocks adding either.
 - NEVER cut coverage to make a failing test pass; find out why it fails and fix the code.
 - NEVER modify database mutability, overwrite, or recreation settings (`overwrite: false` -> `true`, destructive template replaces, volume reclaim policies, storage classes) without explicit user confirmation. Treat `overwrite: false` on database components as an immutable safety guardrail.
 - NEVER write all-projects agent rules into a git checkout. ALWAYS store and deploy them from this repo (`config/instructions.md` + setup) into `$HOME` product config.
@@ -56,11 +55,10 @@
 - PR Review Threads: handle every review thread, then resolve it via GraphQL `resolveReviewThread` and post no reply. Fixed: push the fix and confirm the relevant tests pass. Dismissed: give the user the one-line reason in chat. When every thread in a review is resolved, dismiss that review with `dismissPullRequestReview`.
 - PR Holds: Other admins use these repos, so holds and status go in the PR description, starting with `ON HOLD: <condition or ETA>`. Editing PR titles and descriptions (`gh pr edit`) for this is allowed. NEVER push to, or list as needing review, a PR whose description starts with `ON HOLD:` until its condition is met.
 - Close Issues: Use `Closes #<num>` ONLY if an issue is explicitly provided. NEVER guess.
-- **Artifacts vs Documentation:** NEVER commit or push audit reports, security scans, or diagnostic outputs (e.g., `MATURITY_REPORT.md`). These are sensitive local artifacts. Only commit source code and formal structural documentation (e.g., ADRs, READMEs).
+- Keep audit reports, scans, and diagnostic outputs local (`./.tmp/`); the `pre-commit` hook blocks common report names.
 
 ## Project Standards
 
-- ALWAYS use Conventional Commits.
 - CI and GitHub Actions (workflows, `action.yml`, pins, gates, SARIF): load the `ci-standards` skill before editing.
 - New dependencies: latest stable. NEVER downgrade. Routine upgrades are Renovate's; before opening a pin or version-bump PR by hand, check for an open Renovate or Dependabot PR covering it. NEVER change a runtime, base image, or dependency version (including aligning a mismatch upward) in a PR whose task is not that version change; report the mismatch to the user instead. If this task requires a version change, take latest and update only that lockfile entry. NEVER touch lockfiles on unrelated work. NEVER hand-edit a lockfile.
 
