@@ -1,7 +1,7 @@
 # Hard Stops
 
 - NEVER post as the user: no PR or issue comments and no review-thread replies. NEVER review or merge PRs under user credentials; closing issues and PRs is at the agent's discretion (resolving a handled review thread and dismissing a handled review post nothing; both are allowed and expected, see PR Review Threads); NEVER create releases/tags, force-push, manage secrets, modify repository settings (via `gh api` or `gh repo edit`), or run `oc`/`kubectl`. Renovate automerge is the only merge exception. Draft those in chat. Commits, `git push`, `gh issue create`, and `gh pr create|edit` are fine. If a command is blocked, do not bypass it. `agent-guard` enforces the git and GitHub items here in AI tools with pre-command hooks.
-- NEVER branch from a feature branch, including merged ones; ALWAYS `git fetch origin && git checkout -b <type>/<name> origin/main`.
+- One PR per change. NEVER branch from a feature branch or stack a PR on another PR's branch, including merged ones; ALWAYS `git fetch origin && git checkout -b <type>/<name> origin/main`.
 - NEVER commit credentials, secrets, or PII.
 - NEVER add AI attribution to commits, PRs, or issues: no AI `Co-authored-by` trailers, "Generated with" lines, or tool links or footers in PR bodies.
 - NEVER commit as a tool's bot account (e.g. Cursor Agent). Set `git config user.name`/`user.email` to the user (Derek Roberts <derek.roberts@gmail.com>) before the FIRST commit; GitHub adds a `Co-authored-by` line on squash merge for any commit whose author email differs from the merger's default commit email (bot accounts and `users.noreply.github.com` addresses included), and deleting trailer text does not stop it. Before handing over a PR, confirm `git log --format='%an <%ae>' origin/main..HEAD` lists only the user.
@@ -64,7 +64,7 @@
 
 - ALWAYS use Conventional Commits.
 - CI and GitHub Actions (workflows, `action.yml`, pins, gates, SARIF): load the `ci-standards` skill before editing.
-- New dependencies: latest stable. NEVER downgrade. Routine upgrades are Renovate's. NEVER change a runtime, base image, or dependency version (including aligning a mismatch upward) in a PR whose task is not that version change; report the mismatch to the user instead. If this task requires a version change, take latest and update only that lockfile entry. NEVER touch lockfiles on unrelated work. NEVER hand-edit a lockfile.
+- New dependencies: latest stable. NEVER downgrade. Routine upgrades are Renovate's; before opening a pin or version-bump PR by hand, check for an open Renovate or Dependabot PR covering it. NEVER edit or push to a bot PR; put any fix in a new PR from `origin/main` and let the bot close its own PR. NEVER change a runtime, base image, or dependency version (including aligning a mismatch upward) in a PR whose task is not that version change; report the mismatch to the user instead. If this task requires a version change, take latest and update only that lockfile entry. NEVER touch lockfiles on unrelated work. NEVER hand-edit a lockfile.
 
 ## Agent Interaction
 
