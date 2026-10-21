@@ -87,6 +87,10 @@ install_maintenance_tools() {
         install_copy "$DOTFILES_DIR/scripts/updown.sh" "$HOME/.local/bin/updown"
         success "Installed updown → $HOME/.local/bin/updown"
     fi
+    if [[ -f "$DOTFILES_DIR/scripts/gh-wrapper.sh" ]]; then
+        install_copy "$DOTFILES_DIR/scripts/gh-wrapper.sh" "$HOME/.local/bin/gh"
+        success "Installed gh wrapper (drops GITHUB_TOKEN) → $HOME/.local/bin/gh"
+    fi
 
     if [[ -d "$DOTFILES_DIR/config/systemd" ]]; then
         info "Configuring systemd user services..."
