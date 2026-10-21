@@ -64,7 +64,7 @@
 
 - ALWAYS use Conventional Commits.
 - CI and GitHub Actions (workflows, `action.yml`, pins, gates, SARIF): load the `ci-standards` skill before editing.
-- New dependencies: latest stable. NEVER downgrade. Routine upgrades are Renovate's; before opening a pin or version-bump PR by hand, check for an open Renovate or Dependabot PR covering it and use that one (fix it per the failing-bot-PR rule). NEVER change a runtime, base image, or dependency version (including aligning a mismatch upward) in a PR whose task is not that version change; report the mismatch to the user instead. If this task requires a version change, take latest and update only that lockfile entry. NEVER touch lockfiles on unrelated work. NEVER hand-edit a lockfile.
+- New dependencies: latest stable. NEVER downgrade. Routine upgrades are Renovate's; before opening a pin or version-bump PR by hand, check for an open Renovate or Dependabot PR covering it. NEVER edit or push to a bot PR; put any fix in a new PR from `origin/main` and let the bot close its own PR. NEVER change a runtime, base image, or dependency version (including aligning a mismatch upward) in a PR whose task is not that version change; report the mismatch to the user instead. If this task requires a version change, take latest and update only that lockfile entry. NEVER touch lockfiles on unrelated work. NEVER hand-edit a lockfile.
 
 ## Agent Interaction
 
