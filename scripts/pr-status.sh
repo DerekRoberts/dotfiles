@@ -29,7 +29,8 @@ search() { # $1 = tag, $2 = search qualifiers
 }
 
 tmp=$(mktemp); trap 'rm -f "$tmp"' EXIT
-prs=$( { search review "review-requested:$ME"; search assigned "assignee:$ME"; search authored "author:$ME"; } | jq -s '
+prs=$( { search review "review-requested:$ME" && search direct "user-review-requested:$ME" &&
+    search assigned "assignee:$ME" && search authored "author:$ME"; } | jq -s '
   group_by(.url) | map(.[0] + {tags: map(.tag)})')
 
 jq -r --argjson support "$support" '
@@ -38,18 +39,20 @@ jq -r --argjson support "$support" '
   | ($p[0].fieldValueByName.name // null) as $status
   | (.repository.nameWithOwner) as $repo
   | (.tags | index("review") != null) as $rev
+  | (.tags | index("direct") != null) as $direct
   | (.tags | index("assigned") != null) as $asg
+  | (.tags | index("authored") != null) as $own
   | (.commits.nodes[0].commit.statusCheckRollup.state // "NONE") as $ci
   | select(.repository.isArchived | not)
   | select($repo != "MinionTech/metacurious")
   | select($status != "Done")
-  | select($rev or (($support | index($repo)) == null))
+  | select($direct or (($support | index($repo)) == null))
   | select($rev or $asg or ($p | length > 0) or ($repo | startswith("DerekRoberts/")))
-  | if ($ci == "FAILURE" or $ci == "ERROR") then "2\tfailing checks\t\(.url)"
-    elif .reviewDecision == "CHANGES_REQUESTED" then "2\tchanges requested\t\(.url)"
+  | if ($own or $asg) and ($ci == "FAILURE" or $ci == "ERROR") then "2\tfailing checks\t\(.url)"
+    elif ($own or $asg) and .reviewDecision == "CHANGES_REQUESTED" then "2\tchanges requested\t\(.url)"
     elif $rev then "1\treview requested\t\(.url)"
     elif .isDraft then empty
-    elif (.reviewDecision == "APPROVED" or .mergeStateStatus == "CLEAN") and ($ci != "PENDING") then "1\tready to merge\t\(.url)"
+    elif $own and (.reviewDecision == "APPROVED" or .mergeStateStatus == "CLEAN") and ($ci != "PENDING") then "1\tready to merge\t\(.url)"
     elif $asg then "1\tassigned\t\(.url)"
     else empty end' <<<"$prs" | sort -u >"$tmp"
 
@@ -62,14 +65,15 @@ echo "== Failed runs on the default branch (last $DAYS days)"
 since=$(date -u -d "-$DAYS days" +%Y-%m-%d)
 for repo in $watch; do
     (
-        info=$(gh api "repos/$repo" --jq 'select(.archived|not) | .default_branch' 2>/dev/null) || exit 0
-        [[ -n "$info" ]] || exit 0
-        # Latest run per workflow; report it only if that latest run failed.
-        gh run list -R "$repo" -b "$info" --created ">=$since" -L 100 \
-            --json workflowName,conclusion,url,createdAt 2>/dev/null |
-            jq -r 'group_by(.workflowName)[] | max_by(.createdAt)
-                   | select(.conclusion == "failure") | "\(.workflowName): \(.url)"'
+        branch=$(gh api "repos/$repo" --jq 'if .archived then "" else .default_branch end') ||
+            { echo "WARN could not read $repo"; exit 0; }
+        [[ -n "$branch" ]] || exit 0
+        # Latest run per workflow; report it only if that latest run failed or timed out.
+        gh run list -R "$repo" -b "$branch" --created ">=$since" -L 1000 \
+            --json workflowDatabaseId,workflowName,conclusion,url,createdAt |
+            jq -r 'group_by(.workflowDatabaseId)[] | max_by(.createdAt)
+                   | select(.conclusion | IN("failure","timed_out")) | "\(.workflowName): \(.url)"' ||
+            echo "WARN could not list runs for $repo"
     ) &
 done | sort
-wait
 echo "(checked $(date '+%Y-%m-%d %H:%M %Z'))"
