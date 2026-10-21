@@ -46,7 +46,7 @@ source ~/.bashrc
 | **Essential Desktop Apps** (Chrome, VLC, Insync) | ✅ | ✅ |
 | **Git Setup & SSH Commit Signing** (`git-setup.sh`) | ❌ *(Untouched)* | ✅ |
 | **Global Git Hooks (gitleaks secret scanning)** | ❌ | ✅ |
-| **Developer CLI Suite** (`gh`, `jq`, `gitleaks`, `shellcheck`, `actionlint`, `uv`, `docker-compose`, `oc`) | ❌ | ✅ |
+| **Developer CLI Suite** (`gh`, `jq`, `gitleaks`, `shellcheck`, `actionlint`, `uv`, `docker-compose`, `oc`, `helm`) | ❌ | ✅ |
 | **Node.js LTS** (via NVM) | ❌ | ✅ |
 | **AI Assistants & Prompt Rules** (Cursor, Grok Bot, Antigravity Hub, Ponytail) | ❌ | ✅ |
 | **Drop-Down Terminal** (Yakuake) | ❌ | ✅ |
@@ -57,8 +57,9 @@ source ~/.bashrc
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `UPDATE` | `0` | Set `UPDATE=1` to re-check GitHub CLI tools (`scripts/setup/dev.sh --tools`) and `oc` |
+| `UPDATE` | `0` | Set `UPDATE=1` to re-check GitHub CLI tools (`scripts/setup/dev.sh --tools`), `oc` and `helm` |
 | `OC_VERSION` | `latest` | Override version tag for `oc` |
+| `HELM_VERSION` | `latest` | Override version tag for `helm` (e.g. `v4.3.1`) |
 
 ## AI Agent Guardrails
 
@@ -91,6 +92,7 @@ verified; the rest is documented here rather than left implicit.
 | Component | Integrity check | Notes |
 | --- | --- | --- |
 | `oc` | **sha256 verified** | Red Hat publishes `sha256sum.txt` per release; a mismatch aborts the install. |
+| `helm` | **sha256 verified** | Downloaded from `get.helm.sh`, which publishes a `.sha256sum` per tarball; a missing checksum or a mismatch aborts the install. |
 | `jq`, `gh`, `gitleaks`, `docker-compose`, `shellcheck`, `actionlint`, `uv` | TLS only | GitHub release assets, resolved from the `/releases/latest` redirect. No upstream checksums. Archives are rejected if their members are absolute, traversing, or link outside the extraction directory. |
 | Cursor AppImage | TLS + URL anchored | The download URL comes from Cursor's API and must sit under `https://downloads.cursor.com/`. |
 | Grok Bot AppImage | User-supplied file | Copied from `~/Downloads/Grok_Bot_*.AppImage` (browser download from `https://x.ai/bot` / `https://cursor.com/download/bot`). No unauthenticated AppImage URL to pin. `.deb`/`.rpm` are unused on Kinoite. |
@@ -149,7 +151,7 @@ Two other deliberate trade-offs:
 │   │   ├── core.sh                    # Shell profiles, XDG dirs, systemd, Dolphin places & MIME defaults
 │   │   ├── desktop.sh                 # KDE Plasma layout, panel, notifications & natural scrolling
 │   │   ├── apps.sh                    # Application installers (Chrome, VLC, Yakuake, Insync)
-│   │   └── dev.sh                     # Toolchains (jq, gh, uv, nvm; `--tools` for CLIs only), AI assistants, oc & repos
+│   │   └── dev.sh                     # Toolchains (jq, gh, uv, nvm; `--tools` for CLIs only), AI assistants, oc, helm & repos
 │   ├── lib.sh                         # Shared helpers: output, install_copy, download guards
 │   ├── updown.sh                      # Workstation updater script (installed to ~/.local/bin/updown)
 │   ├── clone-repos.sh                 # Idempotent repository cloner
