@@ -1,18 +1,66 @@
 #!/bin/bash
-set -euo pipefail
-# Global pre-push hook to block accidental pushes to main.
+# Global pre-push hook: blocks pushes that break the branch rules.
+#   - direct pushes to main/master
+#   - force-pushes (non-fast-forward updates)
+#   - pushes to bot branches (renovate/*, dependabot/*)
+#   - branches behind their base (merge the base in first)
+#   - commits authored by anyone other than the configured git user
 # Bypass (HUMAN DEVELOPERS ONLY): git push --no-verify
+set -uo pipefail
 
-# Read from stdin. Each line is: local_ref local_sha remote_ref remote_sha
-while read -r local_ref local_sha remote_ref remote_sha; do
-    if [ "$remote_ref" = "refs/heads/main" ] || [ "$remote_ref" = "refs/heads/master" ]; then
-        echo ""
-        echo "🚨 BLOCKED: Direct push to '$remote_ref' is disabled by global pre-push hook."
-        echo "   Please create a pull request instead."
-        echo "   (HUMAN BYPASS ONLY: git push <remote> <ref> --no-verify)"
-        echo ""
-        exit 1
+remote="${1:-origin}"
+zero="0000000000000000000000000000000000000000"
+
+block() {
+    echo "" >&2
+    echo "BLOCKED by global pre-push hook: $1" >&2
+    [ -n "${2:-}" ] && echo "   Fix: $2" >&2
+    echo "   (HUMAN BYPASS ONLY: git push --no-verify)" >&2
+    echo "" >&2
+    exit 1
+}
+
+me="$(git config user.email || true)"
+[ -n "$me" ] || block "git user.email is not set." "git config --global user.email <you>"
+
+# Default branch: local remote HEAD, else ask the remote.
+base="$(git symbolic-ref -q --short "refs/remotes/$remote/HEAD" 2>/dev/null || true)"
+base="${base#"$remote"/}"
+if [ -z "$base" ]; then
+    base="$(git ls-remote --symref "$remote" HEAD 2>/dev/null | sed -n 's#^ref: refs/heads/\(.*\)\tHEAD$#\1#p')"
+fi
+[ -n "$base" ] || block "could not find the default branch of '$remote'." "check the network and retry."
+
+base_sha=""
+while read -r _local_ref local_sha remote_ref remote_sha; do
+    case "$remote_ref" in refs/heads/*) ;; *) continue ;; esac
+    branch="${remote_ref#refs/heads/}"
+
+    case "$branch" in
+        main|master|"$base") block "push or deletion of '$branch'." "push a branch and open a pull request." ;;
+        renovate/*|dependabot/*) block "'$branch' belongs to a bot." "put the fix in a new branch from $remote/$base." ;;
+    esac
+    [ "$local_sha" = "$zero" ] && continue   # deleting a feature branch
+
+    if [ "$remote_sha" != "$zero" ]; then
+        if ! git cat-file -e "$remote_sha^{commit}" 2>/dev/null; then
+            block "remote '$branch' has commits you don't have." "git fetch $remote && git merge $remote/$branch"
+        fi
+        git merge-base --is-ancestor "$remote_sha" "$local_sha" \
+            || block "force-push to '$branch' (not a fast-forward)." "git fetch $remote && git merge $remote/$branch"
     fi
+
+    if [ -z "$base_sha" ]; then
+        git fetch -q "$remote" "refs/heads/$base" 2>/dev/null \
+            || block "could not fetch $remote/$base to check the branch is current." "check the network and retry."
+        base_sha="$(git rev-parse FETCH_HEAD)"
+    fi
+    git merge-base --is-ancestor "$base_sha" "$local_sha" \
+        || block "'$branch' is behind $remote/$base." "git fetch $remote && git merge $remote/$base"
+
+    # Every commit on the branch but not on the base, merges included.
+    others="$(git log --format='%ae' "$local_sha" "^$base_sha" | grep -vxF "$me" | sort -u || true)"
+    [ -z "$others" ] || block "commits authored by: $others (expected $me)." "recreate the branch from $remote/$base with your own commits"
 done
 
 exit 0
