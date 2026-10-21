@@ -1,10 +1,10 @@
 # Hard Stops
 
 - NEVER post as the user: no PR or issue comments and no review-thread replies. NEVER review or merge PRs under user credentials; closing issues and PRs is at the agent's discretion (resolving a handled review thread and dismissing a handled review post nothing; both are allowed and expected, see PR Review Threads); NEVER create releases/tags, force-push, manage secrets, modify repository settings (via `gh api` or `gh repo edit`), or run `oc`/`kubectl`. Renovate automerge is the only merge exception. Draft those in chat. Commits, `git push`, `gh issue create`, and `gh pr create|edit` are fine. If a command is blocked, do not bypass it. `agent-guard` enforces the git and GitHub items here in AI tools with pre-command hooks.
-- One PR per change. NEVER branch from a feature branch or stack a PR on another PR's branch, including merged ones; ALWAYS `git fetch origin && git checkout -b <type>/<name> origin/main`.
+- One PR per change; the global `pre-push` hook blocks force-pushes, bot branches (`renovate/*`, `dependabot/*`), branches behind their base, and commits not authored by the user. NEVER branch from a feature branch or stack a PR on another PR's branch, including merged ones; ALWAYS `git fetch origin && git checkout -b <type>/<name> origin/main`.
 - NEVER commit credentials, secrets, or PII.
 - NEVER add AI attribution to commits, PRs, or issues: no AI `Co-authored-by` trailers, "Generated with" lines, or tool links or footers in PR bodies.
-- NEVER commit as a tool's bot account (e.g. Cursor Agent). Set `git config user.name`/`user.email` to the user (Derek Roberts <derek.roberts@gmail.com>) before the FIRST commit; GitHub adds a `Co-authored-by` line on squash merge for any commit whose author email differs from the merger's default commit email (bot accounts and `users.noreply.github.com` addresses included), and deleting trailer text does not stop it. Before handing over a PR, confirm `git log --format='%an <%ae>' origin/main..HEAD` lists only the user.
+- NEVER commit as a tool's bot account (e.g. Cursor Agent). Set `git config user.name`/`user.email` to the user (Derek Roberts <derek.roberts@gmail.com>) before the FIRST commit; GitHub adds a `Co-authored-by` line on squash merge for any commit whose author email differs from the merger's default commit email (bot accounts and `users.noreply.github.com` addresses included), and deleting trailer text does not stop it.
 - NEVER silence diagnostics (`eslint-disable`, `@ts-ignore`); fix the root cause.
 - NEVER pass `--legacy-peer-deps` to `npm`/`npx`; NEVER set `NPM_CONFIG_LEGACY_PEER_DEPS`; NEVER write `legacy-peer-deps=true` to `.npmrc`, `npmrc`, or Renovate `npmrc`. Fix the dependency graph (`overrides`, peer ranges, callers). NEVER recommend `--legacy-peer-deps`, `NPM_CONFIG_LEGACY_PEER_DEPS`, or `legacy-peer-deps=true` as a workaround.
 - NEVER cut coverage to make a failing test pass; find out why it fails and fix the code.
@@ -40,7 +40,7 @@
 
 ## Definition of Done
 
-- ALWAYS `git push` and ensure the branch has a pull request (`gh pr create` only when none exists) upon completing branch work. Before any push to a branch, merge its base branch in (`git fetch origin && git merge origin/<base>`); NEVER force-push.
+- ALWAYS `git push` and ensure the branch has a pull request (`gh pr create` only when none exists) upon completing branch work.
 
 ## Dependencies & Solutions
 
@@ -63,7 +63,7 @@
 
 - ALWAYS use Conventional Commits.
 - CI and GitHub Actions (workflows, `action.yml`, pins, gates, SARIF): load the `ci-standards` skill before editing.
-- New dependencies: latest stable. NEVER downgrade. Routine upgrades are Renovate's; before opening a pin or version-bump PR by hand, check for an open Renovate or Dependabot PR covering it. NEVER edit or push to a bot PR; put any fix in a new PR from `origin/main` and let the bot close its own PR. NEVER change a runtime, base image, or dependency version (including aligning a mismatch upward) in a PR whose task is not that version change; report the mismatch to the user instead. If this task requires a version change, take latest and update only that lockfile entry. NEVER touch lockfiles on unrelated work. NEVER hand-edit a lockfile.
+- New dependencies: latest stable. NEVER downgrade. Routine upgrades are Renovate's; before opening a pin or version-bump PR by hand, check for an open Renovate or Dependabot PR covering it. NEVER change a runtime, base image, or dependency version (including aligning a mismatch upward) in a PR whose task is not that version change; report the mismatch to the user instead. If this task requires a version change, take latest and update only that lockfile entry. NEVER touch lockfiles on unrelated work. NEVER hand-edit a lockfile.
 
 ## Agent Interaction
 
@@ -89,7 +89,6 @@ This section is the single home for board workflow, claiming, draft-until-ready 
 - Keep PRs small. Put any not-safe change (new behaviour, schema or SQL, architecture, enabling or disabling features or maintenance mode) in its own PR with a plain-language note on what changes for the app. Do not track who signs off.
 - Decision issues: bots may file a decision issue when a question needs the maintainer's call. The issue body holds the problem, the options with their trade-offs, and any open questions, and it is kept current by editing the body, never by commenting. Ask the maintainer in chat before filing one, so only a few get created, and only for questions that can't be answered on the spot.
 - Before starting, check for an existing PR or branch: continue work done as the user (theirs or a bot's) or clearly abandoned work; skip items another person is actively working.
-- Fix a failing bot PR with a new PR from `origin/main`; NEVER push to the bot PR.
 - A PROD deploy job left waiting on its environment is stuck, not failed: report it as stuck and flag the repo to the maintainer for transition to release-to-prod. Do not change the repo beyond its role rules.
 - Org repos (`bcgov`, `bcgov-c`): an agent runs `git` and `gh` directly on the always-on agent box, as the user, with the user's `gh` login.
 - Bot conduct (agent-box bots; moved from brain `bots/*.md`):
