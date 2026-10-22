@@ -35,6 +35,7 @@
 
 ## Implementation Discipline
 
+- Build the simplest thing that works. Only guard against edge cases that are likely, costly, or would fail silently. Fix the rest when they show up.
 - ALWAYS default missing environments and toggles to PROD. TEST and DEV must be set explicitly — an omitted value must not select a non-prod environment.
 
 ## Definition of Done
