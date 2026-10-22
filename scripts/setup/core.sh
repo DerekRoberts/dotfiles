@@ -97,6 +97,10 @@ install_maintenance_tools() {
         install_copy "$DOTFILES_DIR/scripts/pr-ready.sh" "$HOME/.local/bin/pr-ready"
         success "Installed pr-ready → $HOME/.local/bin/pr-ready"
     fi
+    if [[ -f "$DOTFILES_DIR/scripts/pr-status.sh" ]]; then
+        install_copy "$DOTFILES_DIR/scripts/pr-status.sh" "$HOME/.local/bin/pr-status"
+        success "Installed pr-status → $HOME/.local/bin/pr-status"
+    fi
 
     if [[ -d "$DOTFILES_DIR/config/systemd" ]]; then
         info "Configuring systemd user services..."
