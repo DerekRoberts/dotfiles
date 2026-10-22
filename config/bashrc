@@ -87,7 +87,6 @@ alias gd='git diff'
 alias gpu='git push -u origin $(git branch --show-current)'
 alias grm='git fetch origin main && git pull origin main --rebase'
 alias gbc='git branch --merged | grep -v "\*" | xargs -n 1 git branch -d'
-alias gprune='git switch main && git pull --ff-only --no-tags && git fetch --prune --no-tags && git branch -vv | grep ": gone]" | grep -v "^+" | awk "{sub(/^[+* ]+/, \"\"); print \$1}" | xargs -r git branch -D && git branch -a'
 
 # Aliases - Podman Containers
 alias p='podman'
@@ -101,8 +100,17 @@ alias docker='podman'
 alias docker-compose='podman compose'
 
 # Functions
-gwprune() {
-    local first=1 path
+gprune() {
+    local git_dir common_dir first=1 path line
+    { read -r git_dir; read -r common_dir; } < <(git rev-parse --path-format=absolute --git-dir --git-common-dir) || return
+    if [ "$git_dir" != "$common_dir" ]; then
+        echo "gprune: run this from the main checkout, not a linked worktree" >&2
+        return 1
+    fi
+    git switch main && git pull --ff-only --no-tags && git fetch --prune --no-tags || return
+    # Branches checked out in a worktree (+) stay protected for this run.
+    git branch -vv | grep ": gone]" | grep -v "^+" | awk '{sub(/^[+* ]+/, ""); print $1}' | xargs -r git branch -D || return
+    # Remove every linked worktree without forcing; report each and continue past failures.
     while IFS= read -r -d '' line || [ -n "${line:-}" ]; do
         case $line in
             worktree\ *)
