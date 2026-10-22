@@ -67,5 +67,5 @@ jobs:
       - name: Test updown
         run: bash scripts/test-updown.sh
 
-      - name: Test gwt-clean
-        run: bash scripts/test-gwt-clean.sh
+      - name: Test gwprune
+        run: bash scripts/test-gwprune.sh
