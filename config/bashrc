@@ -121,6 +121,14 @@ gwprune() {
     git branch -a
 }
 
+gwt-clean() {
+  git worktree list --porcelain | awk '/^worktree /{print $2}' | tail -n +2 |
+    while read -r wt; do
+      git worktree remove "$wt" && echo "removed $wt" || echo "kept $wt (has changes)"
+    done
+  git worktree prune
+}
+
 ga() {
     if [ -n "${1:-}" ]; then
         git add -A
