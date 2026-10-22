@@ -66,3 +66,6 @@ jobs:
 
       - name: Test updown
         run: bash scripts/test-updown.sh
+
+      - name: Test gprune
+        run: bash scripts/test-gprune.sh
