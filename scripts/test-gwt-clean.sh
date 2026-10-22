@@ -12,17 +12,20 @@ eval "$(sed -n '/^gwt-clean() {/,/^}/p' "$BASHRC")"
 git init -q -b main "$TMP/repo"
 cd "$TMP/repo"
 git config user.name Me; git config user.email me@example.com
-git commit -q --allow-empty -m init
+echo base > tracked.txt; git add tracked.txt; git commit -q -m init
 git worktree add -q -b clean "$TMP/clean"
 git worktree add -q -b dirty "$TMP/dirty"
 echo change > "$TMP/dirty/file.txt"
+git worktree add -q -b edited "$TMP/edited"
+echo edit >> "$TMP/edited/tracked.txt"
 
 out=$(gwt-clean 2>/dev/null)
 pass() { echo "ok   $1"; }
 fail() { echo "FAIL $1"; fails=1; }
 if [[ ! -d "$TMP/clean" && $out == *"removed $TMP/clean"* ]]; then pass "clean worktree removed"; else fail "clean worktree removed"; fi
 if [[ -f "$TMP/dirty/file.txt" && $out == *"kept $TMP/dirty (has changes)"* ]]; then pass "dirty worktree kept"; else fail "dirty worktree kept"; fi
+if [[ -d "$TMP/edited" && $out == *"kept $TMP/edited (has changes)"* ]]; then pass "worktree with a tracked edit kept"; else fail "worktree with a tracked edit kept"; fi
 if [[ -d "$TMP/repo/.git" && $out != *"$TMP/repo"* ]]; then pass "main checkout kept"; else fail "main checkout kept"; fi
-if [[ $(git worktree list | wc -l) -eq 2 ]]; then pass "only main and dirty left"; else fail "only main and dirty left"; fi
+if [[ $(git worktree list | wc -l) -eq 3 ]]; then pass "only main, dirty and edited left"; else fail "only main, dirty and edited left"; fi
 
 exit "$fails"
