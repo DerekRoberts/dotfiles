@@ -41,7 +41,7 @@ Run these before the Renovate pre-flight and scaffolding below when the app stil
 ### 2. Clean up CI and Sonar
 - Remove dead workflows, jobs and config. Keep what works.
 - Sonar: keep the working path (for example SonarCloud automatic analysis). Remove stray project keys, unused `sonar-project.properties` and redundant scanner args. Say in the PR what remains and why.
-- Lint workflows (for example `actionlint`).
+- Validate PR titles and lint workflows via `.github/workflows/pr-validate.yml` (`bcgov/actions/pr-validate`); remove standalone `actionlint.yml` workflows.
 
 ### 3. Adopt standard results gates
 - Use `bcgov/actions/workflow-results` with `needs` listing the jobs it gates. Do not set `title:`; leave the action's default header (`Workflow Results`). Required check names come from the job `name:` (`PR Results`, `Validate Results`, `Analysis Results`), not from `title:`.
@@ -76,7 +76,7 @@ Not blockers: a supported PostgreSQL or PostGIS major behind `bcgov/quickstart-o
 
 ### What tested means
 - **Application dependencies** (package manifests, lockfiles, base images): a required check builds that component and runs its tests on the PR.
-- **GitHub Actions workflow updates** (`uses:` bumps in `.github/workflows/`): a required check runs `actionlint` (or equivalent) on the PR, and the updated workflow itself actually runs on the PR and is gated by a required results check. Workflows that only run after merge (deploy, release, schedule) are covered by `actionlint` plus Tier-1 item 4: watch the next run on the default branch.
+- **GitHub Actions workflow updates** (`uses:` bumps in `.github/workflows/`): a required check (`Validate Results` in `pr-validate.yml` via `bcgov/actions/pr-validate`) lints workflows on the PR, and the updated workflow itself actually runs on the PR and is gated by a required results check. Workflows that only run after merge (deploy, release, schedule) are covered by `pr-validate` plus Tier-1 item 4: watch the next run on the default branch.
 - **Code nothing runs any more** (dead apps, scripts, old directories): the default is to add tests. Excluding it from Renovate with `ignorePaths` is a weakening override and needs the user's approval: ask the user in chat; record the answer in the issue. Deleting it is a separate code change; ask the user in chat too.
 
 ## Pre-flight Checklist (CRITICAL)
