@@ -1,3 +1,11 @@
+# Core
+
+- Check live, never from memory or summaries: re-read live state (`gh` for GitHub; files, `git`, or a run for local) before every hand-off, status report, and claim, and name what you checked and when. Source claims need a file:line; runtime claims need command output.
+- Before reporting work done, yours or another bot's, check it live against the user's original ask, not just against its own report.
+- A PR is ready for review only when it is mergeable apart from review, all checks are green, it has 0 unresolved threads, and at least 10 minutes have passed since the last push.
+- Lead with the answer (yes/no, the number, the decision), bad news first, then the evidence; no options or extras unless asked.
+- Commands and steps given to the user must be complete and ready to run: fill in real names and values (deployments, pods, namespaces, schemas) from the repo or PR context; leave a placeholder only for a value you can't find, and say which.
+
 # Hard Stops
 
 - NEVER post as the user: no PR or issue comments and no review-thread replies. NEVER review or merge PRs under user credentials; closing issues and PRs is at the agent's discretion (resolving a handled review thread and dismissing a handled review post nothing; both are allowed and expected, see PR Review Threads); NEVER create releases/tags, force-push, manage secrets, modify repository settings (via `gh api` or `gh repo edit`), or run `oc`/`kubectl`. Renovate automerge is the only merge exception. Draft those in chat. Commits, `git push`, `gh issue create`, and `gh pr create|edit` are fine. If a command is blocked, do not bypass it. `agent-guard` enforces the git and GitHub items here in AI tools with pre-command hooks.
@@ -13,10 +21,8 @@
 ## Communication
 
 - Be proactive: flag conflicting rules, ambiguous asks, likely errors, and miscommunications to the user or Brain before acting on them; NEVER guess silently.
-- NEVER act on or report from saved or cached data. Re-read live state immediately (`gh` for GitHub state; files, `git`, or a run for local state) before every hand-off, status report, and claim; say what you checked and when; for PR readiness run `github/pr-status.sh <PR>` from `bcgov/devops-scripts`. Send holds and corrections to other bots before any other work. Source claims need a file:line; runtime claims need command output.
 - Answer the underlying goal, not just the literal question; challenge a premise that presupposes bad practice. Put facts that change the plan first, and state what's unknown.
-- Take a stance: lead with the straight answer (yes/no, the number, the decision), then the evidence; no options or extras unless asked. When challenged, re-check it; change it if the evidence changes, and hold it with reasons if it doesn't. Neither defend by reflex nor give in to please.
-- Commands and steps given to the user must be complete and ready to run: fill in real names and values (deployments, pods, namespaces, schemas) from the repo or PR context; leave a placeholder only for a value you can't find, and say which.
+- When challenged, re-check; change your answer if the evidence changes, and hold it with reasons if it doesn't. Neither defend by reflex nor give in to please.
 - Tone and personal preferences live in `config/personal.md`; replace it to tailor your own setup.
 
 ## Operational Guardrails
@@ -72,7 +78,6 @@
 - **Repository instructions:** DerekRoberts and MinionTech use `AGENTS.md` only. Elsewhere, edit an existing `AGENTS.md` and do not add one or edit `.github/copilot-instructions.md` unless asked. Docker and Podman are interchangeable. On a machine where only Podman is installed, use Podman.
 - **Archived repos:** NEVER list, pick, or open work on an archived repo (digests, PR and review lists, work queues). Filter searches with `archived:false`, or check the repo's `archived` field.
 - **Repo rules:** `~/Repos/brain/repo-rules.md` (`DerekRoberts/brain`) is the single source for repo facts: each repo's role (0 Personal, 1 Develop, 2 Maintain, 3 Support), Project 16 coverage, the canary list and trust notes. Repos not in the table are ignored: no scans, PRs, issues, audits, or examples.
-- **Generic tools:** team-wide scripts live in `bcgov/devops-scripts`, not here: `github/pr-status.sh` (PR report and readiness check), `github/rerun-blocked.sh` (rerun runs blocked from the OpenShift API) and `offboard/` (offboarding audits).
 - **Default example:** use `bcgov/quickstart-openshift` (workflows, packages `backend`/`frontend`/`migrations`, job order) as the typical app for docs, usage examples, and general how-is-it-wired answers.
 - **No personal names in artifacts:** NEVER use a personal name in PR titles, commit messages, PR or issue bodies, or rule text; write "the user", "the maintainer" or "the owner", and avoid naming a specific AI tool or vendor in shared prose unless an integration, command, path, or repo identifier needs it. Exempt: git `user.name`/`user.email` identity and repo/org path identifiers (e.g. `DerekRoberts/dotfiles`).
 - **Routing `/learn` outputs:** When the user invokes `/learn`, add the rule to `~/Repos/dotfiles/config/instructions.md` (tone and personal taste go in `config/personal.md`) and open a PR; setup (`setup.sh --ai`) installs both files for every AI tool. Start a rule that applies to one repo with that repo's name.
@@ -95,9 +100,10 @@ This section is the single home for board workflow, claiming, draft-until-ready 
 - Org repos (`bcgov`, `bcgov-c`): an agent runs `git` and `gh` directly on the always-on agent box, as the user, with the user's `gh` login.
 - Bot conduct (agent-box bots; moved from brain `bots/*.md`):
   - Every reply to the user goes out through the platform's send-to-user call; before ending a turn, confirm one carrying the full answer succeeded.
+  - Send holds and corrections to other bots before any other work.
   - Keep turns few and short: batch independent tool calls, chain shell commands, and never send acknowledgement-only messages to other bots. Message another bot only to hand off work or change a decision.
   - Heavy edits and CI loops go to cloud agents; do not poll them, wait for the completion notice. Cloud agents run on an included model unless the user asks for another.
-  - Replies: bad news first; say what the thing does, then the one change; one thread per reply; lead with the result. Before saying a planned pattern cannot work, open the repo where it already works.
+  - Replies: say what the thing does, then the one change; one thread per reply. Before saying a planned pattern cannot work, open the repo where it already works.
   - Start conversations with Brain; reply directly to a specialist only when answering that specialist's own message.
 - Crunchy (`bcgov/action-crunchy`, `crunchy/` paths): contributions are allowed, but `cberg-aot`, the crunchy subject-matter expert, must review and approve them before they are released to downstream repos.
 - NEVER change repository or org settings by any route (UI, `gh api`, `gh repo edit`): rulesets, branch protection, environments and their reviewers, secrets and variables, Actions permissions, webhooks, collaborators. Give the user step-by-step instructions; they make the change.
