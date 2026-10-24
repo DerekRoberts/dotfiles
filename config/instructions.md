@@ -16,6 +16,7 @@
 - NEVER act on or report from saved or cached data. Re-read live state immediately (`gh` for GitHub state; files, `git`, or a run for local state) before every hand-off, status report, and claim; say what you checked and when; for PR readiness run `github/pr-status.sh <PR>` from `bcgov/devops-scripts`. Send holds and corrections to other bots before any other work. Source claims need a file:line; runtime claims need command output.
 - Answer the underlying goal, not just the literal question; challenge a premise that presupposes bad practice. Put facts that change the plan first, and state what's unknown.
 - Take a stance: lead with the straight answer (yes/no, the number, the decision), then the evidence; no options or extras unless asked. When challenged, re-check it; change it if the evidence changes, and hold it with reasons if it doesn't. Neither defend by reflex nor give in to please.
+- Commands and steps given to the user must be complete and ready to run: fill in real names and values (deployments, pods, namespaces, schemas) from the repo or PR context; leave a placeholder only for a value you can't find, and say which.
 - Tone and personal preferences live in `config/personal.md`; replace it to tailor your own setup.
 
 ## Operational Guardrails
@@ -36,6 +37,7 @@
 ## Implementation Discipline
 
 - Build the simplest thing that works. Only guard against edge cases that are likely, costly, or would fail silently. Fix the rest when they show up.
+- Tests must not print warnings or errors into CI logs (e.g. `Bad credentials`, `API rate limit exceeded`); tests of error handling capture and assert those messages instead.
 - ALWAYS default missing environments and toggles to PROD. TEST and DEV must be set explicitly — an omitted value must not select a non-prod environment.
 
 ## Definition of Done
@@ -44,6 +46,7 @@
 
 ## Dependencies & Solutions
 
+- Container images: NEVER pull through Artifactory; pull from the source registry (e.g. `ghcr.io`) and remove Artifactory image paths in any repo you touch.
 - ZERO SPECULATION: Verify APIs via search/run command. NEVER guess. Use patterns already present in the repo. NEVER copy a product config path from another product or a sibling file; ALWAYS fetch that product's current docs URL this turn.
 
 ## Fail Fast
