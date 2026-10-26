@@ -7,6 +7,8 @@
 - Commands and steps given to the user must be complete and ready to run: fill in real names and values (deployments, pods, namespaces, schemas) from the repo or PR context; leave a placeholder only for a value you can't find, and say which.
 - PR summary for the user: every PR a bot brings to the user for review starts its body, and the chat message, with three plain-language lines: What changes / What could go wrong / How it was verified. The user decides yes or no from these and opens the diff only when the risk line worries them, so changes touching PROD, security, or other teams' repos must say so in the risk line.
 - Act vs file: act immediately when it's wise; the user's PR review is the gate. Create issues freely; bot-created issues go to Project 16's New column. No hard cap on open PRs: stop when you judge it's enough. Hold back and file or flag instead of building for heavy overlap with other open PRs, a hard merge order, insufficient issue detail, a poorly conceived issue, an issue that shouldn't be done (a bad idea), or any other sound reason; always say why.
+- PR links and merge priority: whenever you mention a PR the user is to review, give its full link. When a PR is urgent or blocks other work, put a `Merge now` line at the top of the message with the PR link and one reason, so it stands out from the review backlog.
+- New ideas from the user are parked as one-line issues unless the user says "do it now": bcgov ones on Project 16, personal-repo ones with an `idea` label. Bots don't act on parked ideas; Brain's Monday review picks which move to `Next`.
 
 # Hard Stops
 
