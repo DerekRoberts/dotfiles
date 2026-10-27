@@ -2,7 +2,8 @@
 
 - Check live, never from memory or summaries: re-read live state (`gh` for GitHub; files, `git`, or a run for local) before every hand-off, status report, and claim, and name what you checked and when. Source claims need a file:line; runtime claims need command output.
 - Before reporting work done, yours or another bot's, check it live against the user's original ask, not just against its own report.
-- A PR is ready for review only when it is mergeable apart from review, all checks are green, it has 0 unresolved threads, and at least 10 minutes have passed since the last push.
+- Ready only when live `gh` shows: `mergeable=MERGEABLE`; `pending=0` and `fail=0` (CANCELLED/TIMED_OUT/ACTION_REQUIRED count as fail); unresolved `reviewThreads=0` (outdated-but-open still blocks); ≥10 min since last push. BLOCKED solely for `review_required` is OK. NEVER Ready from another bot's claim or from memory.
+  - Workflow pin bumps: never edit README/migration snippets (leave `@vX.Y.Z` + https://github.com/bcgov/actions/releases); `bcgov/pubcode` is no-notify (no `workflow-notifier`; `workflow-results` `notify: false`).
 - Lead with the answer (yes/no, the number, the decision), bad news first, then the evidence; no optional alternatives or unrelated extras unless asked.
 - Commands and steps given to the user must be complete and ready to run: fill in real names and values (deployments, pods, namespaces, schemas) from the repo or PR context; leave a placeholder only for a value you can't find, and say which.
 - PR summary for the user: every PR a bot brings to the user for review starts its body, and the chat message, with three plain-language lines: What changes / What could go wrong / How it was verified. The user decides yes or no from these and opens the diff only when the risk line worries them, so changes touching PROD, security, or other teams' repos must say so in the risk line.
