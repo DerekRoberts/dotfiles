@@ -3,15 +3,16 @@ name: quickstart-from-argocd
 description: 'Migrate legacy OpenShift applications (built on OpenShift in-cluster BuildConfig builds, bcgov-c/tenant-gitops-* ArgoCD repos, manual namespace oc tag promotions, and Artifactory proxies) to the canonical bcgov/quickstart-openshift delivery pipeline.'
 ---
 
-> This file lives in `DerekRoberts/dotfiles` at `config/skills/quickstart-from-argocd/`. `scripts/setup/ai.sh` copies every directory under `config/skills/` into `~/.agents/skills/`.
-
 # QuickStart from ArgoCD (Legacy OpenShift Modernization)
+
+> This file lives in `DerekRoberts/dotfiles` at `config/skills/quickstart-from-argocd/`. `scripts/setup/ai.sh` copies every directory under `config/skills/` into `~/.agents/skills/`.
 
 Migrate a legacy OpenShift application—historically wired with in-cluster `BuildConfig` image builds, `bcgov-c/tenant-gitops-*` ArgoCD values repositories, manual `oc tag` namespace promotions, bespoke multi-workflow CI, and Artifactory remote proxies—to the unified `bcgov/quickstart-openshift` workflow suite powered by `bcgov/actions` and `bcgov/actions-openshift`.
 
 ---
 
 ## Use When
+
 - An application uses the legacy 2019–2022 OpenShift deployment model:
   - In-cluster `BuildConfig` objects building container images inside `-tools`.
   - External GitOps repositories (`bcgov-c/tenant-gitops-<namespace>`) running ArgoCD.
@@ -22,6 +23,7 @@ Migrate a legacy OpenShift application—historically wired with in-cluster `Bui
 - The user requests modernizing an app's CI/CD pipeline, adopting `quickstart-openshift`, or retiring ArgoCD tenant-gitops.
 
 ## Don't Use When
+
 - The repository is already standardized on `bcgov/quickstart-openshift`.
 - Non-OpenShift platforms (e.g. AWS ECS, Azure Container Apps).
 
@@ -30,16 +32,18 @@ Migrate a legacy OpenShift application—historically wired with in-cluster `Bui
 ## Core Architectural Principles
 
 1. **Zero-Rebuild Continuous Delivery**:
-   - Container images are built **once** on GitHub Actions runners during the PR stage and pushed to GHCR, tagged by PR number (`pr-<num>`).
+   - Container images are built **once** on GitHub Actions runners during the PR stage and pushed to GHCR, tagged by raw PR number (`<num>`) and head commit SHA.
    - Ephemeral preview environments deploy the image to `-dev`.
    - On squash-merge to `main`, `merge.yml` deploys the verified PR image to `-test` with **zero rebuilding**.
    - On published GitHub Release, `release.yml` promotes that exact tested image to `-prod` with **zero rebuilding**.
 2. **In-Repo OpenShift Templates**:
    - Deployment configuration is stored directly in the application repository under `openshift/*.deploy.yml`.
    - OpenShift `Template` objects declare standard Kubernetes resources (`Deployment`, `Service`, `Route`, `ConfigMap`). Deprecated `DeploymentConfig` objects are eliminated.
-3. **Canonical Docker Hub Registries**:
+3. **Database Migrations in `initContainers`**:
+   - Schema migrations execute as an `initContainer` inside the backend `Deployment` template prior to the main application container starting. A migration failure halts rollout and preserves existing serving pods.
+4. **Canonical Docker Hub Registries**:
    - Base images pull directly from Docker Hub (`python:3.13-slim`, `node:20-bookworm-slim`, `nginx:1.29`). Internal Artifactory remote caching proxies (`artifacts.developer.gov.bc.ca/docker-remote/`) are eradicated.
-4. **Clean Secrets Boundary**:
+5. **Clean Secrets Boundary**:
    - Scoped GitHub Environment variables and secrets (`test`, `prod`) replace legacy repository-wide OpenShift admin tokens.
 
 ---
@@ -50,7 +54,11 @@ Migrate a legacy OpenShift application—historically wired with in-cluster `Bui
 - **NEVER touch database mutability or recreation settings**: Treat `overwrite: false` and database templates as immutable safety guardrails. Never alter volume reclaim policies, storage classes, or stateful manifests during workflow migrations.
 - **NEVER deploy to PROD without explicit maintainer approval**: Phase 3 sets up the automation; actual release publication is an intentional maintainer action.
 - **STRICT SCHEMAS**: No defensive fallback cascades (`A || B || C` or `|| ''`). Canonical inputs only.
-- **Follow Project Standards**: All workflows must pin actions to 40-character commit SHAs with trailing version tags, use explicit LTS runner environments (e.g. `ubuntu-24.04` or `ubuntu-slim`), enforce minimum permissions (`permissions: {}`), and report through standard gate job names (`Validate Results`, `Analysis Results`, `PR Results`, `Merge Results`, `Release Results`).
+- **Follow Project Standards**:
+  - Workflows maintain `permissions: {}` as top-level baseline and define least-privilege permissions on each job (`contents: read` for checkout, `packages: write` for GHCR publishing/retagging, `security-events: write` for SARIF uploads, `pull-requests: write` or `issues: write` for commenting and notifications).
+  - Pin actions to full 40-character commit SHAs with trailing version tags.
+  - Pin runner environments to explicit supported LTS versions (e.g. `ubuntu-24.04` or `ubuntu-slim`).
+  - Report through standard required check names (`Validate Results`, `Analysis Results`, `PR Results`, `Merge Results`, `Release Results`).
 
 ---
 
@@ -74,10 +82,12 @@ flowchart LR
 
 1. **Inventory Live Cluster State**:
    - Ask the maintainer to list cluster secrets in `-dev` and `-test`:
+
      ```bash
      oc get secrets -n <plate>-dev
      oc get secrets -n <plate>-test
      ```
+
    - Identify database secrets (e.g., Crunchy PostgreSQL `pguser` secret: `<app>-<env>-crunchy-pguser-postgres`), MinIO/S3 credentials, Keycloak secrets, and custom application secrets.
    - Identify existing routes, exposed ports, and environment variable requirements across all components.
 
@@ -98,15 +108,30 @@ flowchart LR
      - Container image: `${REGISTRY}/${ORG_NAME}/${NAME}/${COMPONENT}:${IMAGE_TAG}`.
      - Liveness, readiness, and startup probes pointing to application health endpoints.
      - Secret references parameterized by `${CRUNCHY_SECRET_NAME}` or standard secret names.
+     - **Database migrations `initContainer`**: Embed schema migrations inside the backend deployment template before the app container starts:
+
+       ```yaml
+       initContainers:
+         - name: dbmigration
+           image: ${REGISTRY}/${ORG_NAME}/${NAME}/backend:${IMAGE_TAG}
+           imagePullPolicy: Always
+           command: ["/bin/sh", "-c", "python manage.py migrate"]
+           envFrom:
+             - secretRef:
+                 name: ${CRUNCHY_SECRET_NAME}
+       ```
 
 3. **Configure GitHub Repository & Environments**:
    - Instruct the maintainer to set:
      - Repository variables: `OC_SERVER` (`https://api.silver.devops.gov.bc.ca:6443`), `OC_NAMESPACE` (`<plate>-dev`).
-     - Repository secret: `OC_TOKEN` (service account token for `-dev`).
-     - GitHub Environment `test`: variable `OC_NAMESPACE=<plate>-test`, secret `OC_TOKEN` (service account token for `-test`).
-     - GitHub Environment `prod`: variable `OC_NAMESPACE=<plate>-prod`, secret `OC_TOKEN` (service account token for `-prod`).
+     - Repository secret: `OC_TOKEN` (service account token scoped to `-dev`).
+     - GitHub Environment `test`: variable `OC_NAMESPACE=<plate>-test`, secret `OC_TOKEN` (service account token scoped to `-test`).
+     - GitHub Environment `prod`: variable `OC_NAMESPACE=<plate>-prod`, secret `OC_TOKEN` (service account token scoped to `-prod`).
 
-4. **Add Workflow Validation (`.github/workflows/pr-validate.yml`)**:
+4. **Track Disaster Recovery Secrets**:
+   - While in-cluster secrets are consumed via `secretKeyRef` to avoid disrupting live state, open a tracking issue to move application and database secrets declaratively into GitHub Secrets as the permanent source of truth for disaster recovery.
+
+5. **Add Workflow Validation (`.github/workflows/pr-validate.yml`)**:
    - Lint PR titles (Conventional Commits) and all GitHub Actions workflows via `bcgov/actions/pr-validate`.
    - Gate check: `Validate Results` (`bcgov/actions/workflow-results`).
 
@@ -125,8 +150,12 @@ flowchart LR
      - Tag images with `${{ github.event.number }}` and `${{ github.event.pull_request.head.sha }}`.
      - Publish to `ghcr.io/bcgov/<repo>/<package>`.
    - Job `deploys`:
-     - Run `bcgov/actions-openshift/deployer` with `oc_namespace: ${{ vars.OC_NAMESPACE }}` (points to `-dev`).
-     - Pass `ZONE="pr-${{ github.event.number }}"` and `IMAGE_TAG="${{ github.event.pull_request.head.sha }}"`.
+     - Run `bcgov/actions-openshift/deployer` with:
+       - `file: ${{ matrix.file }}`
+       - `oc_namespace: ${{ vars.OC_NAMESPACE }}` (points to `-dev`)
+       - `oc_server: ${{ vars.OC_SERVER }}`
+       - `oc_token: ${{ secrets.OC_TOKEN }}`
+       - `parameters: -p ZONE="pr-${{ github.event.number }}" -p IMAGE_TAG="${{ github.event.pull_request.head.sha }}"`
    - Job `tests` (Post-Deploy Health Check):
      - Poll `https://${NAME}-pr-${{ github.event.number }}.${DOMAIN}/api/healthcheck` until HTTP 200 OK before marking the PR green.
    - Job `comment`: Post ephemeral deployment links on the PR.
@@ -148,7 +177,6 @@ flowchart LR
    - Job `trivy`:
      - Run `aquasecurity/trivy-action` in filesystem (`fs`) mode scanning for `vuln,secret,misconfig`.
      - Cache `.trivycache` keyed by workflow file hash.
-     - Set `skip-dirs` for directories that trigger upstream rate limits or irrelevant files.
      - Set `ref: ${{ github.event.pull_request.head.sha }}` on `actions/checkout` (no `|| ''`).
      - Upload SARIF to GitHub Code Scanning: on PRs, target `ref: refs/pull/${{ github.event.pull_request.number }}/head` and `sha: ${{ github.event.pull_request.head.sha }}`; on push, use default ambient ref.
    - Job `backend-tests` / `frontend-tests`:
@@ -168,14 +196,17 @@ flowchart LR
 
 1. **Merge Workflow (`.github/workflows/merge.yml`)**:
    - Trigger on `push: branches: [main]` (with `paths-ignore` for markdown).
-   - Concurrency: `group: ${{ github.workflow }}`, `cancel-in-progress: false`.
+   - Concurrency: `group: Merge`, `cancel-in-progress: false` (locks against `release.yml`).
    - Job `init`:
      - Use `bcgov/action-get-pr` to resolve the squash-merge commit to its source PR number.
    - Job `deploys`:
      - Set `environment: test`.
-     - Run `bcgov/actions-openshift/deployer` targeting `vars.OC_NAMESPACE` (`<plate>-test`) using `secrets.OC_TOKEN`.
-     - Pass `ZONE="test"` and `IMAGE_TAG="${{ needs.init.outputs.pr }}"`.
-     - Pass test-specific parameters (e.g. `CRUNCHY_SECRET_NAME="<app>-test-crunchy-pguser-postgres"`, `MINIO_BUCKET_NAME="<test-bucket>"`).
+     - Run `bcgov/actions-openshift/deployer` with:
+       - `file: ${{ matrix.file }}`
+       - `oc_namespace: ${{ vars.OC_NAMESPACE }}` (`<plate>-test`)
+       - `oc_server: ${{ vars.OC_SERVER }}`
+       - `oc_token: ${{ secrets.OC_TOKEN }}`
+       - `parameters: -p ZONE="test" -p IMAGE_TAG="${{ needs.init.outputs.pr }}" ...`
    - Gate: `Merge Results` (`bcgov/actions/workflow-results`).
 
 2. **Conduct End-to-End UAT in TEST**:
@@ -192,10 +223,10 @@ flowchart LR
    - Concurrency: `group: Merge`, `cancel-in-progress: false` (locks against `merge.yml`).
    - Job `init`:
      - Use `bcgov/action-get-pr` to map the release commit on `main` to its source PR.
-     - Run `docker buildx imagetools inspect ghcr.io/${REPO}/${package}:${PR}` to verify that immutable image manifests exist in GHCR for all components before touching OpenShift.
+     - Bind environment variables (`PR: ${{ steps.pr.outputs.pr }}`, `REPO: ${{ github.repository }}`, `RELEASE: ${{ github.event.release.tag_name }}`) and run `docker buildx imagetools inspect ghcr.io/${REPO}/${package}:${PR}` to verify immutable image manifests exist in GHCR for all packages before touching OpenShift.
    - Job `deploys`:
      - Set `environment: prod`.
-     - Run `bcgov/actions-openshift/deployer` targeting `vars.OC_NAMESPACE` (`<plate>-prod`) using `secrets.OC_TOKEN`.
+     - Run `bcgov/actions-openshift/deployer` targeting `vars.OC_NAMESPACE` (`<plate>-prod`) with `secrets.OC_TOKEN`.
      - Pass `ZONE="prod"`, `IMAGE_TAG="${{ needs.init.outputs.pr }}"`, and prod-specific secret/bucket parameters.
    - Job `promote`:
      - Re-tag GHCR images with `prod` via `shrink/actions-docker-registry-tag`.
@@ -207,8 +238,18 @@ flowchart LR
    - Replace Artifactory proxy base images (`artifacts.developer.gov.bc.ca/docker-remote/*`) with official Docker Hub images (`python:*`, `node:*`, `nginx:*`, `eclipse-temurin:*`) across all Dockerfiles.
    - Deploy `renovate.json` extending `github>bcgov/renovate-config#<latest-date>` with targeted `packageRules` disabling lookups for local or proprietary system JARs.
 
-3. **Retire ArgoCD / Tenant-GitOps**:
+3. **Retire Zombie Secrets & Deploy Keys**:
+   - Instruct the maintainer to purge obsolete repository secrets:
+     - `MANIFEST_REPO_DEPLOY_KEY` (SSH key previously used to push to tenant-gitops).
+     - `ARTIFACTORY_API_KEY`, `ARTIFACTORY_USERNAME`, `ARTIFACTORY_REGISTRY`, `ARTIFACTORY_REPO`.
+     - Legacy OpenShift admin secrets (`OPENSHIFT_SERVER`, `OPENSHIFT_TOKEN`, `OPENSHIFT_NAMESPACE_PLATE`).
+
+4. **Retire ArgoCD / Tenant-GitOps**:
    - Once Production is running stably under the QuickStart deployment, advise the maintainer to remove the application's ArgoCD Application resource from OpenShift and archive or clean up the `bcgov-c/tenant-gitops-<plate>` folder.
+
+5. **Handling Copilot AI Reviews on QuickStart Workflows**:
+   - Automated AI reviewers (like Copilot) may challenge canonical QuickStart patterns (e.g. demanding `release.yml` query historical Actions runs, claiming `concurrency: group: Merge` drops pending runs, or demanding image digest rewriting in templates).
+   - Dismiss these threads with reference receipts to `bcgov/quickstart-openshift`; do not alter established pipeline architectures to satisfy automated generic reviewers.
 
 ---
 
@@ -217,7 +258,7 @@ flowchart LR
 | Symptom / Failure | Root Cause | Solution |
 | :--- | :--- | :--- |
 | **`CreateContainerConfigError` on deploy** | Missing secret in target namespace (e.g. cluster has `app-django-test` instead of `app-django`). | Maintainer must clone or align the secret name in the target namespace before deploying. |
-| **Trivy HTTP 429 Rate Limit** | Trivy in `fs` mode queries Maven Central for BOM files (e.g. `spring-session-bom`). | Add `spring` or irrelevant directories to `skip-dirs` in `trivy-action`. |
+| **Trivy HTTP 429 Rate Limit** | Trivy in `fs` mode queries Maven Central for BOM files in third-party or unmaintained packages. | Scope `skip-dirs` or `--skip-files` strictly to the specific unmaintained directory or offending POM; keep active application code and manifests in scope. |
 | **Django Test SQLite Syntax Error** | Migrations contain PostgreSQL-specific DDL syntax (`ALTER TABLE`). | Run tests against a live `postgres:15` service container in CI and Podman. |
 | **Renovate Automerge Delete/Modify Conflict** | Renovate automerges action pin bumps into legacy workflows while a decommissioning PR is open. | Re-sync branch with `origin/main` and run `git rm` on the obsolete files to resolve the conflict. |
 | **Renovate Lookup Failures on Local JARs** | System-scoped Maven dependencies (`espdata:vinpower`) don't exist on public registries. | Add `packageRules: [{ matchPackageNames: ["<dep>"], enabled: false }]` to `renovate.json`. |
