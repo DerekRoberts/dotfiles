@@ -20,10 +20,11 @@ Take over an orphaned app (no day-to-day team), make its CI trustworthy, check i
 ## Don't Use When
 - The pre-flight finds any Tier-1 blocker (defined below) for the Renovate / maintenance-mode steps.
 
-Maintenance mode is about merging dependency updates without humans. PROD deploys through one of the target patterns in step 3, such as release-to-prod, where PROD deploys the tested images when a release is published.
+Maintenance mode is about merging dependency updates without humans. Deployable apps promote tested artifacts through one of the target patterns in step 3 (OpenShift TEST/PROD or release-to-prod). Chart and library repos publish tested images and Helm charts on GitHub Release instead (Target Pattern 3).
 
 ## Ground Rules
-- **No version changes outside version PRs.** Runtime, base image and dependency versions stay as they are in cleanup PRs. Flag mismatches to the user instead of fixing them.
+- **No version changes outside version PRs.** Runtime, base image and dependency versions stay as they are in cleanup PRs. Flag mismatches to the user instead of fixing them. When a version PR is needed, use the **latest stable release** (see below); never downgrade or pin an older version as a workaround.
+- **Prefer the latest release.** When maintenance mode changes a dependency, action, or tool version, pick the newest stable release unless there is a documented, repo-specific reason not to. Do not pin or downgrade to an older release to dodge a break (for example an older `chart-releaser-action`); fix the real failure instead.
 - **PROD only with approval.** Never deploy, promote or write to PROD without the user's explicit approval.
 - **Settings are the user's.** Rulesets, environments and secrets are changed by the user; give exact steps. Never change repository settings yourself. Read them with `gh api` if you can; for anything that must change, give the human numbered, click-by-click steps.
 - **No feature work.** Keep PRs small, one concern each.
@@ -49,9 +50,10 @@ Run these before the Renovate pre-flight and scaffolding below when the app stil
 - The user sets the rulesets to require exactly those three checks.
 - `workflow-results` counts every `skipped` job in `needs` as passing and has no input for expected or allowed skips. Only `failure`, `cancelled` or an unknown result fails it. So a test job skipped by a wrong `if:` still passes the gate. Give test jobs no `if:` that can skip them on a Renovate PR, list them directly in `needs` (the context holds direct needs only), and check a Renovate PR's run shows them as `success`, not `skipped`.
 
-### 4. Pin actions
-- Pin every action by release-commit SHA with a version comment: `uses: owner/action@<sha> # vX.Y.Z`.
-- Renovate bumps the pins.
+### 4. Pin workflow actions
+- **Allowlisted orgs** (`actions/*`, `github/*`, `docker/*`): float a **major version tag**, for example `uses: actions/checkout@v4`. Renovate keeps these current.
+- **All other orgs** (including `bcgov/*` and third parties): pin the release-commit SHA with a version comment: `uses: owner/action@<sha> # vX.Y.Z`. Renovate bumps the pins.
+- **Docs and examples** for humans (README, wiki, issue templates): cite `@vX.Y.Z` or the action's Releases page, never a concrete SHA readers might copy into workflows.
 
 ### 5. QA with the PO
 - Build the UAT checklist, PO test plan and approximation tests with `derive-uat-checklist`. Run checks in TEST only.
@@ -67,7 +69,7 @@ This list is authoritative. The `github-repo-setup` audit has no fixed Tier-1 li
 1. **Untested Renovate updates.** Renovate updates a manifest, lockfile, Dockerfile, workflow, or path (an app directory, a script, a migration tool, unused code) that no *required* check builds and tests. Compare the paths Renovate PRs actually touch against the paths each required check exercises. See "What tested means" below.
 2. **Fake gates.** A required check can pass when its tests did not run: it reports `skipped` or `neutral`, uses `continue-on-error`, or is a results job that ignores skipped or missing jobs. A results job with `needs: []` (or one that does not list the test jobs) gates nothing and is a fake gate.
 3. **No test suite.** No automated tests run in CI for the code being kept up to date.
-4. **Broken release pipeline.** The merge/release pipeline on the default branch has not succeeded recently: its latest completed run failed, or its last success is more than about a month old. A pipeline that has been failing for months means auto-merged updates would pile up undeployed and untested in TEST.
+4. **Broken release pipeline.** The merge/release or publish pipeline for this repo class has not succeeded recently: its latest completed run failed, or its last success is more than about a month old. For OpenShift apps that is the default-branch deploy path and any release-to-prod workflow; for chart/library repos (Target Pattern 3) it is the workflow that builds on `main` and publishes on GitHub Release. A pipeline that has been failing for months means auto-merged updates would pile up undeployed or unpublished.
 5. **renovate-approve can't approve.** The [`renovate-approve`](https://github.com/apps/renovate-approve) app has no current access to the repo, or a review rule blocks its approval (pre-flight item 4). The fix is a settings step for the human (Workflow step 1, item 3), not a code PR or a question.
 6. **Unapproved weakening overrides.** Local Renovate settings that weaken the preset (pre-flight item 6) that the user has not approved. To get approval, ask the user in chat; record the answer in the issue.
 7. **End-of-life runtime or component.** Any runtime or component the repo builds, deploys or tests on is past its end-of-life date (pre-flight item 7): a database major, a Node or Java version, a base image, and so on. This includes images Renovate can't track, such as an internal-registry `postgresql:12`. The fix is an upgrade PR, a not-safe change in its own PR, never bundled with other maintenance-mode changes. Pick the version `bcgov/quickstart-openshift` uses on its default branch. If quickstart doesn't use that product, pick the newest non-EOL LTS cycle on endoflife.date (`isLts: true`, `isEol: false`), or the newest non-EOL cycle when the product has no LTS. Do not ask. A database major upgrade PR also carries the data migration.
@@ -97,7 +99,7 @@ Run every item. Write nothing to the repository while doing so.
      - **No eligible PR in the last 7 days:** the PRs can't tell. If the login is an org owner, read `gh api orgs/{owner}/installations` (app `renovate-approve`, its `repository_selection`; for `selected`, the repo must be in that installation's repository list). Otherwise check the latest eligible Renovate PR of any age (same command without `--search`). If that still can't tell, list it as a settings step: confirm or install the app (Workflow step 1, item 3).
    - **Active review rules.** Read the rules on the branch Renovate targets: `gh api repos/{owner}/{repo}/rules/branches/{branch} --jq '.[] | select(.type == "pull_request") | .parameters'`, plus `gh api repos/{owner}/{repo}/branches/{branch}/protection` for classic protection. An app approval cannot satisfy `require_code_owner_review` on files CODEOWNERS covers, since CODEOWNERS lists only users and teams. With `require_last_push_approval`, the `renovate-approve[bot]` review must come after the PR's last commit.
    - Every finding above is a settings step for the user, with evidence; a blocking review rule is a step naming that ruleset and rule. None is a question. Never suggest disabling required reviews.
-5. **Release pipeline health.** Find the merge/release workflow(s) on the default branch (`gh run list --branch <default> --workflow <file> --limit 10`). The latest completed run must have succeeded, and there must be a success within about the last month. Otherwise it is Tier-1 item 4.
+5. **Release pipeline health.** Identify the repo class (OpenShift app vs chart/library publish) from workflows and README. Find the relevant pipeline(s) on the default branch and, for Pattern 3, the GitHub Release publish workflow (`gh run list --branch <default> --workflow <file> --limit 10`, plus release runs if separate). The latest completed run must have succeeded, and there must be a success within about the last month. Otherwise it is Tier-1 item 4.
 6. **Local Renovate overrides.** Read `renovate.json` / `renovate.json5` (and `package.json` `renovate` blocks). Flag any local setting that weakens the preset, such as `minimumReleaseAge: "0 days"`, `ignorePaths` / `ignoreDeps` that hide code from updates, `ignoreTests: true`, or disabled vulnerability alerts. Each must be removed in the follow-up PR unless the user approves keeping it: ask the user in chat; record the answer in the issue.
 7. **End-of-life check.** List every runtime and image version the repo uses, including ones Renovate doesn't manage:
    - Images: `git grep -n -I -E '^[[:space:]]*FROM[[:space:]]|(^|[^[:alnum:]_.-])"?(image|repository|tag)"?[[:space:]]*:' -- '*Dockerfile*' '*Containerfile*' '*compose*.y*ml' '*.y*ml' '*.json'`. That covers Dockerfiles, compose files, OpenShift templates, Helm values and workflow `services:`. A Helm value split into `repository` and `tag` is one image. Follow a `${PARAM}` or `${{ inputs.x }}` reference to the template parameter, workflow input or caller that sets it.
@@ -120,7 +122,7 @@ You do not change settings. Read the current values and give the human only the 
 
 ### 2. Renovate Configuration
 Modify or create `renovate.json` (or `renovate.json5`) at the repository root.
-- Resolve the latest stable three-segment release and inherit from it, for example: `"extends": ["github>bcgov/renovate-config#<YYYY.M.Patch>"]` (current releases look like `2026.9.26`). Do not use the unversioned `main` preset for production (`github>bcgov/renovate-config` with no ref, or `#main`). The preset README marks that as testing-only and warns it may contain breaking changes.
+- Resolve the latest stable three-segment release and inherit from it, for example: `"extends": ["github>bcgov/renovate-config#<YYYY.M.Patch>"]` (current releases look like `2026.9.26`). Do not use the unversioned `main` preset for production (`github>bcgov/renovate-config` with no ref, or `#main`). The preset README marks that as testing-only and warns it may contain breaking changes. When bumping the preset or any dependency in a maintenance-mode PR, take the **latest** release tag, not an older pin left over from another repo.
 - Renovate can still propose pin updates. Leave the pin where its pin manager can see it. Do not add a local rule that freezes the preset forever.
 - Know what the preset auto-merges before relying on it. As of release `2026.9.26`, its `default.json` sets `automerge: true` for **every** update type, majors included, after a 7-day `minimumReleaseAge` (3 days for vulnerability fixes). Major updates to database images (postgres, mysql, mariadb, mongo, redis) are disabled, so no PR opens for them, and package-manager overrides/resolutions are only bumped for security advisories. Re-read the pinned release's `default.json` each run, since this can change. That is why required checks must cover everything Renovate touches.
 - Do not add custom local auto-merge rules.
@@ -128,21 +130,27 @@ Modify or create `renovate.json` (or `renovate.json5`) at the repository root.
 - If the repo already pins the latest release and has no weakening overrides, make no Renovate change.
 
 ### 3. CI/CD Deployment Pipeline
-Analyze `.github/workflows/` and bring the deploy path to one of the target patterns. Do not assume TEST deploys on `push` to `main`; find the real trigger.
+Analyze `.github/workflows/` and the README. Classify the repo: an **OpenShift app** (TEST/PROD or release-to-prod) or a **chart/library publisher** (images + Helm chart on GitHub Release, consumers upgrade the chart; no OpenShift PROD). Bring the pipeline to one of the target patterns below. Do not assume TEST deploys on `push` to `main`; find the real trigger. Do not force OpenShift PROD, digest promotion to a `prod` environment, or release-to-prod on chart/library repos.
 
 - **Triggers.** TEST may deploy on `push` to `main`, or from a `workflow_run` that follows the `main` build. For `workflow_run`, the deploy must check `github.event.workflow_run.conclusion == 'success'`, `head_branch == 'main'`, and `event == 'push'`, and deploy the artifact built for `github.event.workflow_run.head_sha`, not whatever is newest.
-- **Path filters.** Do not put `paths` / `paths-ignore` on the merge or PR workflow trigger to skip work. Put path conditions on jobs, so the workflow always runs and its results check always reports.
-- **Same artifact means same digest.** Promotion must deploy the image digest that passed CI and TEST. Retagging a mutable tag (such as `latest` or `test` → `prod`) counts only if the workflow resolves and verifies the digest it is promoting. Prefer promoting by digest, for example recording and looking up digests with [`bcgov/actions` `image-tracker`](https://github.com/bcgov/actions/tree/main/image-tracker). A retag without digest verification is a finding to fix, not a pass.
-- **PROD environment.** The `prod` environment holds PROD secrets and its deployment branch and tag rules. If it has other protection rules, list them for the maintainer as environment settings to adjust. "Automatic" below means PROD needs no extra build or trigger step.
-- **`workflow_dispatch` that can deploy PROD.** It may stay only if it can deploy nothing but a digest that already passed TEST (it looks up and verifies that digest; it never builds). Otherwise flag it and replace it with one of the target patterns.
-- **Target Pattern 1: Release-to-PROD**:
+- **Path filters.** Workflows whose results checks are **required on PRs** must not use event-level `paths` / `paths-ignore` on the `pull_request` trigger: a filtered-out PR never starts the workflow, so its required results check never reports and the PR waits forever. Put path conditions on jobs instead, so the workflow always runs and the results check always reports (skipped jobs still pass the gate). **Merge and release pipelines** triggered by `push` to the default branch may use event-level `paths` / `paths-ignore` when skipping a deploy, chart bump, or semver release for docs-only or workflow-only merges is intentional; GitHub supports event-level path filters only on `push`, `pull_request`, and `pull_request_target`, so workflows on `release` or `schedule` need job-level conditions to skip work. That filtering does not leave required PR checks hanging.
+- **Same artifact means same digest.** For OpenShift apps, promotion must deploy the image digest that passed CI and TEST. Retagging a mutable tag (such as `latest` or `test` → `prod`) counts only if the workflow resolves and verifies the digest it is promoting. Prefer promoting by digest, for example recording and looking up digests with [`bcgov/actions` `image-tracker`](https://github.com/bcgov/actions/tree/main/image-tracker). A retag without digest verification is a finding to fix, not a pass. Chart/library repos must publish charts and images built from the same commit that passed required PR checks for that release tag; do not rebuild untested images on the release job unless the release workflow only retags or references digests already built on `main`.
+- **PROD environment.** For OpenShift apps only: the `prod` environment holds PROD secrets and its deployment branch and tag rules. If it has other protection rules, list them for the maintainer as environment settings to adjust. "Automatic" below means PROD needs no extra build or trigger step. Chart/library repos have no PROD environment requirement.
+- **`workflow_dispatch` that can deploy PROD.** OpenShift apps only. It may stay only if it can deploy nothing but a digest that already passed TEST (it looks up and verifies that digest; it never builds). Otherwise flag it and replace it with one of the target patterns.
+- **Target Pattern 1: Release-to-PROD** (OpenShift apps):
   - `TEST` deploys automatically from `main` (push or `workflow_run`) and records the tested digest.
   - `PROD` deploys when a GitHub Release is published (`on: release: types: [published]`), only after verifying that its tag targets a commit on `main`; promote the same digest that passed CI and `TEST`.
   - A published release can point at an arbitrary tag or commit, so the release event alone is not enough. If the tag SHA is not on `main`, or the workflow rebuilds or cannot verify the digest, do not deploy PROD.
-- **Target Pattern 2: Straight-to-TEST+PROD**:
+- **Target Pattern 2: Straight-to-TEST+PROD** (OpenShift apps):
   - `TEST` and `PROD` deploy sequentially from `main`, promoting the same digest from the pipeline that passed CI. PROD follows TEST for that digest; it does not build a second one.
+- **Target Pattern 3: Chart/library publish** (no OpenShift PROD):
+  - Required PR checks build and test the repo on every Renovate path.
+  - `main` builds container images (for example to GHCR) with tags tied to the merge commit or semver policy the repo already uses.
+  - A **GitHub Release** (`on: release: types: [published]`) publishes the Helm chart (for example [`helm/chart-releaser-action`](https://github.com/helm/chart-releaser-action)) and any release artifacts; downstream clusters upgrade by bumping the chart version, not by this repo deploying PROD.
+  - Path filters on the default-branch `push` workflow are fine when docs-only merges should not cut a chart version (see Path filters above).
+  - Leave OpenShift TEST/PROD, release-to-prod, and `prod` environment deploy steps out of scope; do not add them to satisfy this skill.
 
-If the existing pipeline already meets a target pattern, leave it alone and say so.
+If the existing pipeline already meets a target pattern for its repo class, leave it alone and say so.
 
 ### 4. Stuck Renovate PRs
 Renovate PRs can sit open because a required check was cancelled (for example by a concurrency group) and never reported success. Do not re-run them while the gates are fake or incomplete, or they will auto-merge untested changes. Act only after the real gates (results checks that cover every Renovate path) are merged and required in the ruleset. Then get a fresh run: have Renovate rebase the PR (its rebase checkbox) so the PR picks up the new workflows. A plain re-run reuses the original commit and workflow files, so only re-run when that commit already contains the final gates.
@@ -151,26 +159,29 @@ Renovate PRs can sit open because a required check was cancelled (for example by
 Every repo in maintenance mode has a root `SECURITY.md` that sends reports through GitHub private vulnerability reporting, using `bcgov/quickstart-openshift`'s wording. Read quickstart's current file from its default branch each run (`gh api repos/bcgov/quickstart-openshift/contents/SECURITY.md --jq .content | base64 -d`); never paste a copy from this skill or from memory. Use its "Reporting a Vulnerability" section as is, and keep only the parts of the rest that are true for this repo (quickstart's ASVS table describes quickstart). If the repo's `SECURITY.md` already matches, make no change. The reporting steps only work when pre-flight item 8 passed.
 
 ## Tracking Issue
-Some repos carry an older maintenance-mode checklist issue. Where it conflicts with this skill, this skill wins. In particular, ignore any item asking for `paths-ignore` filters on the merge workflow: use job-level path conditions instead (see Path filters above). A suitable checklist for the issue is:
+Some repos carry an older maintenance-mode checklist issue. Where it conflicts with this skill, this skill wins. Checklist items that demand removing `paths` / `paths-ignore` from a **merge** workflow (`push` to the default branch) are not maintenance-mode requirements when those filters intentionally skip releases for docs-only or `.github/**`-only merges (see Path filters above). Items that forbid event-level path filters on **PR** workflows that gate required checks still apply. A suitable checklist for the issue is:
 
 - [ ] Pre-flight passed (no Tier-1 blockers), report linked or summarized here
 - [ ] Required results checks cover every path Renovate updates
 - [ ] Trivy vulnerability scan configured (`ignore-unfixed: true`, `CRITICAL` severity, PR-head SARIF ref mapping, checkout of PR head sha)
 - [ ] `renovate-approve` installed on the repo
 - [ ] `bcgov/renovate-config` pinned to a release; weakening overrides removed, or kept with the user's answer recorded here
-- [ ] Release pipeline green on the default branch
+- [ ] Release/publish pipeline green on the default branch (and GitHub Release publish for chart/library repos)
 - [ ] No end-of-life runtimes, database majors or base images
-- [ ] Upgrade PRs queued for any PostgreSQL/PostGIS major behind quickstart-openshift's current one (not blocking)
-- [ ] PROD promotes the tested digest
-- [ ] PROD deploys through a target pattern (release-to-prod deploys on a published release)
+- [ ] Upgrade PRs queued for any PostgreSQL/PostGIS major behind quickstart-openshift's current one (not blocking; OpenShift apps)
+- [ ] OpenShift apps only: PROD promotes the tested digest
+- [ ] OpenShift apps only: PROD deploys through Target Pattern 1 or 2 (release-to-prod or straight TEST+PROD)
+- [ ] Chart/library repos only (Target Pattern 3): GitHub Release publishes GHCR images and Helm chart; no OpenShift PROD added
+- [ ] Workflow actions follow the allowlist pin policy (`actions`/`github`/`docker` major tags; SHA pins elsewhere)
 - [ ] `SECURITY.md` uses quickstart-openshift's private vulnerability reporting wording; private vulnerability reporting enabled
-- [ ] UAT passed with the PO
+- [ ] UAT passed with the PO (OpenShift apps; chart/library repos: PO agrees publish path is acceptable)
 
 ## Rules
 - **Hands off settings**: Never change repository settings, rulesets, environments, secrets, or app installs. Give the human steps.
 - **Nothing written before pre-flight passes**: No branches, commits, or report files in the repo until every pre-flight item passes.
 - **Pin `bcgov/renovate-config`**: Do not write verbose custom Renovate rules locally when the central preset applies, and do not float the preset on `main`.
-- **Same digest to PROD**: PROD never deploys a digest that did not pass CI and TEST, and never a release tag whose SHA is off `main`.
+- **Same digest to PROD (OpenShift apps)**: PROD never deploys a digest that did not pass CI and TEST, and never a release tag whose SHA is off `main`. Chart/library repos (Target Pattern 3) are not held to OpenShift PROD or release-to-prod; they publish tested artifacts on GitHub Release instead.
+- **Latest versions**: Do not downgrade dependencies or actions to older releases as a maintenance-mode workaround; use the latest stable release and fix the underlying break.
 - **Checks must actually run and cover what Renovate changes**: A test suite on disk, a skipped required check, a results job with `needs: []`, or a required check that ignores a Renovate-updated path is not a pass.
 - **No end-of-life components**: An EOL runtime, database major or base image blocks maintenance mode until an upgrade PR (its own PR, versions from `bcgov/quickstart-openshift`, else the newest non-EOL LTS) merges. A supported PostgreSQL/PostGIS major behind quickstart-openshift's current one (read from its default branch) gets a queued upgrade PR and does not block.
 - **Private reporting via SECURITY.md**: `SECURITY.md` uses `bcgov/quickstart-openshift`'s current private vulnerability reporting wording, read from its default branch each run. If private vulnerability reporting is off, tell the user in chat; never change the setting.
@@ -184,7 +195,8 @@ Some repos carry an older maintenance-mode checklist issue. Where it conflicts w
 
 ## Edge Cases
 - **Monorepos**: map each Renovate-updated directory to a required check; one green check for one app does not cover the others.
-- **Path-filtered workflows**: an event-level `paths` / `paths-ignore` filter means the workflow never starts, so its required results check never reports and the PR waits forever. Required workflows must trigger on every PR and apply path conditions at the job level, and only skip jobs that are safe to skip, since the results job passes every skip.
+- **Chart/library repos**: classify as Target Pattern 3 before proposing OpenShift TEST/PROD or release-to-prod. Consumers upgrade the published Helm chart; maintenance mode still requires required checks on every Renovate path and a green publish pipeline.
+- **Path-filtered PR workflows**: on `pull_request`, an event-level `paths` / `paths-ignore` filter means the workflow never starts, so its required results check never reports and the PR waits forever. Workflows with required PR results checks must trigger on every PR and apply path conditions at the job level, and only skip jobs that are safe to skip, since the results job passes every skip. Default-branch `push` merge and release pipelines are different: event-level path filters there only skip post-merge work and do not strand required PR checks.
 
 ## References
 - `bcgov/quickstart-openshift` workflows: results-job pattern (`PR Results`, `Analysis Results`).
