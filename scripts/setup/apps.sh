@@ -63,6 +63,22 @@ install_vlc() {
     fi
 }
 
+install_signal() {
+    section "Signal"
+    if flatpak list --user 2>/dev/null | grep -q "org.signal.Signal"; then
+        success "Signal already installed (Flatpak)"
+    else
+        ensure_flathub
+        info "Installing Signal via Flatpak..."
+        flatpak install --user -y flathub org.signal.Signal
+        success "Signal installed"
+    fi
+
+    info "Configuring Signal kwallet6 password store override..."
+    flatpak override --user --env=SIGNAL_PASSWORD_STORE=kwallet6 org.signal.Signal
+    success "Signal password store override configured"
+}
+
 install_yakuake() {
     section "Yakuake (Drop-down Terminal)"
 
@@ -164,8 +180,8 @@ Usage:
   scripts/setup/apps.sh [OPTIONS]
 
 Options:
-  --dev, --all   Install full application suite: Chrome, VLC, Yakuake, Insync (default)
-  --desktop      Install minimal desktop apps: Chrome, VLC, Insync
+  --dev, --all   Install full application suite: Chrome, VLC, Signal, Yakuake, Insync (default)
+  --desktop      Install minimal desktop apps: Chrome, VLC, Signal, Insync
   --help, -h     Show this help
 EOF
 }
@@ -201,6 +217,7 @@ main() {
     echo "=== Installing Applications ($PROFILE profile) ==="
     install_chrome
     install_vlc
+    install_signal
     if [[ "$PROFILE" == "dev" ]]; then
         install_yakuake
     fi
