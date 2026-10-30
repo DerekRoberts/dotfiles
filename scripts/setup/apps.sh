@@ -74,9 +74,25 @@ install_signal() {
         success "Signal installed"
     fi
 
-    info "Configuring Signal kwallet6 password store override..."
-    flatpak override --user --env=SIGNAL_PASSWORD_STORE=kwallet6 org.signal.Signal
-    success "Signal password store override configured"
+    # Avoid SafeStorageBackendChangeError: Signal cannot migrate existing profiles across backends.
+    # Only configure kwallet6 override when no profile backend exists or it is already kwallet6.
+    local config_file="$HOME/.var/app/org.signal.Signal/config/Signal/config.json"
+    local backend=""
+    if [[ -f "$config_file" ]]; then
+        if command -v jq &>/dev/null; then
+            backend="$(jq -r '.safeStorageBackend // empty' "$config_file" 2>/dev/null || true)"
+        elif command -v sed &>/dev/null; then
+            backend="$(sed -n 's/.*"safeStorageBackend"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$config_file" 2>/dev/null || true)"
+        fi
+    fi
+
+    if [[ -n "$backend" && "$backend" != "kwallet6" ]]; then
+        warn "Existing Signal profile uses safeStorageBackend='$backend'; skipping kwallet6 override to prevent database decryption failure."
+    else
+        info "Configuring Signal kwallet6 password store override..."
+        flatpak override --user --env=SIGNAL_PASSWORD_STORE=kwallet6 org.signal.Signal
+        success "Signal password store override configured"
+    fi
 }
 
 install_yakuake() {
