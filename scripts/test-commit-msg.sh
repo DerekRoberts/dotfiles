@@ -32,7 +32,8 @@ reject() {
     printf '%s\n' "$2" > "$TMP/msg"
     if sh "$HOOK" "$TMP/msg" 2>/dev/null; then echo "FAIL $1 (accepted)"; fails=1; else echo "ok   $1"; fi
 }
-reject "non-conventional subject" $'Update stuff'
+expect "non-conventional subject allowed" $'Update stuff' $'Update stuff'
+expect "short subject like Trigger" $'Trigger' $'Trigger'
 reject "Generated with line" $'fix: thing\n\nGenerated with SomeTool'
 reject "indented Generated with line" $'fix: thing\n\n  Generated with SomeTool'
 reject "Generated with line in merge" $'Merge branch \'main\'\n\nGenerated with SomeTool'

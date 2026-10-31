@@ -1,7 +1,8 @@
 #!/bin/sh
 # commit-msg hook - drop Co-authored-by trailers that credit an AI tool, so
-# commits stay authored by the user. Human co-authors are kept. Then require
-# a Conventional Commits subject and no "Generated with" lines.
+# commits stay authored by the user. Human co-authors are kept. Block
+# "Generated with" attribution lines (Conventional Commits belong on PR titles,
+# e.g. bcgov/actions/pr-validate, not on local commit subjects).
 
 # AI-tool co-author addresses, as regex alternatives.
 ai='cursoragent@cursor[.]com|noreply@anthropic[.]com'
@@ -16,18 +17,6 @@ awk -v ai="$ai" '
     { while (blank) { print ""; blank-- } print } # ...until text follows
 ' "$1" > "$tmp" && mv "$tmp" "$1"
 
-subject=$(sed -n '1p' "$1")
-case "$subject" in
-    "Merge "*|"Revert "*|"fixup! "*|"squash! "*|"amend! "*) ;;
-    *)
-        if ! printf '%s\n' "$subject" | grep -qE '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([^)]+\))?!?: .+'; then
-            echo "BLOCKED by global commit-msg hook: subject is not a Conventional Commit: $subject" >&2
-            echo "   Fix: <type>(<scope>): <summary>, e.g. 'fix(api): handle empty input'" >&2
-            echo "   (HUMAN BYPASS ONLY: git commit --no-verify)" >&2
-            exit 1
-        fi
-        ;;
-esac
 if grep -qiE '^[[:space:]]*(🤖 )?generated (with|by) ' "$1"; then
     echo "BLOCKED by global commit-msg hook: remove the 'Generated with' line." >&2
     echo "   (HUMAN BYPASS ONLY: git commit --no-verify)" >&2
