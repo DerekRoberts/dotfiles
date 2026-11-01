@@ -21,9 +21,11 @@ Add task-specific **Goal**, links, success criteria, and repo scope after this b
 ```text
 Follow the standing cloud-agent kickoff rules (set git user.name/email to Derek Roberts / derek.roberts@gmail.com before the first commit; iterate until CI green + review done; fix or resolve threads, reasons in the summary; no tool co-author/footer; same PR only).
 
-Cloud Hard Stops (never merge, PR/issue comment, review reply, force-push, tags, repo/org settings, secrets, or oc/kubectl — see config/instructions.md Hard Stops): commits and push are fine.
+Full Hard Stops and Bot Lanes (read before DB overwrite, PAT, or Artifactory work): https://github.com/DerekRoberts/dotfiles/blob/main/config/instructions.md#hard-stops
 
-- Iterate on the same branch and PR until CI is green and every open review thread is fixed or resolved (no PR comments). Stop only for user blockers.
+Cloud Hard Stops (never merge, PR/issue comment, review reply, force-push, tags, releases, repo/org settings, secrets, or oc/kubectl): commits and push are fine.
+
+- Iterate on the same branch and PR until CI is green and every open review thread is handled and resolved (GraphQL resolveReviewThread; live gh shows reviewThreads=0; no PR comments). Stop only for user blockers.
 - Bot PRs (Renovate, Dependabot, Mend): new PR from origin/main; never push to the bot PR (Bot Lanes).
 - Before the first commit: git config user.name "Derek Roberts" and user.email "derek.roberts@gmail.com". No Co-authored-by, Generated-with, or tool footers; verify git log --format='%B' origin/<base>..HEAD is clean before handoff.
 - PR body: three plain lines — What changes / What could go wrong / How it was verified.
