@@ -26,6 +26,12 @@ expect "AI trailer stripped, any case" \
 expect "human trailer kept" \
     $'fix: thing\n\nCo-authored-by: Jane Doe <jane@example.com>\nCo-authored-by: Cursor Agent <cursoragent@cursor.com>' \
     $'fix: thing\n\nCo-authored-by: Jane Doe <jane@example.com>'
+expect "noreply self-coauthor stripped" \
+    $'fix: thing\n\nCo-authored-by: Derek Roberts <DerekRoberts@users.noreply.github.com>' \
+    $'fix: thing'
+expect "noreply stripped, human kept" \
+    $'fix: thing\n\nCo-authored-by: Jane Doe <jane@example.com>\nCo-authored-by: Derek Roberts <DerekRoberts@users.noreply.github.com>' \
+    $'fix: thing\n\nCo-authored-by: Jane Doe <jane@example.com>'
 
 # reject <name> <message>: hook must exit non-zero
 reject() {
