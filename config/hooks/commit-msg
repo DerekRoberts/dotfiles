@@ -1,10 +1,11 @@
 #!/bin/sh
-# commit-msg hook - drop Co-authored-by trailers that credit an AI tool, so
-# commits stay authored by the user. Human co-authors are kept. Then require
-# a Conventional Commits subject and no "Generated with" lines.
+# commit-msg hook - drop Co-authored-by trailers that credit an AI tool or a
+# GitHub noreply self-coauthor, so commits stay authored by the user. Human
+# co-authors with normal emails are kept. Then require a Conventional Commits
+# subject and no "Generated with" lines.
 
-# AI-tool co-author addresses, as regex alternatives.
-ai='cursoragent@cursor[.]com|noreply@anthropic[.]com'
+# Co-author addresses to strip (regex alternatives inside <...>).
+ai='cursoragent@cursor[.]com|noreply@anthropic[.]com|[^@]+@users[.]noreply[.]github[.]com'
 
 tmp=$(mktemp "${1}.tmp.XXXXXX") || exit 1
 trap 'rm -f "$tmp"' 0

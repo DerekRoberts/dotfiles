@@ -23,7 +23,7 @@ Use this whenever you launch a cloud agent or send a follow-up (`reply`) for iss
 - **Goal**: issue or PR link, the problem, and success criteria.
 - **Iterate loop**: keep working on the same branch and PR (for a failing bot PR, the new PR from `origin/main` that Bot Lanes requires) until CI is green AND still-valid review feedback is addressed. Stop only for user blockers (secrets, product decisions, repo access). Never merge.
 - **Review threads**: for each open thread, verify it against current code. Still valid: make a minimal fix and push. Outdated, wrong or intentional won't-fix: resolve the thread without replying and give the one-line reason in the final summary.
-- **Commit identity and no attribution** (the cloud agent does not load `config/instructions.md`, so the Hard Stops it needs go in the prompt): set `git config user.name` and `user.email` to the user before the FIRST commit, add no attribution trailers or footers, and confirm `git log --format='%an <%ae>' origin/<base>..HEAD` lists only the user before handing over.
+- **Commit identity and no attribution** (cloud agents do not load this repo's hooks or `config/instructions.md` unless pasted; put Hard Stops in the prompt): before the FIRST commit, set `git config user.name` and `user.email` to Derek Roberts <derek.roberts@gmail.com>. Do **not** append `Co-authored-by` (including `*@users.noreply.github.com`), `Generated-with`, or tool footers unless the user named a **different human** co-author in chat. If a trailer appears anyway, strip it with `git commit --amend` or an interactive rebase before push. Confirm with `git log --format='%an <%ae>%n%B' origin/<base>..HEAD` that author lines and bodies are clean before handing over.
 - **Scope**: only the named repos. Do not touch other orgs or repos unless the user named them.
 - **PR hygiene**: branch and PR selection follow Bot Lanes. Push to the existing PR when one exists, except a bot's PR (Renovate, Dependabot, Mend), which is fixed with a new PR from `origin/main` and never pushed to. Never open a duplicate PR for the same fix.
 
@@ -33,4 +33,4 @@ Use this whenever you launch a cloud agent or send a follow-up (`reply`) for iss
 3. For follow-ups, `reply` to the same agent with the same standing block plus the new delta; never send a weaker half-prompt.
 
 ## Optional one-liner to prepend
-`Follow the standing cloud-agent kickoff rules (commit as the user from the first commit; iterate until CI is green and review is done; fix or resolve threads, reasons in the summary; no tool co-author or footer; same PR only, never a bot's PR).`
+`Follow the standing cloud-agent kickoff rules (git config user.name "Derek Roberts" and user.email "derek.roberts@gmail.com" before first commit; iterate until CI green + review threads cleared; no Co-authored-by / Generated-with / tool marketing in commits or PR body; same PR only).`
