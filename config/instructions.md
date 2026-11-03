@@ -23,6 +23,7 @@
 - Fix root causes: never silence diagnostics or use or recommend `--legacy-peer-deps`; `pre-commit` blocks adding either in tracked files.
 - NEVER cut coverage to make a failing test pass; find out why it fails and fix the code.
 - NEVER modify database mutability, overwrite, or recreation settings (`overwrite: false` -> `true`, destructive template replaces, volume reclaim policies, storage classes) without explicit user confirmation. Treat `overwrite: false` on database components as an immutable safety guardrail.
+- NEVER kick off GitHub Actions via `workflow_dispatch`, `gh workflow run`, workflow re-run, or equivalent for any job that can touch live TEST, PROD, or tools-mutating OpenShift/database environments, unless the user has explicitly accepted that named run in chat in the same turn (e.g. "run it", "dispatch Promote"). PR CI and `mode:rehearse-only` paths that cannot cut over or pause live databases are allowed. Ready-ping and wait; do not self-certify that a job is safe.
 - NEVER write all-projects agent rules into a git checkout. ALWAYS store and deploy them from this repo (`config/instructions.md` + setup) into `$HOME` product config.
 
 ## Communication
