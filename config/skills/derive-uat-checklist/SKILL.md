@@ -55,7 +55,7 @@ Turn an app's docs and training into three things, shipped as PRs to the app rep
 - No app behaviour or version changes in a test PR.
 
 ### 5. Ship
-- Small PRs off the default branch; drafts until CI is green. Point an existing `AGENTS.md` at `docs/uat/` with one line.
+- Small PRs off the default branch; open normal non-draft PRs (see Bot Lanes in `config/instructions.md`). Point an existing `AGENTS.md` at `docs/uat/` with one line.
 - Leave merging to the user.
 
 ## Worked examples
