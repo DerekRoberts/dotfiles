@@ -583,8 +583,8 @@ main() {
     install_antigravity
     install_cursor
     install_grok_bot
-    install_ai
     install_repos
+    install_ai
     rebuild_ksycoca
     success "Developer stack configuration complete"
 }

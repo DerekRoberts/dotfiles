@@ -65,12 +65,12 @@ source ~/.bashrc
 
 The rules live in one place each; this README links to them instead of restating them.
 
-- **Policy:** [`config/instructions.md`](config/instructions.md) (Hard Stops, Git & Branch Hygiene, Bot Lanes), plus [`config/personal.md`](config/personal.md) for tone. Skills in [`config/skills/`](config/skills/) load on demand.
+- **Policy:** [`config/instructions.md`](config/instructions.md) (Hard Stops, Git & Branch Hygiene, Universal Craft), [`DerekRoberts/brain` `config/instructions.md`](https://github.com/DerekRoberts/brain/blob/main/config/instructions.md) (Portfolio & Bot Lanes, when `~/Repos/brain` is present), plus [`config/personal.md`](config/personal.md) for tone. Skills in [`config/skills/`](config/skills/) load on demand.
 - **Reminder hook:** [`config/agent-guard/agent-guard.sh`](config/agent-guard/agent-guard.sh), installed as `~/.local/bin/agent-guard`. It denies the plain forms of the Hard Stops (merges, force-pushes, tags, comments, reviews, reopens, deletes, settings, secrets) and tells the agent to ask the user. A reminder, not a sandbox. The rules read best as examples in [`scripts/test-agent-guard.sh`](scripts/test-agent-guard.sh). Cursor is wired through `config/agent-guard/cursor-hooks.json`; other tools can call `agent-guard shell "<command>" [cwd]` or `agent-guard mcp <tool> <args-json>` from their own pre-command hook.
 - **Git hooks:** [`config/hooks/`](config/hooks/), installed to `~/.githooks`: gitleaks on pre-commit, no direct pushes to `main`/`master` on pre-push, and on commit-msg unwanted `Co-authored-by` trailers (AI tools and `*@users.noreply.github.com`) dropped plus `Generated with` lines blocked. Conventional Commits are enforced on **PR titles** where CI uses [`bcgov/actions/pr-validate`](https://github.com/bcgov/actions/tree/main/pr-validate), not on local commit subjects. Cloud agents do not install these hooks; paste the [`cloud-agent-kickoff`](config/skills/cloud-agent-kickoff/SKILL.md) standing block into every handoff (it links to [`config/instructions.md`](config/instructions.md) Hard Stops instead of restating hook-enforced rules).
 - **Shell:** [`config/bashrc`](config/bashrc) unsets ambient `GITHUB_TOKEN`/`GH_TOKEN` for agents and restores the user's git identity when a tool rewrites `~/.gitconfig`.
 
-`scripts/setup/ai.sh` concatenates `config/instructions.md` and `config/personal.md` into `~/.local/share/dotfiles/instructions.md` and installs it for each tool:
+`scripts/setup/ai.sh` concatenates `config/instructions.md`, `~/Repos/brain/config/instructions.md` (when present), and `config/personal.md` into `~/.local/share/dotfiles/instructions.md` and installs it for each tool:
 
 | Tool | Installed to | Docs |
 | :--- | :--- | :--- |
