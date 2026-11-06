@@ -52,6 +52,7 @@
 ## Implementation Discipline
 
 - Build the simplest thing that works. Only guard against edge cases that are likely, costly, or would fail silently. Fix the rest when they show up.
+- Prefer general, reusable solutions that read live context (schemas, manifests, `action.yml`, configs) over hardcoded maps, one-off renames, or "migration" bridges. Add special cases only when the general path cannot express the need.
 - Tests must not print warnings or errors into CI logs (e.g. `Bad credentials`, `API rate limit exceeded`); tests of error handling capture and assert those messages instead.
 - ALWAYS default missing environments and toggles to PROD. TEST and DEV must be set explicitly — an omitted value must not select a non-prod environment.
 
