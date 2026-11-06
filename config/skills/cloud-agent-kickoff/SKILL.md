@@ -16,12 +16,13 @@ description: >-
 
 ## Paste into every launch and reply
 
-Add task-specific **Goal**, links, success criteria, and repo scope after this block. Full policy (PAT preference, DB overwrite, Artifactory, Bot Lanes detail): [`config/instructions.md` — Hard Stops & Bot Lanes](https://github.com/DerekRoberts/dotfiles/blob/main/config/instructions.md#hard-stops).
+Add task-specific **Goal**, links, success criteria, and repo scope after this block. Full policy (PAT preference, DB overwrite, Artifactory): [`config/instructions.md` — Hard Stops](https://github.com/DerekRoberts/dotfiles/blob/main/config/instructions.md#hard-stops); board workflow and Bot Lanes: [`DerekRoberts/brain` `config/instructions.md`](https://github.com/DerekRoberts/brain/blob/main/config/instructions.md#bot-lanes).
 
 ```text
 Follow the standing cloud-agent kickoff rules (set git user.name/email to Derek Roberts / derek.roberts@gmail.com before the first commit; iterate until CI green + review done; fix or resolve threads, reasons in the summary; no tool co-author/footer; same PR only).
 
-Full Hard Stops and Bot Lanes (read before DB overwrite, PAT, or Artifactory work): https://github.com/DerekRoberts/dotfiles/blob/main/config/instructions.md#hard-stops
+Full Hard Stops (read before DB overwrite, PAT, or Artifactory work): https://github.com/DerekRoberts/dotfiles/blob/main/config/instructions.md#hard-stops
+Bot Lanes & board workflow: https://github.com/DerekRoberts/brain/blob/main/config/instructions.md#bot-lanes
 
 Cloud Hard Stops (never merge, PR/issue comment, review reply, force-push, tags, releases, repo/org settings, secrets, or oc/kubectl): commits and push are fine.
 

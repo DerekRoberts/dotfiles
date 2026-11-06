@@ -49,11 +49,17 @@ install_managed_block() {
 install_ai_wiring() {
     section "AI Assistant Instructions & Skills"
 
-    # Shared rules plus the personal layer (config/personal.md), as one file
-    # that every AI tool below receives.
+    # Shared rules plus portfolio/bot-lane rules (when ~/Repos/brain is present)
+    # and the personal layer (config/personal.md), as one file that every AI tool
+    # below receives.
     local INSTRUCTIONS_FILE="$HOME/.local/share/dotfiles/instructions.md"
+    local BRAIN_INSTRUCTIONS="${BRAIN_INSTRUCTIONS:-$HOME/Repos/brain/config/instructions.md}"
     mkdir -p "${INSTRUCTIONS_FILE%/*}"
     cat "$DOTFILES_DIR/config/instructions.md" > "$INSTRUCTIONS_FILE"
+    if [[ -f "$BRAIN_INSTRUCTIONS" ]]; then
+        printf '\n' >> "$INSTRUCTIONS_FILE"
+        cat "$BRAIN_INSTRUCTIONS" >> "$INSTRUCTIONS_FILE"
+    fi
     if [[ -f "$DOTFILES_DIR/config/personal.md" ]]; then
         printf '\n' >> "$INSTRUCTIONS_FILE"
         cat "$DOTFILES_DIR/config/personal.md" >> "$INSTRUCTIONS_FILE"
