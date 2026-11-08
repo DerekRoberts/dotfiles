@@ -76,7 +76,7 @@ The rules live in one place each; this README links to them instead of restating
 | :--- | :--- | :--- |
 | Antigravity | `~/.gemini/GEMINI.md` | |
 | Cursor | `~/.cursor/plugins/local/dotfiles/rules/instructions.mdc` (always-apply plugin rule) | |
-| Claude Code | `~/.claude/rules/dotfiles.md` | [User-level rules](https://code.claude.com/docs/en/memory) |
+| Claude Code | `~/.claude/rules/dotfiles.md`, our skills linked into `~/.claude/skills/`, and the agent-guard hook merged into `~/.claude/settings.json` | [User-level rules](https://code.claude.com/docs/en/memory), [hooks](https://code.claude.com/docs/en/hooks), [skills](https://code.claude.com/docs/en/skills) |
 | Kilo | managed block in `~/.config/kilo/AGENTS.md` (other content kept) | [Global instructions](https://kilo.ai/docs/customize/custom-instructions) |
 
 Humans can bypass a hook in an emergency with `git commit --no-verify`, or a shell wrapper with the `command` builtin.
