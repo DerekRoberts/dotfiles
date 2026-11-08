@@ -86,3 +86,16 @@ podman compose logs --since=5m <service>
 # Inspect specific failure logs for dead containers
 podman logs --tail=100 <container_id>
 ```
+
+### 6. Shell test suites for Actions repos (bats)
+Run `.github/tests/*` suites in the same image as the `ubuntu-26.04` CI runner, so a local pass means the same as a CI pass:
+
+```bash
+podman run --rm --cpus=2 --memory=2g --security-opt label=disable \
+  -v "$PWD":/w -w /w docker.io/library/ubuntu:26.04 sh -c '
+    apt-get update -qq && apt-get install -y -qq bats openssl jq python3 curl shellcheck
+    bats .github/tests/<suite>
+    shellcheck -S warning <scripts>'
+```
+
+`.github/tests/shared/inputs.bats` also needs the Go `yq` (not in apt); CI runners have it, so leave that suite to CI. Nothing here installs tools on the host.
