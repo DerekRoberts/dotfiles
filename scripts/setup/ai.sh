@@ -121,6 +121,23 @@ install_ai_wiring() {
         ln -sfn "$HOME/.agents/skills" "$link"
     done
 
+    # Claude Code reads personal skills from ~/.claude/skills/<name> and follows
+    # symlinks, so link each of our skills to the one real copy. Anything else
+    # in that directory (including synced/, which claude.ai owns) is left alone.
+    local claude_skills="$HOME/.claude/skills" name
+    mkdir -p "$claude_skills"
+    for skill_dir in "$DOTFILES_DIR/config/skills"/*; do
+        [[ -d "$skill_dir" ]] || continue
+        name="$(basename "$skill_dir")"
+        [[ -d "$HOME/.agents/skills/$name" ]] || continue
+        if [[ -e "$claude_skills/$name" && ! -L "$claude_skills/$name" ]]; then
+            warn "$claude_skills/$name is a real directory — leaving it alone"
+            continue
+        fi
+        ln -sfn "$HOME/.agents/skills/$name" "$claude_skills/$name"
+    done
+    success "Claude Code skills linked (~/.claude/skills)"
+
     # Global Cursor instructions: user-scoped local plugin only (not per-checkout).
     local CURSOR_USER_DIR="$HOME/.config/Cursor/User"
     if [[ -f "$INSTRUCTIONS_FILE" ]]; then
@@ -300,6 +317,41 @@ setup_github_mcp() {
     fi
 }
 
+# Claude Code adapter: PreToolUse on Bash and GitHub MCP tools, merged into
+# ~/.claude/settings.json so everything else in it survives. onFailure "block"
+# makes a missing or crashing hook stop the call instead of waving it through.
+install_claude_hook() {
+    section "Claude Code Agent Guard"
+
+    local src="$DOTFILES_DIR/config/agent-guard/claude-hook.sh"
+    local dest_hook="$HOME/.claude/hooks/agent-guard.sh"
+    local settings="$HOME/.claude/settings.json"
+
+    if ! command -v jq &>/dev/null; then
+        warn "jq not found — skipping the Claude Code hook"
+        return 0
+    fi
+    install_copy "$src" "$dest_hook"
+    [[ -s "$settings" ]] || echo '{}' > "$settings"
+
+    local tmp_file
+    tmp_file="$(mktemp "${settings}.XXXXXX")"
+    if jq --arg cmd "$dest_hook" '
+        .hooks = ((.hooks // {})
+            | .PreToolUse = (((.PreToolUse // []) | map(select(((.hooks // []) | map(.command)) | index($cmd) | not)))
+                + [{matcher: "Bash|mcp__.*github.*",
+                    hooks: [{type: "command", command: $cmd, timeout: 10, onFailure: "block"}]}]))
+        ' "$settings" > "$tmp_file"; then
+        chmod 600 "$tmp_file"
+        mv -f "$tmp_file" "$settings"
+        success "Claude Code hook installed → ${settings/#$HOME/\~}"
+    else
+        rm -f "$tmp_file"
+        warn "Failed to merge the Claude Code hook into $settings"
+        return 1
+    fi
+}
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 usage() {
@@ -333,6 +385,7 @@ main() {
     echo "=== Configuring AI Assistant Environment ==="
     install_ai_wiring
     install_agent_guard
+    install_claude_hook
     install_ponytail
     setup_github_mcp
     success "AI assistant configuration complete"
