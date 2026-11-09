@@ -84,7 +84,7 @@
 
 - CI and GitHub Actions (workflows, `action.yml`, pins, gates, SARIF): load the `ci-standards` skill before editing.
 - New dependencies: latest stable. NEVER downgrade. Routine upgrades are Renovate's; before opening a pin or version-bump PR by hand, check for an open Renovate or Dependabot PR covering it. NEVER change a runtime, base image, or dependency version (including aligning a mismatch upward) in a PR whose task is not that version change; report the mismatch to the user instead. If this task requires a version change, take latest and update only that lockfile entry. NEVER touch lockfiles on unrelated work. NEVER hand-edit a lockfile.
-- Python CI installs wheels only (e.g. `uv sync --locked --no-build`), so a Python version bump fails at once when a locked package has no wheel for it; pin the newest Python whose wheels exist (3.14 while 3.15 wheels lag).
+- Python CI installs wheels only (e.g. `uv sync --locked --no-build` with a clean cache, since `--no-build` still reuses wheels built earlier from source and a warm cache can hide a missing wheel), so a Python version bump fails at once when a locked package has no published wheel for it; pin the newest Python whose wheels exist (3.14 while 3.15 wheels lag).
 
 ## Agent Interaction
 
