@@ -76,7 +76,7 @@ The rules live in one place each; this README links to them instead of restating
 | :--- | :--- | :--- |
 | Antigravity | `~/.gemini/GEMINI.md` | |
 | Cursor | `~/.cursor/plugins/local/dotfiles/rules/instructions.mdc` (always-apply plugin rule) | |
-| Claude Code | `~/.claude/rules/dotfiles.md`, our skills linked into `~/.claude/skills/`, the agent-guard hook merged into `~/.claude/settings.json`, and subagents from `config/claude/agents/*.md` copied to `~/.claude/agents/` (`claude --agent orchestrator` runs Opus as a planner that can only spawn `sonnet-worker`, which does the edits and test runs on Sonnet; only its summary returns) | [User-level rules](https://code.claude.com/docs/en/memory), [hooks](https://code.claude.com/docs/en/hooks), [skills](https://code.claude.com/docs/en/skills), [subagents](https://code.claude.com/docs/en/sub-agents) |
+| Claude Code | `~/.claude/rules/dotfiles.md`, our skills linked into `~/.claude/skills/`, and the agent-guard hook merged into `~/.claude/settings.json` | [User-level rules](https://code.claude.com/docs/en/memory), [hooks](https://code.claude.com/docs/en/hooks), [skills](https://code.claude.com/docs/en/skills) |
 | Kilo | managed block in `~/.config/kilo/AGENTS.md` (other content kept) | [Global instructions](https://kilo.ai/docs/customize/custom-instructions) |
 
 Humans can bypass a hook in an emergency with `git commit --no-verify`, or a shell wrapper with the `command` builtin.
@@ -130,7 +130,6 @@ Two other deliberate trade-offs:
 ├── .github/workflows/ci.yml           # ShellCheck & integration tests
 ├── config/
 │   ├── bashrc                         # Shell configuration (copied to ~/.config/dotfiles/bashrc)
-│   ├── claude/agents/                 # Claude Code subagents (copied to ~/.claude/agents)
 │   ├── gitconfig                      # Global git include (copied to ~/.config/dotfiles/gitconfig)
 │   ├── hooks/                         # Global git hooks (copied to ~/.githooks)
 │   ├── instructions.md                # Unified AI agent instructions & guardrails
@@ -140,6 +139,7 @@ Two other deliberate trade-offs:
 │   │   ├── ci-standards/              # CI and GitHub Actions authoring rules
 │   │   ├── cloud-agent-kickoff/       # Standing wishes for cloud-agent handoffs
 │   │   ├── derive-uat-checklist/      # UAT checklist and tests from app material
+│   │   ├── handle-my-tasks/           # "Handle my tasks": Project 16 items built by Sonnet workers
 │   │   ├── podman-runner/             # Containerized execution & resource limits
 │   │   └── preflight/                 # Ground external prompts against reality
 │   ├── kde/

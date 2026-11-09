@@ -150,13 +150,6 @@ install_ai_wiring() {
     install_rules_file "$INSTRUCTIONS_FILE" "$HOME/.claude/rules/dotfiles.md"
     install_managed_block "$INSTRUCTIONS_FILE" "$HOME/.config/kilo/AGENTS.md"
 
-    # Claude Code subagents (e.g. Sonnet workers an Opus session delegates to).
-    local agent
-    for agent in "$DOTFILES_DIR/config/claude/agents"/*.md; do
-        [[ -f "$agent" ]] || continue
-        install_rules_file "$agent" "$HOME/.claude/agents/${agent##*/}"
-    done
-
     info "Configuring Cursor default workspace paths and update settings..."
     local CURSOR_SETTINGS="$CURSOR_USER_DIR/settings.json"
     mkdir -p "$CURSOR_USER_DIR"
