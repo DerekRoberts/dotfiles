@@ -165,4 +165,26 @@ else
     echo "FAIL cursor adapter"; fails=1
 fi
 
+# Claude Code adapter
+install -m 755 "$DIR/agent-guard.sh" "$TMP/home/.local/bin/agent-guard" 2>/dev/null \
+    || { mkdir -p "$TMP/home/.local/bin" && install -m 755 "$DIR/agent-guard.sh" "$TMP/home/.local/bin/agent-guard"; }
+claude() {
+    # $1 = want (allow|deny), $2 = label, $3 = hook JSON
+    local want="$1" got="allow" out
+    out="$(printf '%s' "$3" | HOME="$TMP/home" sh "$DIR/claude-hook.sh" 2>&1)" || {
+        [[ $? -eq 2 ]] && got="deny" || got="error"
+    }
+    if [[ "$got" == "$want" ]]; then echo "ok   claude $want: $2"; else echo "FAIL claude want $want got $got: $2 ($out)"; fails=1; fi
+}
+bash_call() { jq -cn --arg c "$1" '{hook_event_name: "PreToolUse", tool_name: "Bash", tool_input: {command: $c}, cwd: "/tmp"}'; }
+claude allow 'gh pr view 1' "$(bash_call 'gh pr view 1')"
+claude deny  'gh pr merge 1' "$(bash_call 'gh pr merge 1 --squash')"
+claude deny  'git push --force' "$(bash_call 'git push --force origin feat/x')"
+claude allow 'git push' "$(bash_call 'git push -u origin feat/x')"
+claude deny  'github MCP merge' '{"hook_event_name":"PreToolUse","tool_name":"mcp__github__merge_pull_request","tool_input":{"pullNumber":1}}'
+claude deny  'plugin github MCP comment' '{"hook_event_name":"PreToolUse","tool_name":"mcp__plugin_github_github__add_issue_comment","tool_input":{"body":"x"}}'
+claude allow 'github MCP list' '{"hook_event_name":"PreToolUse","tool_name":"mcp__github__list_issues","tool_input":{"state":"open"}}'
+claude allow 'other MCP server' '{"hook_event_name":"PreToolUse","tool_name":"mcp__memory__create_entities","tool_input":{}}'
+claude allow 'non-Bash tool' '{"hook_event_name":"PreToolUse","tool_name":"Read","tool_input":{"file_path":"/tmp/x"}}'
+
 exit "$fails"
