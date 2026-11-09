@@ -76,7 +76,7 @@ The rules live in one place each; this README links to them instead of restating
 | :--- | :--- | :--- |
 | Antigravity | `~/.gemini/GEMINI.md` | |
 | Cursor | `~/.cursor/plugins/local/dotfiles/rules/instructions.mdc` (always-apply plugin rule) | |
-| Claude Code | `~/.claude/rules/dotfiles.md` | [User-level rules](https://code.claude.com/docs/en/memory) |
+| Claude Code | `~/.claude/rules/dotfiles.md`, plus subagents from `config/claude/agents/*.md` to `~/.claude/agents/` (`sonnet-worker`: an Opus session delegates bulky work to Sonnet, only its summary returns) | [User-level rules](https://code.claude.com/docs/en/memory), [Subagents](https://code.claude.com/docs/en/sub-agents) |
 | Kilo | managed block in `~/.config/kilo/AGENTS.md` (other content kept) | [Global instructions](https://kilo.ai/docs/customize/custom-instructions) |
 
 Humans can bypass a hook in an emergency with `git commit --no-verify`, or a shell wrapper with the `command` builtin.
@@ -130,6 +130,7 @@ Two other deliberate trade-offs:
 ├── .github/workflows/ci.yml           # ShellCheck & integration tests
 ├── config/
 │   ├── bashrc                         # Shell configuration (copied to ~/.config/dotfiles/bashrc)
+│   ├── claude/agents/                 # Claude Code subagents (copied to ~/.claude/agents)
 │   ├── gitconfig                      # Global git include (copied to ~/.config/dotfiles/gitconfig)
 │   ├── hooks/                         # Global git hooks (copied to ~/.githooks)
 │   ├── instructions.md                # Unified AI agent instructions & guardrails
