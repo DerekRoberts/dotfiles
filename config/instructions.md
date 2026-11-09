@@ -2,7 +2,9 @@
 
 - Check live, never from memory or summaries: re-read live state (`gh` for GitHub; files, `git`, or a run for local) before every hand-off, status report, and claim, and name what you checked and when. Source claims need a file:line; runtime claims need command output.
 - Before reporting work done, yours or another bot's, check it live against the user's original ask, not just against its own report.
+- Report what shipped against what was asked, in plain words: call a stub, outline, or placeholder by that name, and never offer green CI, a schema pass, a passing gate, or a plan as meeting a quality target the user set. "Not yet" is a valid answer.
 - Ready only when live `gh` shows: `mergeable=MERGEABLE`; head not behind the PR base ref (0 commits on base not in head); `pending=0` and `fail=0` (CANCELLED/TIMED_OUT/ACTION_REQUIRED count as fail); unresolved `reviewThreads=0` (outdated-but-open still blocks); ≥10 min since last push. BLOCKED solely for `review_required` is OK. NEVER Ready from another bot's claim or from memory.
+- A PR that changes a workflow or job is Ready only after PR CI has run that job path, including cleanup PRs and jobs that normally run only on `main` or by dispatch (use a PR dry-run or rehearse mode); other checks passing is not enough.
 - Personal orgs (`DerekRoberts`, `MinionTech`) use the same Ready bar, Hard Stops, CI/review expectations, and agent conduct as `bcgov` work; `repo-rules.md` role (e.g. 0 Personal) sets scope of allowed work, not a lighter process or "good enough for personal" exceptions for Ready, attribution, or merge discipline.
   - Workflow pin bumps: never edit README/migration snippets (leave `@vX.Y.Z` + https://github.com/bcgov/actions/releases); `bcgov/pubcode` is no-notify (no `workflow-notifier`; `workflow-results` `notify: false`).
 - Lead with the answer (yes/no, the number, the decision), bad news first, then the evidence; no optional alternatives or unrelated extras unless asked.
@@ -82,6 +84,7 @@
 
 - CI and GitHub Actions (workflows, `action.yml`, pins, gates, SARIF): load the `ci-standards` skill before editing.
 - New dependencies: latest stable. NEVER downgrade. Routine upgrades are Renovate's; before opening a pin or version-bump PR by hand, check for an open Renovate or Dependabot PR covering it. NEVER change a runtime, base image, or dependency version (including aligning a mismatch upward) in a PR whose task is not that version change; report the mismatch to the user instead. If this task requires a version change, take latest and update only that lockfile entry. NEVER touch lockfiles on unrelated work. NEVER hand-edit a lockfile.
+- Python CI installs wheels only (e.g. `uv sync --locked --no-build`), so a Python version bump fails at once when a locked package has no wheel for it; pin the newest Python whose wheels exist (3.14 while 3.15 wheels lag).
 
 ## Agent Interaction
 
