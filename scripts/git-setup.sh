@@ -167,21 +167,25 @@ configure_gitignore() {
   TEMP_GITIGNORE_FILE=""
 }
 
-# Always ignore agent scratch space, whatever the gitignore choice above
+# Always ignore agent scratch space and agent worktrees, whatever the
+# gitignore choice above. Only .claude/worktrees/ is ignored, not .claude/, so
+# a repo can still commit its own .claude/settings.json, agents or skills.
 ensure_scratch_ignored() {
-  local file
+  local file pattern
   file=$(command git config --global --path --get core.excludesfile 2>/dev/null || true)
   if [[ -z "$file" ]]; then
     # Git's default excludes file; leave core.excludesfile unset
     file="${XDG_CONFIG_HOME:-$HOME/.config}/git/ignore"
   fi
   mkdir -p "$(dirname "$file")"
-  if grep -qxF '.tmp/' "$file" 2>/dev/null; then
-    print_skip ".tmp/ already ignored in $file"
-  else
-    printf '\n# Agent scratch space\n.tmp/\n' >> "$file"
-    print_success "Added .tmp/ to $file"
-  fi
+  for pattern in '.tmp/' '.claude/worktrees/'; do
+    if grep -qxF "$pattern" "$file" 2>/dev/null; then
+      print_skip "$pattern already ignored in $file"
+    else
+      printf '\n# Agent scratch space\n%s\n' "$pattern" >> "$file"
+      print_success "Added $pattern to $file"
+    fi
+  done
 }
 
 # Apply recommended git configurations
