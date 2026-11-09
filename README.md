@@ -76,7 +76,7 @@ The rules live in one place each; this README links to them instead of restating
 | :--- | :--- | :--- |
 | Antigravity | `~/.gemini/GEMINI.md` | |
 | Cursor | `~/.cursor/plugins/local/dotfiles/rules/instructions.mdc` (always-apply plugin rule) | |
-| Claude Code | `~/.claude/rules/dotfiles.md`, plus subagents from `config/claude/agents/*.md` to `~/.claude/agents/` (`sonnet-worker`: an Opus session delegates bulky work to Sonnet, only its summary returns) | [User-level rules](https://code.claude.com/docs/en/memory), [Subagents](https://code.claude.com/docs/en/sub-agents) |
+| Claude Code | `~/.claude/rules/dotfiles.md`, plus subagents from `config/claude/agents/*.md` to `~/.claude/agents/` (`claude --agent orchestrator` runs Opus as a planner that can only spawn `sonnet-worker`, which does the edits and test runs on Sonnet; only its summary returns) | [User-level rules](https://code.claude.com/docs/en/memory), [Subagents](https://code.claude.com/docs/en/sub-agents) |
 | Kilo | managed block in `~/.config/kilo/AGENTS.md` (other content kept) | [Global instructions](https://kilo.ai/docs/customize/custom-instructions) |
 
 Humans can bypass a hook in an emergency with `git commit --no-verify`, or a shell wrapper with the `command` builtin.
