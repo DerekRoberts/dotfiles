@@ -59,6 +59,11 @@ install_update_helpers() {
         success "Installed update-antigravity → $HOME/.local/bin/update-antigravity"
     fi
 
+    if [[ -f "$DOTFILES_DIR/scripts/pr-ready-check.sh" ]]; then
+        install_copy "$DOTFILES_DIR/scripts/pr-ready-check.sh" "$HOME/.local/bin/pr-ready-check"
+        success "Installed pr-ready-check → $HOME/.local/bin/pr-ready-check"
+    fi
+
     if [[ -L "$HOME/.copilot.md" ]]; then
         rm -f "$HOME/.copilot.md"
         info "Removed legacy ~/.copilot.md"
