@@ -62,6 +62,11 @@
 ## Definition of Done
 
 - ALWAYS `git push` and ensure the branch has a pull request (`gh pr create` only when none exists) upon completing branch work.
+- PR Lifecycle Gate: NEVER report branch work done or present a PR for review until running `scripts/pr-ready-check.sh <PR_NUM>` (or `--watch`) to satisfy the Core Ready rule:
+  1. Watch CI checks with a bound (`gh pr checks --watch` or `scripts/pr-ready-check.sh --watch`). If checks fail or hang indefinitely, report the blocker rather than claiming Ready.
+  2. Query GraphQL for open `reviewThreads` (automated Copilot and CodeRabbit reviews take 2–5 minutes to post).
+  3. For valid review threads: apply fixes, run containerized tests, push, and resolve via `resolveReviewThread`. For invalid suggestions: dismiss with the one-line reason in chat and resolve the thread without code changes.
+  4. Only declare done and hand off when `scripts/pr-ready-check.sh` confirms Core Ready: `mergeable=MERGEABLE`, head not behind PR base ref (0 commits on base not in head), `pending=0`, `fail=0`, unresolved `reviewThreads=0`, and ≥10 min elapsed since last push.
 
 ## Dependencies & Solutions
 
