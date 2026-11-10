@@ -4,8 +4,11 @@
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/config/agent-guard"
+SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fails=0
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
+install -m 755 "$SCRIPTS_DIR/pr-ready-check.sh" "$TMP/pr-ready-check"
+export PATH="$TMP:$PATH"
 
 expect() {
     local want="$1" got="deny"; shift
@@ -171,6 +174,7 @@ fi
 # Claude Code adapter
 install -m 755 "$DIR/agent-guard.sh" "$TMP/home/.local/bin/agent-guard" 2>/dev/null \
     || { mkdir -p "$TMP/home/.local/bin" && install -m 755 "$DIR/agent-guard.sh" "$TMP/home/.local/bin/agent-guard"; }
+install -m 755 "$SCRIPTS_DIR/pr-ready-check.sh" "$TMP/home/.local/bin/pr-ready-check"
 claude() {
     # $1 = want (allow|deny), $2 = label, $3 = hook JSON
     local want="$1" got="allow" out
