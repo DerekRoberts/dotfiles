@@ -47,6 +47,9 @@ allow 'git push origin main' "$REPO"
 allow 'git push -u origin feat/x' "$REPO"
 
 # Comments, reviews, closes (closing allowed, reopening denied)
+allow 'gh pr ready --undo'
+deny  'gh pr ready 99999999'
+deny  'gh project item-edit --id 123 --single-select-option-id c66ba2dd'
 deny  'gh pr comment 12 --body hi'
 deny  'gh pr review 12 --approve'
 allow 'gh pr close 12'
@@ -178,6 +181,7 @@ claude() {
 }
 bash_call() { jq -cn --arg c "$1" '{hook_event_name: "PreToolUse", tool_name: "Bash", tool_input: {command: $c}, cwd: "/tmp"}'; }
 claude allow 'gh pr view 1' "$(bash_call 'gh pr view 1')"
+claude deny  'gh pr ready without check' "$(bash_call 'gh pr ready 99999999')"
 claude deny  'gh pr merge 1' "$(bash_call 'gh pr merge 1 --squash')"
 claude deny  'git push --force' "$(bash_call 'git push --force origin feat/x')"
 claude allow 'git push' "$(bash_call 'git push -u origin feat/x')"

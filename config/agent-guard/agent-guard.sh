@@ -8,6 +8,8 @@
 #
 # Exit 0 = allow. Exit 2 = deny, reason on stderr.
 
+export PATH="${HOME}/.local/bin:${PATH}"
+
 deny() {
     echo "agent-guard: $1 needs the user's approval. Stop and ask the user instead." >&2
     exit 2
@@ -83,6 +85,24 @@ while read -r c; do
         "gh issue transfer"*) continue ;;
 
         "gh pr merge"*)                                   deny "merging a PR" ;;
+        "gh pr ready"*"--undo"*) continue ;;
+        "gh pr ready"*)
+            pr_arg="${c#gh pr ready}"
+            if command -v pr-ready-check >/dev/null 2>&1; then
+                # shellcheck disable=SC2086
+                if ! (cd "$dir" && pr-ready-check $pr_arg >/dev/null 2>&1); then
+                    deny "marking PR ready before 'pr-ready-check' passes (unresolved review threads or pending/failing CI)"
+                fi
+            fi ;;
+        "gh project item-edit"*)
+            case "$c" in
+                *c66ba2dd*|*[Aa]ctive*)
+                    if command -v pr-ready-check >/dev/null 2>&1; then
+                        if ! (cd "$dir" && pr-ready-check >/dev/null 2>&1); then
+                            deny "moving project card to Active before 'pr-ready-check' passes on the PR"
+                        fi
+                    fi ;;
+            esac ;;
         "gh pr comment"*|"gh pr review"*|"gh pr reopen"*) deny "commenting on, reviewing, or reopening a PR" ;;
         "gh pr close"*" -c"*|"gh pr close"*" --comment"*|"gh issue close"*" -c"*|"gh issue close"*" --comment"*) deny "commenting" ;;
         "gh issue comment"*|"gh issue reopen"*|"gh issue delete"*) deny "commenting on, reopening, or deleting an issue" ;;
@@ -98,6 +118,12 @@ while read -r c; do
                     graphql_cmd="$(printf '%s' "$c" | sed -E 's/state[[:space:]]*:[[:space:]]*/state:/g')"
                     case "$graphql_cmd" in
                         *unresolveReviewThread*) deny "unresolving a review thread" ;;
+                        *markPullRequestReadyForReview*)
+                            if command -v pr-ready-check >/dev/null 2>&1; then
+                                if ! (cd "$dir" && pr-ready-check >/dev/null 2>&1); then
+                                    deny "marking PR ready before 'pr-ready-check' passes"
+                                fi
+                            fi ;;
                         *mergePullRequest*|*enablePullRequestAutoMerge*) deny "merging a PR" ;;
                         *addComment*|*updateIssueComment*|*deleteIssueComment*|*minimizeComment*) deny "commenting" ;;
                         *addPullRequestReview*|*submitPullRequestReview*) deny "reviewing" ;;
