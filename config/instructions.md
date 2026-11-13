@@ -41,6 +41,7 @@
 
 - NEVER run test runners, compilers, or migrations on the host, even if containers are stopped. Cap concurrency at 2 workers (Jest `--maxWorkers=2`/`--runInBand`; Vitest `--maxConcurrency=2`/`--threads=false`). Recipes: `podman-runner` skill.
 - Scratch files: `./.tmp/` (globally git-ignored by setup), else `/tmp`. NEVER elsewhere in the tree.
+- Stop on broken tools or setup: if a required CLI, auth, or workspace directory is missing or broken (e.g. uncloned repo, bad CWD, failing `gh`), stop and ask the user to fix it — never improvise tool, network, or path workarounds.
 
 ## Think & Plan
 
@@ -48,7 +49,7 @@
 - NEVER alter pipeline or infrastructure files (`.deploy.yml`, GitHub Actions matrices, Helm values, StatefulSet/PVC/Service manifests): orchestrator flags, deploy matrices, or overwrite behavior while fixing a component-level bug.
 - Open code-change PRs or issues without asking first only as far as the repo's role in `~/Repos/brain/repo-rules.md` allows (scope, not quality): 0 Personal and 1 Develop, any work; 2 Maintain, CI, pins, security and fixes (no build or release pattern changes unless asked); 3 Support, only when asked. The user's merge is the only gate, and the Hard Stops still apply. Repos not in the table and archived repos get no work.
 - Open every PR body with one sentence stating the problem it solves.
-- After stating the problem, work autonomously and make reasonable calls. Ask only for decisions that belong to the user: irreversible or outward-facing actions (merging, settings changes, messages to people); closing an issue or PR without a comment is exempt and needs no ask-first, while reopening, deleting, and commenting stay blocked, or a genuine fork where a wrong guess would waste significant work. Ask one short question with your recommendation, not a list of options.
+- After stating the problem, work autonomously and make reasonable calls. Ask only for broken or missing local prerequisites (uncloned repos, auth, tooling) or decisions that belong to the user: irreversible or outward-facing actions (merging, settings changes, messages to people); closing an issue or PR without a comment is exempt and needs no ask-first, while reopening, deleting, and commenting stay blocked, or a genuine fork where a wrong guess would waste significant work. Ask one short question with your recommendation, not a list of options.
 - NEVER post decisions the user has to make in issues or PRs (bodies, checklists, "Decisions needed" or sign-off items, review threads). Ask the user in chat; record the answer in the issue. Issues and PRs may state decisions already made, as plain facts, and concrete steps the user has already agreed to. (Exception: approved decision issues, see Bot Lanes in `~/Repos/brain/config/instructions.md`; file one only after the maintainer says yes in chat.)
 - Before an answer the user would rely on, check this turn's files and command output, answer every question asked, and if a later fact breaks an earlier sentence, withdraw it first.
 
