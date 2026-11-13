@@ -4,7 +4,7 @@
 #   - force-pushes (non-fast-forward updates)
 #   - pushes to bot branches (renovate/*, dependabot/*)
 #   - branches behind their base (merge the base in first)
-#   - commits authored by anyone other than the configured git user
+#   - newly pushed commits authored by anyone other than the configured git user
 # Bypass (HUMAN DEVELOPERS ONLY): git push --no-verify
 set -uo pipefail
 
@@ -58,9 +58,12 @@ while read -r _local_ref local_sha remote_ref remote_sha; do
     git merge-base --is-ancestor "$base_sha" "$local_sha" \
         || block "'$branch' is behind $remote/$base." "git fetch $remote && git merge $remote/$base"
 
-    # Every commit on the branch but not on the base, merges included.
-    others="$(git log --format='%ae' "$local_sha" "^$base_sha" | grep -vxF "$me" | sort -u || true)"
-    [ -z "$others" ] || block "commits authored by: $others (expected $me)." "recreate the branch from $remote/$base with your own commits"
+    # Newly pushed commits only: exclude the base (and the remote branch tip when
+    # updating an existing branch, so pushing onto a teammate's PR branch works).
+    exclude=("^$base_sha")
+    [ "$remote_sha" != "$zero" ] && exclude+=("^$remote_sha")
+    others="$(git log --format='%ae' "$local_sha" "${exclude[@]}" | grep -vxF "$me" | sort -u || true)"
+    [ -z "$others" ] || block "commits authored by: $others (expected $me)." "recreate your unpushed commits from $remote/$base (or $remote/$branch) as $me"
 done
 
 exit 0
