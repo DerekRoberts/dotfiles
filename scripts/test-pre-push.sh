@@ -44,6 +44,10 @@ expect "HEAD:main blocked" 1 "$a1" refs/heads/main "$Z" HEAD
 expect "deleting main blocked" 1 "$Z" refs/heads/main "$a1" "(delete)"
 git checkout -q -b feat/c origin/main
 git merge -q --no-ff --no-edit "$o" 2>/dev/null; fm=$(git rev-parse HEAD)
-expect "earlier foreign commit blocked" 1 "$(c c1)" refs/heads/feat/c "$fm"
+c1=$(c c1)
+expect "pushing own commit onto collaborator branch allowed" 0 "$c1" refs/heads/feat/c "$fm"
+expect "new branch with earlier foreign commit blocked" 1 "$c1" refs/heads/feat/c-new "$Z"
+o2=$(c other2 --author="Bot <bot@example.com>")
+expect "new foreign commit on collaborator branch blocked" 1 "$o2" refs/heads/feat/c "$fm"
 
 exit "$fails"
