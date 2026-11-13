@@ -130,7 +130,7 @@ deny  'gh api -X PUT repos/o/r/branches/main/protection'
 allow 'gh api repos/o/r/branches/main/protection'
 allow 'gh repo view o/r'
 
-# Crunchy: contributions and issue transfers allowed (cberg-aot reviews, see instructions.md)
+# Crunchy: contributions and issue transfers allowed
 allow 'gh pr create -R bcgov/action-crunchy --title t --body b'
 allow 'git push' "$HOME/Repos/action-crunchy"
 allow 'cd ~/Repos/action-crunchy && git commit -m x'
