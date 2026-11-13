@@ -41,6 +41,7 @@
 
 - NEVER run test runners, compilers, or migrations on the host, even if containers are stopped. Cap concurrency at 2 workers (Jest `--maxWorkers=2`/`--runInBand`; Vitest `--maxConcurrency=2`/`--threads=false`). Recipes: `podman-runner` skill.
 - Scratch files: `./.tmp/` (globally git-ignored by setup), else `/tmp`. NEVER elsewhere in the tree.
+- Stop on broken tools or preconditions: if a required CLI, auth, or workspace directory fails (e.g. missing CWD, broken `gh`), report the blocker and stop — never fall back to a slower or interactive tool (such as a browser agent for GitHub) without asking.
 
 ## Think & Plan
 
