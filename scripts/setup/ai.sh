@@ -66,6 +66,7 @@ install_ai_wiring() {
     fi
     info "Configuring Antigravity global instructions and skills..."
     mkdir -p "$HOME/.gemini/config" "$HOME/.gemini/antigravity" "$HOME/.agents/skills"
+    chmod 700 "$HOME/.gemini" "$HOME/.gemini/config"
     if [[ -f "$INSTRUCTIONS_FILE" ]]; then
         local tmp_file
         tmp_file="$(mktemp "$HOME/.gemini/GEMINI.md.XXXXXX")"
@@ -262,10 +263,10 @@ install_ponytail() {
 
 write_github_mcp_config() {
     local config_file="$1"
-    local gh_token="$2"
-    local mcp_pkg="@modelcontextprotocol/server-github@2025.4.8"
+    local mcp_cmd="$2"
 
     mkdir -p "$(dirname "$config_file")"
+    chmod 700 "$(dirname "$config_file")"
     if [[ ! -s "$config_file" ]]; then
         echo '{"mcpServers": {}}' > "$config_file"
     fi
@@ -273,8 +274,8 @@ write_github_mcp_config() {
     local tmp_file
     tmp_file="$(mktemp "$(dirname "$config_file")/mcp.XXXXXX")"
 
-    if jq --arg token "$gh_token" --arg pkg "$mcp_pkg" \
-        '.mcpServers.github = {"command": "npx", "args": ["-y", $pkg], "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": $token}}' \
+    if jq --arg cmd "$mcp_cmd" \
+        '.mcpServers.github = {"command": $cmd}' \
         "$config_file" > "$tmp_file"; then
         chmod 600 "$tmp_file"
         mv -f "$tmp_file" "$config_file"
@@ -290,23 +291,20 @@ setup_github_mcp() {
 
     local config_dir="$HOME/.gemini/config"
     local config_file="$config_dir/mcp_config.json"
+    local mcp_cmd="$HOME/.local/share/dotfiles/bin/mcp-github"
+
+    install_copy "$DOTFILES_DIR/scripts/mcp-github.sh" "$mcp_cmd"
 
     if ! command -v gh &>/dev/null; then
-        warn "GitHub CLI ('gh') is not installed. Skipping GitHub MCP configuration."
-        return 0
+        warn "GitHub CLI ('gh') is not installed — MCP wrapper configured, run 'gh auth login' after installing gh."
+    elif [[ -z "$(unset GITHUB_TOKEN GH_TOKEN; gh auth token --hostname github.com 2>/dev/null || true)" ]]; then
+        warn "No active GitHub CLI login found — MCP wrapper configured, run 'gh auth login' before using GitHub MCP."
     fi
 
-    local gh_token
-    gh_token="$(unset GITHUB_TOKEN; gh auth token 2>/dev/null || true)"
-
-    if [[ -z "$gh_token" ]]; then
-        warn "No active GitHub CLI login found. Run 'gh auth login' before configuring GitHub MCP."
-        return 0
-    fi
-
-    mkdir -p "$config_dir"
-    if write_github_mcp_config "$config_file" "$gh_token"; then
-        success "GitHub MCP Server configured at $config_file"
+    mkdir -p "$HOME/.gemini" "$config_dir"
+    chmod 700 "$HOME/.gemini" "$config_dir"
+    if write_github_mcp_config "$config_file" "$mcp_cmd"; then
+        success "GitHub MCP Server configured at $config_file (tokenless wrapper: $mcp_cmd)"
     fi
 }
 

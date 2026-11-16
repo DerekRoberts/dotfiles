@@ -69,3 +69,6 @@ jobs:
 
       - name: Test gprune
         run: bash scripts/test-gprune.sh
+
+      - name: Test security hardening
+        run: bash scripts/test-security-hardening.sh

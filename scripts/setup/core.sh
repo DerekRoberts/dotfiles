@@ -232,6 +232,50 @@ configure_mime_defaults() {
     fi
 }
 
+# ── Security Hardening ───────────────────────────────────────────────────────
+
+harden_security() {
+    section "Security Hardening"
+
+    if [[ -d "$HOME/.config/gh" ]]; then
+        chmod 700 "$HOME/.config/gh"
+        success "Restricted ~/.config/gh permissions (700)"
+    fi
+
+    if ! firewall_needs_hardening; then
+        if command -v firewall-cmd >/dev/null 2>&1 && firewall-cmd --state >/dev/null 2>&1; then
+            success "Firewall already hardened (zone: $(firewall-cmd --get-default-zone 2>/dev/null || echo unknown))"
+        fi
+        return 0
+    fi
+
+    local zone
+    zone="$(firewall-cmd --get-default-zone 2>/dev/null || true)"
+    if [[ "$zone" == "FedoraWorkstation" ]]; then
+        info "Switching firewalld default zone from FedoraWorkstation to public..."
+        sudo firewall-cmd --set-default-zone=public >/dev/null
+    fi
+    if ! ssh_listener_active; then
+        if firewall-cmd --zone=public --query-service=ssh --permanent >/dev/null 2>&1; then
+            info "Removing unused ssh service from public firewalld zone..."
+            sudo firewall-cmd --zone=public --remove-service=ssh --permanent >/dev/null
+        fi
+        if firewall-cmd --zone=public --query-service=ssh >/dev/null 2>&1; then
+            sudo firewall-cmd --zone=public --remove-service=ssh >/dev/null
+        fi
+    fi
+    if firewall-cmd --info-service=kdeconnect >/dev/null 2>&1; then
+        if ! firewall-cmd --zone=public --query-service=kdeconnect --permanent >/dev/null 2>&1; then
+            info "Allowing kdeconnect in public firewalld zone..."
+            sudo firewall-cmd --zone=public --add-service=kdeconnect --permanent >/dev/null
+        fi
+        if ! firewall-cmd --zone=public --query-service=kdeconnect >/dev/null 2>&1; then
+            sudo firewall-cmd --zone=public --add-service=kdeconnect >/dev/null
+        fi
+    fi
+    success "Firewall hardened (default zone: $(firewall-cmd --get-default-zone 2>/dev/null || echo public))"
+}
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 usage() {
@@ -271,6 +315,7 @@ main() {
     install_maintenance_tools
     configure_user_dirs "$PROFILE"
     configure_mime_defaults
+    harden_security
     success "Core configuration complete"
 }
 
