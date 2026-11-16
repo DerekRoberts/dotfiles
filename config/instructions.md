@@ -13,6 +13,7 @@
 - Act vs file: act immediately when it's wise; the user's PR review is the gate. Create issues freely, except decision issues, which need the maintainer's yes in chat first (see Bot Lanes in `~/Repos/brain/config/instructions.md`); bot-created issues for Project 16–covered repos go to Project 16's New column (Vexilon stays on its MinionTech board; see Vexilon priority). No hard cap on open PRs: stop when you judge it's enough. Hold back and file or flag instead of building for heavy overlap with other open PRs, a hard merge order, insufficient issue detail, a poorly conceived issue, an issue that shouldn't be done (a bad idea), or any other sound reason; always say why.
 - PR links and merge priority: whenever you mention a PR the user is to review, give its full link. When a PR is urgent or blocks other work, put a `Merge now` line at the top of the message with the PR link and one reason, so it stands out from the review backlog.
 - New ideas from the user are parked: file an issue (body as long as appropriate) and don't act on it unless the user says "do it now": bcgov ones on Project 16, personal-repo ones with an `idea` label. Bots don't act on parked ideas; Brain's Monday review picks which move to `Next`.
+- Version control: rules, decisions, routine schedules and prompts, and skills are saved in a repo through a PR (usually `DerekRoberts/brain`; universal rules here). A saved memory note, routine, or skill on its own is not done.
 
 # Hard Stops
 
@@ -59,6 +60,7 @@
 - Prefer general, reusable solutions that read live context (schemas, manifests, `action.yml`, configs) over hardcoded maps, one-off renames, or "migration" bridges. Add special cases only when the general path cannot express the need.
 - Tests must not print warnings or errors into CI logs (e.g. `Bad credentials`, `API rate limit exceeded`); tests of error handling capture and assert those messages instead.
 - ALWAYS default missing environments and toggles to PROD. TEST and DEV must be set explicitly — an omitted value must not select a non-prod environment.
+- Scanners and reports (CodeQL, Semgrep, ZAP and similar): fix or report findings instead of excluding paths, rules or alerts; exclude only a confirmed false positive or generated code, with the reason beside the exclusion. When a report is missing data (e.g. a sample lost to a GitHub outage), show the gap rather than hiding it.
 
 ## Definition of Done
 
