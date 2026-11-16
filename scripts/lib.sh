@@ -310,6 +310,12 @@ insync_is_live() {
 
 # ── Firewall ─────────────────────────────────────────────────────────────────
 
+# True when an SSH service or socket-activated listener is active.
+ssh_listener_active() {
+    command -v systemctl >/dev/null 2>&1 || return 1
+    systemctl is-active --quiet sshd 2>/dev/null || systemctl is-active --quiet sshd.socket 2>/dev/null
+}
+
 # True when firewalld is active on the wide-open FedoraWorkstation default zone
 # or still permits ssh in public while sshd is inactive.
 firewall_needs_hardening() {
@@ -318,7 +324,7 @@ firewall_needs_hardening() {
     local zone
     zone="$(firewall-cmd --get-default-zone 2>/dev/null || true)"
     [[ "$zone" == "FedoraWorkstation" ]] && return 0
-    if [[ "$zone" == "public" ]] && ! (command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet sshd 2>/dev/null); then
+    if [[ "$zone" == "public" ]] && ! ssh_listener_active; then
         firewall-cmd --zone=public --query-service=ssh >/dev/null 2>&1 && return 0
         firewall-cmd --zone=public --query-service=ssh --permanent >/dev/null 2>&1 && return 0
     fi

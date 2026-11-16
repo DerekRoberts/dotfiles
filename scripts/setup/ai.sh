@@ -297,7 +297,7 @@ setup_github_mcp() {
 
     if ! command -v gh &>/dev/null; then
         warn "GitHub CLI ('gh') is not installed — MCP wrapper configured, run 'gh auth login' after installing gh."
-    elif [[ -z "$(unset GITHUB_TOKEN; gh auth token 2>/dev/null || true)" ]]; then
+    elif [[ -z "$(unset GITHUB_TOKEN GH_TOKEN; gh auth token --hostname github.com 2>/dev/null || true)" ]]; then
         warn "No active GitHub CLI login found — MCP wrapper configured, run 'gh auth login' before using GitHub MCP."
     fi
 

@@ -44,9 +44,11 @@ chmod +x "$TMP/bin/firewall-cmd"
 
 cat > "$TMP/bin/systemctl" << 'EOF'
 #!/usr/bin/env bash
-if [[ "${1:-}" == "is-active" && "${2:-}" == "--quiet" && "${3:-}" == "sshd" ]]; then
-    [[ "${SSHD_ACTIVE:-0}" -eq 1 ]]
-    exit $?
+if [[ "${1:-}" == "is-active" && "${2:-}" == "--quiet" ]]; then
+    case "${3:-}" in
+        sshd)        [[ "${SSHD_ACTIVE:-0}" -eq 1 ]]; exit $? ;;
+        sshd.socket) [[ "${SSHD_SOCKET_ACTIVE:-0}" -eq 1 ]]; exit $? ;;
+    esac
 fi
 exit 0
 EOF
@@ -68,6 +70,7 @@ FW_RUNNING=0 refute "firewall_needs_hardening false when firewalld stopped" fire
 FW_RUNNING=1 FW_ZONE=FedoraWorkstation check "firewall_needs_hardening true for FedoraWorkstation" firewall_needs_hardening
 FW_RUNNING=1 FW_ZONE=public FW_SSH_RUN=1 FW_SSH_PERM=1 SSHD_ACTIVE=0 check "firewall_needs_hardening true for public+ssh when sshd inactive" firewall_needs_hardening
 FW_RUNNING=1 FW_ZONE=public FW_SSH_RUN=1 FW_SSH_PERM=1 SSHD_ACTIVE=1 refute "firewall_needs_hardening false when sshd active" firewall_needs_hardening
+FW_RUNNING=1 FW_ZONE=public FW_SSH_RUN=1 FW_SSH_PERM=1 SSHD_ACTIVE=0 SSHD_SOCKET_ACTIVE=1 refute "firewall_needs_hardening false when sshd.socket active" firewall_needs_hardening
 FW_RUNNING=1 FW_ZONE=public FW_SSH_RUN=0 FW_SSH_PERM=0 SSHD_ACTIVE=0 refute "firewall_needs_hardening false when already hardened" firewall_needs_hardening
 FW_RUNNING=1 FW_ZONE=drop refute "firewall_needs_hardening false for custom zone" firewall_needs_hardening
 
@@ -78,7 +81,7 @@ FW_RUNNING=1 FW_ZONE=drop refute "firewall_needs_hardening false for custom zone
 
 export SUDO_LOG="$TMP/sudo.log"
 : > "$SUDO_LOG"
-FW_RUNNING=1 FW_ZONE=FedoraWorkstation FW_SSH_RUN=1 FW_SSH_PERM=1 SSHD_ACTIVE=0 \
+FW_RUNNING=1 FW_ZONE=FedoraWorkstation FW_SSH_RUN=1 FW_SSH_PERM=1 SSHD_ACTIVE=0 SSHD_SOCKET_ACTIVE=0 \
     harden_security >/dev/null
 
 check "harden_security restricts ~/.config/gh to 700" \
@@ -87,8 +90,16 @@ check "harden_security switches default zone to public" \
     grep -qxF "firewall-cmd --set-default-zone=public" "$SUDO_LOG"
 check "harden_security removes ssh permanently" \
     grep -qxF "firewall-cmd --zone=public --remove-service=ssh --permanent" "$SUDO_LOG"
-check "harden_security reloads firewalld" \
+check "harden_security removes ssh at runtime without full reload" \
+    grep -qxF "firewall-cmd --zone=public --remove-service=ssh" "$SUDO_LOG"
+refute "harden_security avoids full firewall reload" \
     grep -qxF "firewall-cmd --reload" "$SUDO_LOG"
+
+: > "$SUDO_LOG"
+FW_RUNNING=1 FW_ZONE=FedoraWorkstation FW_SSH_RUN=1 FW_SSH_PERM=1 SSHD_ACTIVE=0 SSHD_SOCKET_ACTIVE=1 \
+    harden_security >/dev/null
+refute "harden_security preserves ssh when sshd.socket is active" \
+    grep -q -- "--remove-service=ssh" "$SUDO_LOG"
 
 : > "$SUDO_LOG"
 FW_RUNNING=1 FW_ZONE=public FW_SSH_RUN=0 FW_SSH_PERM=0 SSHD_ACTIVE=0 \
@@ -124,7 +135,7 @@ check "mcp_config.json sets wrapper command" \
 
 cat > "$TMP/bin/gh" << 'EOF'
 #!/usr/bin/env bash
-if [[ "${1:-}" == "auth" && "${2:-}" == "token" ]]; then
+if [[ "${1:-}" == "auth" && "${2:-}" == "token" && "${3:-}" == "--hostname" && "${4:-}" == "github.com" ]]; then
     [[ -z "${GITHUB_TOKEN:-}" && -z "${GH_TOKEN:-}" ]] || exit 9
     printf '%s\n' "${MOCK_GH_TOKEN:-}"
     exit 0
@@ -140,7 +151,7 @@ EOF
 chmod +x "$TMP/bin/npx"
 
 export NPX_LOG="$TMP/npx.log"
-GITHUB_TOKEN="ambient-bad" GH_TOKEN="ambient-bad-2" MOCK_GH_TOKEN="live-gh-token" \
+GH_HOST="git.corp.example" GITHUB_TOKEN="ambient-bad" GH_TOKEN="ambient-bad-2" MOCK_GH_TOKEN="live-gh-token" \
     bash "$REPO/scripts/mcp-github.sh" --extra-arg
 check "mcp-github exports gh auth token in-memory" \
     grep -qxF "live-gh-token" "$NPX_LOG"

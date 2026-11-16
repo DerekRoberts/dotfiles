@@ -255,13 +255,13 @@ harden_security() {
         info "Switching firewalld default zone from FedoraWorkstation to public..."
         sudo firewall-cmd --set-default-zone=public >/dev/null
     fi
-    if ! (command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet sshd 2>/dev/null); then
+    if ! ssh_listener_active; then
         if firewall-cmd --zone=public --query-service=ssh --permanent >/dev/null 2>&1; then
             info "Removing unused ssh service from public firewalld zone..."
             sudo firewall-cmd --zone=public --remove-service=ssh --permanent >/dev/null
         fi
         if firewall-cmd --zone=public --query-service=ssh >/dev/null 2>&1; then
-            sudo firewall-cmd --reload >/dev/null
+            sudo firewall-cmd --zone=public --remove-service=ssh >/dev/null
         fi
     fi
     success "Firewall hardened (default zone: $(firewall-cmd --get-default-zone 2>/dev/null || echo public))"

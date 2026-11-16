@@ -20,7 +20,7 @@ fi
 command -v npx >/dev/null 2>&1 || { echo "mcp-github: npx not found on PATH" >&2; exit 127; }
 command -v gh >/dev/null 2>&1 || { echo "mcp-github: gh not found on PATH" >&2; exit 127; }
 
-token="$(unset GITHUB_TOKEN GH_TOKEN; gh auth token 2>/dev/null || true)"
+token="$(unset GITHUB_TOKEN GH_TOKEN; gh auth token --hostname github.com 2>/dev/null || true)"
 [[ -n "$token" ]] || { echo "mcp-github: no active gh login; run 'gh auth login'" >&2; exit 1; }
 
 export GITHUB_PERSONAL_ACCESS_TOKEN="$token"
