@@ -308,6 +308,23 @@ insync_is_live() {
     type -p insync >/dev/null 2>&1
 }
 
+# ── Firewall ─────────────────────────────────────────────────────────────────
+
+# True when firewalld is active on the wide-open FedoraWorkstation default zone
+# or still permits ssh in public while sshd is inactive.
+firewall_needs_hardening() {
+    command -v firewall-cmd >/dev/null 2>&1 || return 1
+    firewall-cmd --state >/dev/null 2>&1 || return 1
+    local zone
+    zone="$(firewall-cmd --get-default-zone 2>/dev/null || true)"
+    [[ "$zone" == "FedoraWorkstation" ]] && return 0
+    if [[ "$zone" == "public" ]] && ! (command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet sshd 2>/dev/null); then
+        firewall-cmd --zone=public --query-service=ssh >/dev/null 2>&1 && return 0
+        firewall-cmd --zone=public --query-service=ssh --permanent >/dev/null 2>&1 && return 0
+    fi
+    return 1
+}
+
 # Layered packages are not on PATH until reboot. Ask when stdin is a TTY;
 # otherwise print the reminder (curl|bash / CI must not block on `read`).
 prompt_reboot_for_insync() {

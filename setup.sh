@@ -84,15 +84,22 @@ echo "=== Bootstrapping Dotfiles (Fedora Kinoite) ==="
 # shellcheck source=scripts/lib.sh
 . "$DOTFILES_DIR/scripts/lib.sh"
 
-# Insync is the only privileged step. If it isn't a command on this boot, ask
-# for sudo now, layer it later, and offer a reboot at the end.
+# Layering Insync and initial firewall hardening are the only privileged steps.
+# Check both upfront so sudo is prompted at most once per run.
 INSYNC_NEEDS_REBOOT=0
+SUDO_REASONS=()
 if ! insync_is_live; then
-    echo "Prompting for sudo to layer Insync via rpm-ostree..."
-    echo "Insync will not be available until you reboot."
+    SUDO_REASONS+=("layer Insync via rpm-ostree (available after reboot)")
+    INSYNC_NEEDS_REBOOT=1
+fi
+if firewall_needs_hardening; then
+    SUDO_REASONS+=("set default firewalld zone to public (without ssh)")
+fi
+if [[ "${#SUDO_REASONS[@]}" -gt 0 ]]; then
+    echo "Prompting for sudo to:"
+    printf '  - %s\n' "${SUDO_REASONS[@]}"
     sudo -v
     while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
-    INSYNC_NEEDS_REBOOT=1
 fi
 export DOTFILES_DEFER_REBOOT_PROMPT=1
 
