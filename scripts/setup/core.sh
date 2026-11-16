@@ -264,6 +264,15 @@ harden_security() {
             sudo firewall-cmd --zone=public --remove-service=ssh >/dev/null
         fi
     fi
+    if firewall-cmd --info-service=kdeconnect >/dev/null 2>&1; then
+        if ! firewall-cmd --zone=public --query-service=kdeconnect --permanent >/dev/null 2>&1; then
+            info "Allowing kdeconnect in public firewalld zone..."
+            sudo firewall-cmd --zone=public --add-service=kdeconnect --permanent >/dev/null
+        fi
+        if ! firewall-cmd --zone=public --query-service=kdeconnect >/dev/null 2>&1; then
+            sudo firewall-cmd --zone=public --add-service=kdeconnect >/dev/null
+        fi
+    fi
     success "Firewall hardened (default zone: $(firewall-cmd --get-default-zone 2>/dev/null || echo public))"
 }
 

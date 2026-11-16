@@ -28,6 +28,8 @@ case "${1:-}" in
         [[ "${FW_RUNNING:-1}" -eq 1 ]] && { echo running; exit 0; } || exit 1 ;;
     --get-default-zone)
         echo "${FW_ZONE:-FedoraWorkstation}" ;;
+    --info-service=kdeconnect)
+        [[ "${FW_HAS_KDECONNECT:-1}" -eq 1 ]] && exit 0 || exit 1 ;;
     --zone=public)
         case "${2:-}" in
             --query-service=ssh)
@@ -35,6 +37,12 @@ case "${1:-}" in
                     [[ "${FW_SSH_PERM:-1}" -eq 1 ]] && { echo yes; exit 0; } || exit 1
                 else
                     [[ "${FW_SSH_RUN:-1}" -eq 1 ]] && { echo yes; exit 0; } || exit 1
+                fi ;;
+            --query-service=kdeconnect)
+                if [[ "${3:-}" == "--permanent" ]]; then
+                    [[ "${FW_KDE_PERM:-0}" -eq 1 ]] && { echo yes; exit 0; } || exit 1
+                else
+                    [[ "${FW_KDE_RUN:-0}" -eq 1 ]] && { echo yes; exit 0; } || exit 1
                 fi ;;
         esac ;;
 esac
@@ -68,10 +76,11 @@ chmod +x "$TMP/bin/sudo"
 
 FW_RUNNING=0 refute "firewall_needs_hardening false when firewalld stopped" firewall_needs_hardening
 FW_RUNNING=1 FW_ZONE=FedoraWorkstation check "firewall_needs_hardening true for FedoraWorkstation" firewall_needs_hardening
-FW_RUNNING=1 FW_ZONE=public FW_SSH_RUN=1 FW_SSH_PERM=1 SSHD_ACTIVE=0 check "firewall_needs_hardening true for public+ssh when sshd inactive" firewall_needs_hardening
-FW_RUNNING=1 FW_ZONE=public FW_SSH_RUN=1 FW_SSH_PERM=1 SSHD_ACTIVE=1 refute "firewall_needs_hardening false when sshd active" firewall_needs_hardening
-FW_RUNNING=1 FW_ZONE=public FW_SSH_RUN=1 FW_SSH_PERM=1 SSHD_ACTIVE=0 SSHD_SOCKET_ACTIVE=1 refute "firewall_needs_hardening false when sshd.socket active" firewall_needs_hardening
-FW_RUNNING=1 FW_ZONE=public FW_SSH_RUN=0 FW_SSH_PERM=0 SSHD_ACTIVE=0 refute "firewall_needs_hardening false when already hardened" firewall_needs_hardening
+FW_RUNNING=1 FW_ZONE=public FW_SSH_RUN=1 FW_SSH_PERM=1 FW_KDE_RUN=1 FW_KDE_PERM=1 SSHD_ACTIVE=0 check "firewall_needs_hardening true for public+ssh when sshd inactive" firewall_needs_hardening
+FW_RUNNING=1 FW_ZONE=public FW_SSH_RUN=0 FW_SSH_PERM=0 FW_KDE_RUN=0 FW_KDE_PERM=0 SSHD_ACTIVE=0 check "firewall_needs_hardening true when kdeconnect missing from public" firewall_needs_hardening
+FW_RUNNING=1 FW_ZONE=public FW_SSH_RUN=1 FW_SSH_PERM=1 FW_KDE_RUN=1 FW_KDE_PERM=1 SSHD_ACTIVE=1 refute "firewall_needs_hardening false when sshd active and kdeconnect set" firewall_needs_hardening
+FW_RUNNING=1 FW_ZONE=public FW_SSH_RUN=1 FW_SSH_PERM=1 FW_KDE_RUN=1 FW_KDE_PERM=1 SSHD_ACTIVE=0 SSHD_SOCKET_ACTIVE=1 refute "firewall_needs_hardening false when sshd.socket active and kdeconnect set" firewall_needs_hardening
+FW_RUNNING=1 FW_ZONE=public FW_SSH_RUN=0 FW_SSH_PERM=0 FW_KDE_RUN=1 FW_KDE_PERM=1 SSHD_ACTIVE=0 refute "firewall_needs_hardening false when already hardened" firewall_needs_hardening
 FW_RUNNING=1 FW_ZONE=drop refute "firewall_needs_hardening false for custom zone" firewall_needs_hardening
 
 # ── harden_security (core.sh) ────────────────────────────────────────────────
@@ -81,7 +90,7 @@ FW_RUNNING=1 FW_ZONE=drop refute "firewall_needs_hardening false for custom zone
 
 export SUDO_LOG="$TMP/sudo.log"
 : > "$SUDO_LOG"
-FW_RUNNING=1 FW_ZONE=FedoraWorkstation FW_SSH_RUN=1 FW_SSH_PERM=1 SSHD_ACTIVE=0 SSHD_SOCKET_ACTIVE=0 \
+FW_RUNNING=1 FW_ZONE=FedoraWorkstation FW_SSH_RUN=1 FW_SSH_PERM=1 FW_KDE_RUN=0 FW_KDE_PERM=0 SSHD_ACTIVE=0 SSHD_SOCKET_ACTIVE=0 \
     harden_security >/dev/null
 
 check "harden_security restricts ~/.config/gh to 700" \
@@ -92,17 +101,21 @@ check "harden_security removes ssh permanently" \
     grep -qxF "firewall-cmd --zone=public --remove-service=ssh --permanent" "$SUDO_LOG"
 check "harden_security removes ssh at runtime without full reload" \
     grep -qxF "firewall-cmd --zone=public --remove-service=ssh" "$SUDO_LOG"
+check "harden_security adds kdeconnect permanently" \
+    grep -qxF "firewall-cmd --zone=public --add-service=kdeconnect --permanent" "$SUDO_LOG"
+check "harden_security adds kdeconnect at runtime" \
+    grep -qxF "firewall-cmd --zone=public --add-service=kdeconnect" "$SUDO_LOG"
 refute "harden_security avoids full firewall reload" \
     grep -qxF "firewall-cmd --reload" "$SUDO_LOG"
 
 : > "$SUDO_LOG"
-FW_RUNNING=1 FW_ZONE=FedoraWorkstation FW_SSH_RUN=1 FW_SSH_PERM=1 SSHD_ACTIVE=0 SSHD_SOCKET_ACTIVE=1 \
+FW_RUNNING=1 FW_ZONE=FedoraWorkstation FW_SSH_RUN=1 FW_SSH_PERM=1 FW_KDE_RUN=1 FW_KDE_PERM=1 SSHD_ACTIVE=0 SSHD_SOCKET_ACTIVE=1 \
     harden_security >/dev/null
 refute "harden_security preserves ssh when sshd.socket is active" \
     grep -q -- "--remove-service=ssh" "$SUDO_LOG"
 
 : > "$SUDO_LOG"
-FW_RUNNING=1 FW_ZONE=public FW_SSH_RUN=0 FW_SSH_PERM=0 SSHD_ACTIVE=0 \
+FW_RUNNING=1 FW_ZONE=public FW_SSH_RUN=0 FW_SSH_PERM=0 FW_KDE_RUN=1 FW_KDE_PERM=1 SSHD_ACTIVE=0 \
     harden_security >/dev/null
 check "harden_security skips sudo when already hardened" \
     test ! -s "$SUDO_LOG"

@@ -316,17 +316,22 @@ ssh_listener_active() {
     systemctl is-active --quiet sshd 2>/dev/null || systemctl is-active --quiet sshd.socket 2>/dev/null
 }
 
-# True when firewalld is active on the wide-open FedoraWorkstation default zone
-# or still permits ssh in public while sshd is inactive.
+# True when firewalld is active on the wide-open FedoraWorkstation default zone,
+# permits ssh in public while sshd is inactive, or lacks kdeconnect in public.
 firewall_needs_hardening() {
     command -v firewall-cmd >/dev/null 2>&1 || return 1
     firewall-cmd --state >/dev/null 2>&1 || return 1
     local zone
     zone="$(firewall-cmd --get-default-zone 2>/dev/null || true)"
     [[ "$zone" == "FedoraWorkstation" ]] && return 0
-    if [[ "$zone" == "public" ]] && ! ssh_listener_active; then
+    [[ "$zone" == "public" ]] || return 1
+    if ! ssh_listener_active; then
         firewall-cmd --zone=public --query-service=ssh >/dev/null 2>&1 && return 0
         firewall-cmd --zone=public --query-service=ssh --permanent >/dev/null 2>&1 && return 0
+    fi
+    if firewall-cmd --info-service=kdeconnect >/dev/null 2>&1; then
+        firewall-cmd --zone=public --query-service=kdeconnect >/dev/null 2>&1 || return 0
+        firewall-cmd --zone=public --query-service=kdeconnect --permanent >/dev/null 2>&1 || return 0
     fi
     return 1
 }

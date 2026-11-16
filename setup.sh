@@ -93,7 +93,7 @@ if ! insync_is_live; then
     INSYNC_NEEDS_REBOOT=1
 fi
 if firewall_needs_hardening; then
-    SUDO_REASONS+=("set default firewalld zone to public (without ssh)")
+    SUDO_REASONS+=("set default firewalld zone to public (with kdeconnect, without ssh)")
 fi
 if [[ "${#SUDO_REASONS[@]}" -gt 0 ]]; then
     echo "Prompting for sudo to:"
