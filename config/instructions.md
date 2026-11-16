@@ -60,7 +60,7 @@
 - Prefer general, reusable solutions that read live context (schemas, manifests, `action.yml`, configs) over hardcoded maps, one-off renames, or "migration" bridges. Add special cases only when the general path cannot express the need.
 - Tests must not print warnings or errors into CI logs (e.g. `Bad credentials`, `API rate limit exceeded`); tests of error handling capture and assert those messages instead.
 - ALWAYS default missing environments and toggles to PROD. TEST and DEV must be set explicitly — an omitted value must not select a non-prod environment.
-- Scanners and reports (CodeQL, Semgrep, ZAP and similar): fix or report findings instead of excluding paths, rules or alerts; exclude only a confirmed false positive or generated code, with the reason beside the exclusion. When a report is missing data (e.g. a sample lost to a GitHub outage), show the gap rather than hiding it.
+- Scanners and reports (CodeQL, Semgrep, ZAP and similar): fix or report findings instead of excluding paths, rules or alerts. Exclude a confirmed false positive or generated code only with the reason beside the exclusion; exclude any other finding only after discussing it with the maintainer and agreeing it genuinely can't be fixed and won't become fixable. When a report is missing data (e.g. a sample lost to a GitHub outage), show the gap rather than hiding it.
 
 ## Definition of Done
 
