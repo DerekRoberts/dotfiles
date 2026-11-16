@@ -61,6 +61,7 @@
 - Tests must not print warnings or errors into CI logs (e.g. `Bad credentials`, `API rate limit exceeded`); tests of error handling capture and assert those messages instead.
 - ALWAYS default missing environments and toggles to PROD. TEST and DEV must be set explicitly — an omitted value must not select a non-prod environment.
 - Scanners and reports (CodeQL, Semgrep, ZAP and similar): fix or report findings instead of excluding paths, rules or alerts; exclude only a confirmed false positive or generated code, with the reason beside the exclusion. When a report is missing data (e.g. a sample lost to a GitHub outage), show the gap rather than hiding it.
+- Exclude a report finding only after discussing it with the maintainer and agreeing it genuinely can't be fixed and won't become fixable; until then keep reporting it.
 
 ## Definition of Done
 
