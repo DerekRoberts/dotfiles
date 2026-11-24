@@ -141,7 +141,8 @@ Two other deliberate trade-offs:
 │   │   ├── derive-uat-checklist/      # UAT checklist and tests from app material
 │   │   ├── handle-my-tasks/           # "Handle my tasks": Project 16 items built by Sonnet workers
 │   │   ├── podman-runner/             # Containerized execution & resource limits
-│   │   └── preflight/                 # Ground external prompts against reality
+│   │   ├── preflight/                 # Ground external prompts against reality
+│   │   └── verify-against-brief/      # Check PRs against the brief before Ready
 │   ├── kde/
 │   │   └── user-places.xbel           # Dolphin sidebar bookmarks
 │   ├── systemd/
