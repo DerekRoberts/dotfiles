@@ -8,11 +8,11 @@ description: >-
   and tests.
 ---
 
-> This file lives in `DerekRoberts/dotfiles` at `config/skills/verify-against-brief/`. `scripts/setup/ai.sh` copies every directory under `config/skills/` into `~/.agents/skills/`.
+> This file lives in `DerekRoberts/dotfiles` at `config/skills/verify-against-brief/`. `scripts/setup/ai.sh` copies every directory under `config/skills/` into `~/.agents/skills/` (and links them for Claude Code). If a skill loader is not available, read this file from that path or from `~/Repos/dotfiles/config/skills/verify-against-brief/SKILL.md`.
 
 # Verify against the brief
 
-Load this skill before marking any PR Ready, and when writing a brief's **Done when** or a PR's **How it was verified**.
+Follow this skill before marking any PR Ready, and when writing a brief's **Done when** or a PR's **How it was verified**.
 
 ## Done-when checks
 
