@@ -70,37 +70,77 @@ owner="${repo%%/*}"
 name="${repo#*/}"
 
 fetch_checks() {
-    gh pr checks "$pr" --repo "$repo" --json name,state,bucket 2>/dev/null || echo "[]"
+    # Bound the request by a remaining-seconds budget when one is passed, so a
+    # slow GitHub call cannot run past the watch cap unnoticed.
+    local budget="${1:-}"
+    local out=""
+    if [[ -n "$budget" ]] && command -v timeout >/dev/null 2>&1; then
+        if [[ "$budget" -lt 1 ]]; then
+            return 124
+        fi
+        out="$(timeout "${budget}s" gh pr checks "$pr" --repo "$repo" --json name,state,bucket 2>/dev/null)" || return $?
+        echo "$out"
+    else
+        gh pr checks "$pr" --repo "$repo" --json name,state,bucket 2>/dev/null || echo "[]"
+    fi
 }
 
-# Wait for this PR's checks until they all finish, any one fails, or the cap
-# is hit. Prints progress; returns 0 (done, no failures), 1 (failed), 3 (stuck).
+# Core Ready: CANCELLED/TIMED_OUT/FAILURE count as fail. gh puts cancellations
+# in the `cancel` bucket, not `fail`.
+list_failures() {
+    echo "$1" | jq -r '.[] | select(.bucket == "fail" or .bucket == "cancel") | "    - " + (if .bucket == "cancel" then "CANCELLED: " else "FAILED: " end) + .name'
+}
+
+# Wait for this PR's checks until they all finish, any one fails (including
+# CANCELLED), or the cap is hit. Prints progress; returns 0 (done, no
+# failures), 1 (failed), 3 (stuck).
 wait_for_ci() {
-    local start_time current_time elapsed remaining sleep_for checks_json pending_count failing_count check_count
+    local start_time current_time elapsed remaining sleep_for checks_json pending_count failing_count check_count fetch_status
     start_time="$(date +%s)"
 
     while true; do
         current_time="$(date +%s)"
         elapsed=$((current_time - start_time))
-        if [[ "$elapsed" -ge "$timeout" ]]; then
+        remaining=$((timeout - elapsed))
+        if [[ "$remaining" -le 0 ]]; then
             echo "STUCK: CI checks on $repo #$pr still pending or unreported after ${timeout}s. Leave not-Ready for a later pass (CI failure check or a re-check)." >&2
             return 3
         fi
 
-        checks_json="$(fetch_checks)"
+        fetch_status=0
+        checks_json="$(fetch_checks "$remaining")" || fetch_status=$?
+        current_time="$(date +%s)"
+        elapsed=$((current_time - start_time))
+        remaining=$((timeout - elapsed))
+
+        if [[ "$fetch_status" -ne 0 ]]; then
+            if [[ "$remaining" -le 0 || "$fetch_status" -eq 124 ]]; then
+                echo "STUCK: CI checks on $repo #$pr still pending or unreported after ${timeout}s. Leave not-Ready for a later pass (CI failure check or a re-check)." >&2
+                return 3
+            fi
+            checks_json="[]"
+        fi
+
         check_count="$(echo "$checks_json" | jq 'length')"
         pending_count="$(echo "$checks_json" | jq '[.[] | select(.bucket == "pending")] | length')"
-        failing_count="$(echo "$checks_json" | jq '[.[] | select(.bucket == "fail")] | length')"
+        failing_count="$(echo "$checks_json" | jq '[.[] | select(.bucket == "fail" or .bucket == "cancel")] | length')"
 
+        # Conclusive failure is reported even if the fetch landed just past the cap.
         if [[ "$failing_count" -gt 0 ]]; then
             echo "FAILED: $failing_count CI check(s) failed on $repo #$pr."
-            echo "$checks_json" | jq -r '.[] | select(.bucket == "fail") | "    - FAILED: " + .name'
+            list_failures "$checks_json"
             return 1
         fi
 
         if [[ "$check_count" -gt 0 && "$pending_count" -eq 0 ]]; then
+            # Conclusive completion, even if the fetch landed just past the cap.
             echo "CI checks finished on $repo #$pr (${elapsed}s; 0 pending, 0 failing)."
             return 0
+        fi
+
+        if [[ "$remaining" -le 0 ]]; then
+            echo "STUCK: CI checks on $repo #$pr still pending or unreported after ${timeout}s. Leave not-Ready for a later pass (CI failure check or a re-check)." >&2
+            return 3
         fi
 
         if [[ "$check_count" -eq 0 ]]; then
@@ -109,7 +149,6 @@ wait_for_ci() {
             echo "Waiting for $pending_count pending CI check(s) on $repo #$pr (${elapsed}s / ${timeout}s)..."
         fi
         # Sleep up to 10s, but not past the cap, so a short --timeout is honored.
-        remaining=$((timeout - elapsed))
         sleep_for=10
         if [[ "$remaining" -lt "$sleep_for" ]]; then
             sleep_for="$remaining"
@@ -218,14 +257,14 @@ query($owner: String!, $name: String!, $pr: Int!) {
     local checks_json pending_count failing_count
     checks_json="$(fetch_checks)"
     pending_count="$(echo "$checks_json" | jq '[.[] | select(.bucket == "pending")] | length')"
-    failing_count="$(echo "$checks_json" | jq '[.[] | select(.bucket == "fail")] | length')"
+    failing_count="$(echo "$checks_json" | jq '[.[] | select(.bucket == "fail" or .bucket == "cancel")] | length')"
 
     if [[ "$pending_count" -eq 0 && "$failing_count" -eq 0 && "$status_state" == "SUCCESS" ]]; then
         echo "  ✓ CI Checks: SUCCESS (0 pending, 0 failing)"
     else
         echo "  ✗ CI Checks: $status_state ($pending_count pending, $failing_count failing)"
         if [[ "$failing_count" -gt 0 ]]; then
-            echo "$checks_json" | jq -r '.[] | select(.bucket == "fail") | "    - FAILED: " + .name'
+            list_failures "$checks_json"
         fi
         if [[ "$pending_count" -gt 0 ]]; then
             echo "$checks_json" | jq -r '.[] | select(.bucket == "pending") | "    - PENDING: " + .name'
