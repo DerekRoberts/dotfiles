@@ -4,17 +4,20 @@
 #   2. Head is not behind PR base ref (0 commits on base not in head).
 #   3. CI checks have 0 pending and 0 failing (CANCELLED/TIMED_OUT/FAILURE count as fail).
 #   4. Unresolved reviewThreads == 0 (including outdated threads).
-#   5. ≥10 minutes elapsed since last push.
+#
+# After a push, --watch waits for this PR's checks (fail-fast) with a 30-minute
+# cap. The script does the waiting so the caller is not burning AI credits.
+# Exit 0 if Ready, 1 if not Ready or a check failed, 2 on usage error, 3 if the
+# cap was hit (stuck, not failed): leave the PR not-Ready for a later pass.
 #
 # Usage:
-#   pr-ready-check.sh [PR_NUMBER] [--repo OWNER/REPO] [--watch] [--timeout SECONDS] [--no-time-check]
+#   pr-ready-check.sh [PR_NUMBER] [--repo OWNER/REPO] [--watch] [--timeout SECONDS]
 set -euo pipefail
 
 pr=""
 repo=""
 watch=0
-timeout=900
-check_time=1
+timeout=1800
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -30,12 +33,8 @@ while [[ $# -gt 0 ]]; do
             timeout="$2"
             shift 2
             ;;
-        --no-time-check)
-            check_time=0
-            shift
-            ;;
         -h|--help)
-            echo "Usage: $0 [PR_NUMBER] [--repo OWNER/REPO] [--watch] [--timeout SECONDS] [--no-time-check]"
+            echo "Usage: $0 [PR_NUMBER] [--repo OWNER/REPO] [--watch] [--timeout SECONDS]"
             exit 0
             ;;
         *)
@@ -70,6 +69,94 @@ fi
 owner="${repo%%/*}"
 name="${repo#*/}"
 
+fetch_checks() {
+    # Bound the request by a remaining-seconds budget when one is passed, so a
+    # slow GitHub call cannot run past the watch cap unnoticed.
+    local budget="${1:-}"
+    local out=""
+    if [[ -n "$budget" ]] && command -v timeout >/dev/null 2>&1; then
+        if [[ "$budget" -lt 1 ]]; then
+            return 124
+        fi
+        out="$(timeout "${budget}s" gh pr checks "$pr" --repo "$repo" --json name,state,bucket 2>/dev/null)" || return $?
+        echo "$out"
+    else
+        gh pr checks "$pr" --repo "$repo" --json name,state,bucket 2>/dev/null || echo "[]"
+    fi
+}
+
+# Core Ready: CANCELLED/TIMED_OUT/FAILURE count as fail. gh puts cancellations
+# in the `cancel` bucket, not `fail`.
+list_failures() {
+    echo "$1" | jq -r '.[] | select(.bucket == "fail" or .bucket == "cancel") | "    - " + (if .bucket == "cancel" then "CANCELLED: " else "FAILED: " end) + .name'
+}
+
+# Wait for this PR's checks until they all finish, any one fails (including
+# CANCELLED), or the cap is hit. Prints progress; returns 0 (done, no
+# failures), 1 (failed), 3 (stuck).
+wait_for_ci() {
+    local start_time current_time elapsed remaining sleep_for checks_json pending_count failing_count check_count fetch_status
+    start_time="$(date +%s)"
+
+    while true; do
+        current_time="$(date +%s)"
+        elapsed=$((current_time - start_time))
+        remaining=$((timeout - elapsed))
+        if [[ "$remaining" -le 0 ]]; then
+            echo "STUCK: CI checks on $repo #$pr still pending or unreported after ${timeout}s. Leave not-Ready for a later pass (CI failure check or a re-check)." >&2
+            return 3
+        fi
+
+        fetch_status=0
+        checks_json="$(fetch_checks "$remaining")" || fetch_status=$?
+        current_time="$(date +%s)"
+        elapsed=$((current_time - start_time))
+        remaining=$((timeout - elapsed))
+
+        if [[ "$fetch_status" -ne 0 ]]; then
+            if [[ "$remaining" -le 0 || "$fetch_status" -eq 124 ]]; then
+                echo "STUCK: CI checks on $repo #$pr still pending or unreported after ${timeout}s. Leave not-Ready for a later pass (CI failure check or a re-check)." >&2
+                return 3
+            fi
+            checks_json="[]"
+        fi
+
+        check_count="$(echo "$checks_json" | jq 'length')"
+        pending_count="$(echo "$checks_json" | jq '[.[] | select(.bucket == "pending")] | length')"
+        failing_count="$(echo "$checks_json" | jq '[.[] | select(.bucket == "fail" or .bucket == "cancel")] | length')"
+
+        # Conclusive failure is reported even if the fetch landed just past the cap.
+        if [[ "$failing_count" -gt 0 ]]; then
+            echo "FAILED: $failing_count CI check(s) failed on $repo #$pr."
+            list_failures "$checks_json"
+            return 1
+        fi
+
+        if [[ "$check_count" -gt 0 && "$pending_count" -eq 0 ]]; then
+            # Conclusive completion, even if the fetch landed just past the cap.
+            echo "CI checks finished on $repo #$pr (${elapsed}s; 0 pending, 0 failing)."
+            return 0
+        fi
+
+        if [[ "$remaining" -le 0 ]]; then
+            echo "STUCK: CI checks on $repo #$pr still pending or unreported after ${timeout}s. Leave not-Ready for a later pass (CI failure check or a re-check)." >&2
+            return 3
+        fi
+
+        if [[ "$check_count" -eq 0 ]]; then
+            echo "Waiting for CI checks to appear on $repo #$pr (${elapsed}s / ${timeout}s)..."
+        else
+            echo "Waiting for $pending_count pending CI check(s) on $repo #$pr (${elapsed}s / ${timeout}s)..."
+        fi
+        # Sleep up to 10s, but not past the cap, so a short --timeout is honored.
+        sleep_for=10
+        if [[ "$remaining" -lt "$sleep_for" ]]; then
+            sleep_for="$remaining"
+        fi
+        sleep "$sleep_for"
+    done
+}
+
 check_pr() {
     # shellcheck disable=SC2016
     local query='
@@ -84,7 +171,6 @@ query($owner: String!, $name: String!, $pr: Int!) {
       commits(last: 1) {
         nodes {
           commit {
-            committedDate
             statusCheckRollup {
               state
             }
@@ -112,12 +198,11 @@ query($owner: String!, $name: String!, $pr: Int!) {
     local pr_data
     pr_data="$(gh api graphql -f query="$query" -F owner="$owner" -F name="$name" -F pr="$pr")"
 
-    local state mergeable base_ref head_ref committed_date status_state
+    local state mergeable base_ref head_ref status_state
     state="$(echo "$pr_data" | jq -r '.data.repository.pullRequest.state // empty')"
     mergeable="$(echo "$pr_data" | jq -r '.data.repository.pullRequest.mergeable // empty')"
     base_ref="$(echo "$pr_data" | jq -r '.data.repository.pullRequest.baseRefName // empty')"
     head_ref="$(echo "$pr_data" | jq -r '.data.repository.pullRequest.headRefName // empty')"
-    committed_date="$(echo "$pr_data" | jq -r '.data.repository.pullRequest.commits.nodes[0].commit.committedDate // empty')"
     status_state="$(echo "$pr_data" | jq -r '.data.repository.pullRequest.commits.nodes[0].commit.statusCheckRollup.state // empty')"
 
     if [[ -z "$state" ]]; then
@@ -169,43 +254,22 @@ query($owner: String!, $name: String!, $pr: Int!) {
 
     # 5. CI Status checks
     # Inspect individual checks for pending or failing
-    local checks_json
-    checks_json="$(gh pr checks "$pr" --repo "$repo" --json name,state,bucket,event 2>/dev/null || echo "[]")"
-    local pending_count failing_count
+    local checks_json pending_count failing_count
+    checks_json="$(fetch_checks)"
     pending_count="$(echo "$checks_json" | jq '[.[] | select(.bucket == "pending")] | length')"
-    failing_count="$(echo "$checks_json" | jq '[.[] | select(.bucket == "fail")] | length')"
+    failing_count="$(echo "$checks_json" | jq '[.[] | select(.bucket == "fail" or .bucket == "cancel")] | length')"
 
     if [[ "$pending_count" -eq 0 && "$failing_count" -eq 0 && "$status_state" == "SUCCESS" ]]; then
         echo "  ✓ CI Checks: SUCCESS (0 pending, 0 failing)"
     else
         echo "  ✗ CI Checks: $status_state ($pending_count pending, $failing_count failing)"
         if [[ "$failing_count" -gt 0 ]]; then
-            echo "$checks_json" | jq -r '.[] | select(.bucket == "fail") | "    - FAILED: " + .name'
+            list_failures "$checks_json"
         fi
         if [[ "$pending_count" -gt 0 ]]; then
             echo "$checks_json" | jq -r '.[] | select(.bucket == "pending") | "    - PENDING: " + .name'
         fi
         failed=1
-    fi
-
-    # 6. Elapsed time check (>= 10 min since last push)
-    if [[ -n "$committed_date" ]]; then
-        local commit_epoch now_epoch elapsed_sec elapsed_min
-        commit_epoch="$(date -d "$committed_date" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%SZ" "$committed_date" +%s 2>/dev/null || echo 0)"
-        now_epoch="$(date +%s)"
-        elapsed_sec=$((now_epoch - commit_epoch))
-        elapsed_min=$((elapsed_sec / 60))
-
-        if [[ "$elapsed_sec" -ge 600 ]]; then
-            echo "  ✓ Elapsed time: ${elapsed_min}m since last commit (≥10 min requirement met)"
-        else
-            if [[ "$check_time" -eq 1 ]]; then
-                echo "  ✗ Elapsed time: ${elapsed_min}m since last commit (<10 min; wait $(( (600 - elapsed_sec) / 60 + 1 ))m for automated bots)"
-                failed=1
-            else
-                echo "  ⚠ Elapsed time: ${elapsed_min}m since last commit (skipped via --no-time-check)"
-            fi
-        fi
     fi
 
     if [[ "$failed" -eq 0 ]]; then
@@ -217,23 +281,12 @@ query($owner: String!, $name: String!, $pr: Int!) {
     fi
 }
 
-start_time="$(date +%s)"
-while true; do
-    if check_pr; then
-        exit 0
+if [[ "$watch" -eq 1 ]]; then
+    ci_status=0
+    wait_for_ci || ci_status=$?
+    if [[ "$ci_status" -ne 0 ]]; then
+        exit "$ci_status"
     fi
+fi
 
-    if [[ "$watch" -eq 0 ]]; then
-        exit 1
-    fi
-
-    current_time="$(date +%s)"
-    elapsed=$((current_time - start_time))
-    if [[ "$elapsed" -ge "$timeout" ]]; then
-        echo "Timed out after ${timeout}s watching PR #$pr in $repo." >&2
-        exit 1
-    fi
-
-    echo "Re-checking in 15 seconds (elapsed: ${elapsed}s / ${timeout}s)..."
-    sleep 15
-done
+check_pr

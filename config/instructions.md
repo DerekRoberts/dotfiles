@@ -3,7 +3,8 @@
 - Check live, never from memory or summaries: re-read live state (`gh` for GitHub; files, `git`, or a run for local) before every hand-off, status report, and claim, and name what you checked and when. Source claims need a file:line; runtime claims need command output.
 - Before reporting work done, yours or another bot's, check it live against the user's original ask, not just against its own report.
 - Report what shipped against what was asked, in plain words: call a stub, outline, or placeholder by that name, and never offer green CI, a schema pass, a passing gate, or a plan as meeting a quality target the user set. "Not yet" is a valid answer.
-- Ready only when live `gh` shows: `mergeable=MERGEABLE`; head not behind the PR base ref (0 commits on base not in head); `pending=0` and `fail=0` (CANCELLED/TIMED_OUT/ACTION_REQUIRED count as fail); unresolved `reviewThreads=0` (outdated-but-open still blocks); ≥10 min since last push. BLOCKED solely for `review_required` is OK. NEVER Ready from another bot's claim or from memory.
+- Ready only when live `gh` shows: `mergeable=MERGEABLE`; head not behind the PR base ref (0 commits on base not in head); `pending=0` and `fail=0` (CANCELLED/TIMED_OUT/ACTION_REQUIRED count as fail); unresolved `reviewThreads=0` (outdated-but-open still blocks). BLOCKED solely for `review_required` is OK. NEVER Ready from another bot's claim or from memory.
+- After a push, wait for the PR's workflow runs in a script or shell so the wait does not burn AI credits. Use `scripts/pr-ready-check.sh <PR_NUM> --watch` (30-minute cap; fail-fast on `fail` or `cancel`). Return as soon as every run finishes or any run fails, including CANCELLED. If the 30-minute cap is hit, report the run as stuck, not failed; leave the PR not-Ready and move on — a later pass (the CI failure check or a re-check) will pick it up. Do not idle-wait past the cap. Prefer that helper over a bare `gh pr checks --watch --fail-fast`: the CLI does not treat CANCELLED as a failure, so a cancelled check with another job still pending would keep waiting.
 - A PR that changes a workflow or job is Ready only after PR CI has run that job path, including cleanup PRs and jobs that normally run only on `main` or by dispatch (use a PR dry-run or rehearse mode); other checks passing is not enough.
 - Before marking any PR Ready, follow the `verify-against-brief` skill at `config/skills/verify-against-brief/SKILL.md` (from `DerekRoberts/dotfiles`, or `~/Repos/dotfiles` when present).
 - Personal orgs (`DerekRoberts`, `MinionTech`) use the same Ready bar, Hard Stops, CI/review expectations, and agent conduct as `bcgov` work; `repo-rules.md` role (e.g. 0 Personal) sets scope of allowed work, not a lighter process or "good enough for personal" exceptions for Ready, attribution, or merge discipline.
@@ -68,10 +69,10 @@
 
 - ALWAYS `git push` and ensure the branch has a pull request (`gh pr create` only when none exists) upon completing branch work.
 - PR Lifecycle Gate: NEVER report branch work done or present a PR for review until running `scripts/pr-ready-check.sh <PR_NUM>` (or `--watch`) to satisfy the Core Ready rule:
-  1. Watch CI checks with a bound (`gh pr checks --watch` or `scripts/pr-ready-check.sh --watch`). If checks fail or hang indefinitely, report the blocker rather than claiming Ready.
+  1. After a push, wait for CI as in the Core wait rule above. If checks fail or are stuck at the 30-minute cap, report that rather than claiming Ready.
   2. Query GraphQL for open `reviewThreads` (automated Copilot and CodeRabbit reviews take 2–5 minutes to post).
   3. For valid review threads: apply fixes, run containerized tests, push, and resolve via `resolveReviewThread`. For invalid suggestions: dismiss with the one-line reason in chat and resolve the thread without code changes.
-  4. Only declare done and hand off when `scripts/pr-ready-check.sh` confirms Core Ready: `mergeable=MERGEABLE`, head not behind PR base ref (0 commits on base not in head), `pending=0`, `fail=0`, unresolved `reviewThreads=0`, and ≥10 min elapsed since last push.
+  4. Only declare done and hand off when `scripts/pr-ready-check.sh` confirms Core Ready: `mergeable=MERGEABLE`, head not behind PR base ref (0 commits on base not in head), `pending=0`, `fail=0`, unresolved `reviewThreads=0`.
 
 ## Dependencies & Solutions
 
