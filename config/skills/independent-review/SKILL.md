@@ -30,4 +30,4 @@ Follow this skill before marking any PR Ready, after the author believes the cha
 - Small findings are fixed in the same PR. Do not open an issue or send them to triage.
 - Flag only real scope creep (a change that does not belong in this PR) to the user in chat, and leave it out of the PR.
 - Never post reviewer findings as PR comments, reviews, or review threads. Report them in chat (to the author agent or the user). Comments that other bots already posted on the PR are still handled by the PR Review Threads rule; this pass does not add more.
-- After fixes are pushed, the PR is not Ready until CI is green again and this review's findings are either fixed or flagged as scope creep.
+- After fixes are pushed, a reviewer separate from the author reads the full current diff again, including the fix commits. The PR is not Ready until CI is green again and every finding is either fixed and confirmed in that re-read or flagged as scope creep.
