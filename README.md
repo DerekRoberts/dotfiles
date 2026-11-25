@@ -140,6 +140,7 @@ Two other deliberate trade-offs:
 │   │   ├── cloud-agent-kickoff/       # Standing wishes for cloud-agent handoffs
 │   │   ├── derive-uat-checklist/      # UAT checklist and tests from app material
 │   │   ├── handle-my-tasks/           # "Handle my tasks": Project 16 items built by Sonnet workers
+│   │   ├── independent-review/        # Fresh reviewer reads the full diff before Ready
 │   │   ├── podman-runner/             # Containerized execution & resource limits
 │   │   ├── preflight/                 # Ground external prompts against reality
 │   │   └── verify-against-brief/      # Check PRs against the brief before Ready
