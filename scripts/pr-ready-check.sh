@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# pr-ready-check.sh — mechanically verify whether a pull request meets the Core Ready rule:
+# pr-ready-check.sh — mechanically verify whether a pull request meets the Ready rule:
 #   1. PR state is OPEN and mergeable is MERGEABLE.
 #   2. Head is not behind PR base ref (0 commits on base not in head).
 #   3. CI checks have 0 pending and 0 failing (CANCELLED/TIMED_OUT/FAILURE count as fail).
@@ -85,7 +85,7 @@ fetch_checks() {
     fi
 }
 
-# Core Ready: CANCELLED/TIMED_OUT/FAILURE count as fail. gh puts cancellations
+# Ready rule: CANCELLED/TIMED_OUT/FAILURE count as fail. gh puts cancellations
 # in the `cancel` bucket, not `fail`.
 list_failures() {
     echo "$1" | jq -r '.[] | select(.bucket == "fail" or .bucket == "cancel") | "    - " + (if .bucket == "cancel" then "CANCELLED: " else "FAILED: " end) + .name'

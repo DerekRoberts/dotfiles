@@ -11,20 +11,21 @@ description: >-
 
 ## Conductor (local agent)
 
+- Not for `bcgov` repos: cloud agents there are a Hard Stop.
 - Prefer **reply** to an existing cloud agent that already owns the branch or PR over launching a duplicate.
 - Tell the user once (agent or PR link). Do not babysit CI or re-investigate from chat unless they ask or you are blocked.
 
 ## Paste into every launch and reply
 
-Add task-specific **Goal**, links, success criteria, and repo scope after this block. Full policy (PAT preference, DB overwrite, Artifactory): [`config/instructions.md` — Hard Stops](https://github.com/DerekRoberts/dotfiles/blob/main/config/instructions.md#hard-stops); board workflow and Bot Lanes: [`DerekRoberts/brain` `config/instructions.md`](https://github.com/DerekRoberts/brain/blob/main/config/instructions.md#bot-lanes).
+Add task-specific **Goal**, links, success criteria, and repo scope after this block. Full policy (DB overwrite, live runs): [`config/instructions.md` — Hard Stops](https://github.com/DerekRoberts/dotfiles/blob/main/config/instructions.md#hard-stops); board workflow and Bot Lanes: [`DerekRoberts/brain` `config/instructions.md`](https://github.com/DerekRoberts/brain/blob/main/config/instructions.md#bot-lanes).
 
 ```text
 Follow the standing cloud-agent kickoff rules (set git user.name/email to Derek Roberts / derek.roberts@gmail.com before the first commit; iterate until CI green + review done; fix or resolve threads, reasons in the summary; no tool co-author/footer; same PR only).
 
-Full Hard Stops (read before DB overwrite, PAT, or Artifactory work): https://github.com/DerekRoberts/dotfiles/blob/main/config/instructions.md#hard-stops
+Full Hard Stops (read before DB overwrite or live-run work): https://github.com/DerekRoberts/dotfiles/blob/main/config/instructions.md#hard-stops
 Bot Lanes & board workflow: https://github.com/DerekRoberts/brain/blob/main/config/instructions.md#bot-lanes
 
-Cloud Hard Stops (never merge, PR/issue comment, review reply, force-push, tags, releases, repo/org settings, secrets, or oc/kubectl): commits and push are fine.
+Cloud Hard Stops (never merge, PR/issue comment, review reply, force-push, tags, releases, repo/org settings, secrets, oc/kubectl, dispatching or re-running main-merge TEST/PROD deploys, Promote, baseline, or other tools-mutating runs unless the user accepted that named run in chat this turn, or version changes outside a version PR): commits and push are fine.
 
 - Iterate on the same branch and PR until CI is green and every open review thread is handled and resolved (GraphQL resolveReviewThread; live gh shows reviewThreads=0; no PR comments). Stop only for user blockers.
 - Bot PRs (Renovate, Dependabot, Mend): new PR from origin/main; never push to the bot PR (Bot Lanes).
