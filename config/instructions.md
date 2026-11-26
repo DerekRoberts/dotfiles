@@ -8,11 +8,11 @@ These are absolute. Everything after this section is guidance with reasons; use 
 - **No PATs.** Prefer `GITHUB_TOKEN`, long-lived OpenShift tokens (`OC_TOKEN`/`OC_SERVER` in Actions secrets), and public images or packages (`bcgov/nr-containers` over private GHCR plus pull secrets). Do not propose minting or refreshing a PAT unless the user already named one as the only workable option (e.g. `project-sync`). OpenShift holds no secrets that are not imported from Actions secrets.
 - **No Cursor App or cloud agents for `bcgov` repos.**
 - **No `dt14`:** remote bots run no machine-targeted commands or checkouts on the user's desktop (`dt14`). The Project Queue exception, if any, lives in `DerekRoberts/brain` `config/instructions.md`.
-- **IaC only:** infrastructure changes go through code in a PR. NEVER run `oc`/`kubectl` or make manual changes in TEST or PROD; raise a one-off manual fix with the user first.
+- **IaC only:** infrastructure changes go through code in a PR. NEVER run `oc`/`kubectl`, in any environment. No manual changes in TEST or PROD; raise a one-off manual fix with the user first.
 - **No version changes in a PR that is not about that version:** runtimes, base images, dependencies, and lockfiles stay untouched, even to align a mismatch upward; report the mismatch instead. When the task is a version change, take latest stable, never downgrade, and change only that entry. Never hand-edit a lockfile.
 - **Deletions need the user's yes in chat:** branches others own, repos, cloud or cluster resources, data, issues, and anything outside the PR's own diff.
 - **Never name the user (or any person) in GitHub text:** PR titles and bodies, commit messages, issues, and rule text say "the user", "the maintainer", or "the owner". Git identity and repo paths (e.g. `DerekRoberts/dotfiles`) are exempt.
-- **Commit identity:** set `git config user.name`/`user.email` to Derek Roberts <derek.roberts@gmail.com> before the first commit. No `Co-authored-by`, `Generated-with`, AI attribution, or tool footers in commits, PR or issue bodies unless the user named a different human co-author; never a `users.noreply.github.com` address or a tool bot account (squash merge still adds a co-author when the author email differs).
+- **Commit identity:** set `git config user.name`/`user.email` to Derek Roberts <derek.roberts@gmail.com> before the first commit. No AI attribution, `Generated-with`, or tool footers in commits, PR or issue bodies, ever. No `Co-authored-by` unless the user named a different human co-author; never a `users.noreply.github.com` address or a tool bot account (squash merge still adds a co-author when the author email differs).
 - **No credentials, secrets, or PII in commits.**
 - **One PR per change, branched from `origin/main`:** `git fetch origin && git checkout -b <type>/<name> origin/main`. Never stack on another PR's branch, merged or not.
 - **No silenced diagnostics, `--legacy-peer-deps`, or cut coverage to get green:** find the cause and fix it.
@@ -22,10 +22,11 @@ These are absolute. Everything after this section is guidance with reasons; use 
 
 # Ready
 
+- When branch work is complete, push it and make sure it has a PR (`gh pr create` only when none exists); local commits aren't finished work.
 - Check live, not from memory or a summary: re-read state (`gh`, files, `git`, a run) before every hand-off, status report, and claim, and say what you checked and when. Source claims cite file:line; runtime claims cite command output. Check finished work, yours or another bot's, against the user's original ask, not its own report. If a later fact breaks an earlier sentence, withdraw it first.
 - A PR is Ready only when live `gh` shows `mergeable=MERGEABLE`, 0 commits behind its base, `pending=0` and `fail=0` (CANCELLED, TIMED_OUT, and ACTION_REQUIRED count as fail), and 0 unresolved review threads (outdated-but-open still counts). BLOCKED only for `review_required` is fine. `scripts/pr-ready-check.sh <PR> [--watch]` checks all of this; another bot's claim never counts.
 - After a push, wait for CI in a script, not in the model: `scripts/pr-ready-check.sh <PR> --watch` (30-minute cap, fails fast on fail or cancel, which bare `gh pr checks --watch` misses). If the cap hits, report the run as stuck, leave the PR not-Ready, and move on.
-- A PR that changes a workflow or job needs PR CI to have run that job path (use a PR dry-run or rehearse mode for jobs that normally run only on `main` or dispatch). If path filters skip it, fix a broken trigger, or push a temporary trigger and remove it in a later commit before Ready, then confirm the removal leaves the tested job unchanged or re-run it on the final head.
+- A PR that changes a workflow or job needs PR CI to have run that job path (use a PR dry-run or rehearse mode for jobs that normally run only on `main` or dispatch). If path filters skip it, fix a broken trigger, or push a temporary trigger and remove it in a later commit before Ready, then confirm the removal leaves the tested job's inputs unchanged or re-run it on the final head.
 - Before Ready, follow the `verify-against-brief` and `independent-review` skills (`config/skills/` in `DerekRoberts/dotfiles`, or `~/Repos/dotfiles`): the change meets the brief's Done-when checks, and a fresh reviewer that did not write it reads the full diff. Fix small findings in the same PR; flag only real scope creep; never post findings as PR comments.
 - Review threads: automated reviews (Copilot, CodeRabbit) take 2–5 minutes to post, so check after CI. Handle every thread, resolve it with GraphQL `resolveReviewThread`, and post no reply. Fixed means pushed with tests passing; dismissed means the one-line reason goes to the user in chat. When every thread in a review is resolved, dismiss that review with `dismissPullRequestReview`.
 - Report what shipped against what was asked, in plain words. Call a stub or placeholder by that name, and do not offer green CI or a passing gate as meeting a quality bar the user set. "Not yet" is a fine answer.
@@ -37,7 +38,7 @@ These are absolute. Everything after this section is guidance with reasons; use 
 - Briefs from one bot to another state the goal, why it matters, the guardrails (Hard Stops plus anything task-specific), and the done-checks that prove it. Leave the how to the builder; step-by-step instructions age badly and hide the intent.
 - The builder runs the same verification the planner will (green checks, mergeable, 0 behind, scope claims true, independent review) and puts that proof in the PR body before a Ready ping. A Ready the planner can disprove costs both bots a round trip.
 - When output misses the brief, fix the brief and restart rather than stacking corrections on the same thread. Piled-on corrections tend to conflict and the original intent gets lost.
-- Status messages to the user open with four short lines: **Needs you?** (with full links) / **Done?** / **How** (one line) / **What went wrong**. Details follow. Steps only a human can do (merges, releases, tags, policy asks) belong in the first line, because long updates bury them.
+- Status messages to the user open with four short lines: **Needs you?** (with full links) / **Done?** / **How** (one line) / **What went wrong**. Details follow, including the three-line PR summary when the message hands over a PR. Steps only a human can do (merges, releases, tags, policy asks) belong in the first line, because long updates bury them.
 
 # Communication
 
@@ -47,7 +48,7 @@ These are absolute. Everything after this section is guidance with reasons; use 
 - Flag conflicting rules, ambiguous asks, and likely errors before acting on them rather than guessing silently.
 - When challenged, re-check. Change the answer if the evidence changes; hold it with reasons if not.
 - Commands and steps for the user should be ready to run, with real names and values from the repo or PR; leave a placeholder only for a value you couldn't find, and say which.
-- Every PR brought to the user starts its body, and the chat message, with three plain lines: What changes / What could go wrong / How it was verified. The user decides from these, so the risk line names PROD, security, or other teams' repos when touched.
+- Every PR brought to the user starts its body with three plain lines, repeated in chat right after the status header: What changes / What could go wrong / How it was verified. The user decides from these, so the risk line names PROD, security, or other teams' repos when touched.
 - Give the full link for any PR the user is to review. When one is urgent or blocks other work, put a `Merge now` line with the link and one reason at the top so it stands out.
 
 # Planning and scope
