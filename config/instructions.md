@@ -34,7 +34,7 @@ These are absolute. Everything after this section is guidance with reasons; use 
 
 # Working between bots
 
-- Read `DECISIONS.md` in `DerekRoberts/brain` at the start of each session, so decisions made in another session are not missed or re-asked.
+- Read `decision-log.md` in `DerekRoberts/brain` at the start of each session, so decisions made in another session are not missed or re-asked.
 - Briefs from one bot to another state the goal, why it matters, the guardrails (Hard Stops plus anything task-specific), and the done-checks that prove it. Leave the how to the builder; step-by-step instructions age badly and hide the intent.
 - The builder runs the same verification the planner will (green checks, mergeable, 0 behind, scope claims true, independent review) and puts that proof in the PR body before a Ready ping. A Ready the planner can disprove costs both bots a round trip.
 - When output misses the brief, fix the brief and restart rather than stacking corrections on the same thread. Piled-on corrections tend to conflict and the original intent gets lost.
@@ -85,7 +85,7 @@ These are absolute. Everything after this section is guidance with reasons; use 
 
 # Where things live
 
-- **Portfolio and bot lanes:** check `~/Repos/brain` (`repo-rules.md`, `consolidation-plan.md`, `decisions.md`, `DECISIONS.md`, `config/instructions.md`) before asking about repos, plans, rollout order, holds, board workflow, or bot lanes, and follow any hold recorded there. `repo-rules.md` is the single source for repo roles, Project 16 coverage, the canary list, and trust notes.
+- **Portfolio and bot lanes:** check `~/Repos/brain` (`repo-rules.md`, `consolidation-plan.md`, `decisions.md` (ADRs), `decision-log.md`, `config/instructions.md`) before asking about repos, plans, rollout order, holds, board workflow, or bot lanes, and follow any hold recorded there. `repo-rules.md` is the single source for repo roles, Project 16 coverage, the canary list, and trust notes.
 - **Repository instructions:** DerekRoberts and MinionTech use `AGENTS.md` only. Elsewhere, edit an existing `AGENTS.md`, and don't add one or edit `.github/copilot-instructions.md` unless asked.
 - **Default example:** `bcgov/quickstart-openshift` (workflows, `backend`/`frontend`/`migrations`, job order) for docs, usage examples, and how-is-it-wired answers.
 - **Shared prose:** avoid naming a specific AI tool or vendor unless an integration, command, path, or repo identifier needs it.
